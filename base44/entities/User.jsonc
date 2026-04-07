@@ -1,0 +1,30 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "client"
+      ],
+      "default": "client"
+    },
+    "whatsapp": {
+      "type": "string",
+      "description": "WhatsApp do cliente"
+    },
+    "address": {
+      "type": "string",
+      "description": "Endere\u00e7o do cliente"
+    },
+    "city": {
+      "type": "string",
+      "description": "Cidade"
+    },
+    "company_name": {
+      "type": "string",
+      "description": "Nome do estabelecimento"
+    }
+  }
+}

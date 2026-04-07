@@ -1,0 +1,67 @@
+{
+  "name": "Product",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do produto"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do produto"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Frutas",
+        "Verduras",
+        "Legumes",
+        "Temperos",
+        "Outros"
+      ],
+      "description": "Categoria do produto"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "URL da imagem do produto"
+    },
+    "packaging_type": {
+      "type": "string",
+      "enum": [
+        "Caixa",
+        "Saco",
+        "Fardo",
+        "Unidade"
+      ],
+      "description": "Tipo de embalagem"
+    },
+    "weight": {
+      "type": "string",
+      "description": "Peso da embalagem (ex: 20kg)"
+    },
+    "price": {
+      "type": "number",
+      "description": "Pre\u00e7o por embalagem"
+    },
+    "promo_active": {
+      "type": "boolean",
+      "default": false,
+      "description": "Promo\u00e7\u00e3o ativa"
+    },
+    "promo_price": {
+      "type": "number",
+      "description": "Pre\u00e7o promocional"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Produto ativo no cat\u00e1logo"
+    }
+  },
+  "required": [
+    "name",
+    "category",
+    "price",
+    "packaging_type"
+  ]
+}
