@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Tag, Package } from 'lucide-react';
+import { ShoppingCart, Tag, Package, Minus, Plus } from 'lucide-react';
 import { addToCart } from '@/lib/cartStore';
 import { toast } from 'sonner';
 
 export default function ProductCard({ product, isLoggedIn, priceGroup }) {
+  const [qty, setQty] = useState(1);
   const hasPromo = product.promo_active && product.promo_price;
   const basePrice = hasPromo ? product.promo_price : product.price;
 
@@ -16,9 +17,11 @@ export default function ProductCard({ product, isLoggedIn, priceGroup }) {
   const hasGroupDiscount = discount !== 0 && isLoggedIn;
 
   const handleAdd = () => {
-    // Pass the adjusted price to cart
-    addToCart({ ...product, price: displayPrice, promo_price: hasPromo ? displayPrice : product.promo_price });
-    toast.success(`${product.name} adicionado ao carrinho`);
+    for (let i = 0; i < qty; i++) {
+      addToCart({ ...product, price: displayPrice, promo_price: hasPromo ? displayPrice : product.promo_price });
+    }
+    toast.success(`${qty}x ${product.name} adicionado ao carrinho`);
+    setQty(1);
   };
 
   return (
@@ -75,13 +78,27 @@ export default function ProductCard({ product, isLoggedIn, priceGroup }) {
                 </span>
               )}
             </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setQty(q => Math.max(1, q - 1))}
+                className="w-7 h-7 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors"
+              >
+                <Minus className="w-3 h-3" />
+              </button>
+              <span className="w-7 text-center text-sm font-semibold">{qty}</span>
+              <button
+                onClick={() => setQty(q => q + 1)}
+                className="w-7 h-7 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
             <Button
               size="sm"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-3"
               onClick={handleAdd}
             >
-              <ShoppingCart className="w-4 h-4 mr-1" />
-              Adicionar
+              <ShoppingCart className="w-4 h-4" />
             </Button>
           </div>
         ) : (

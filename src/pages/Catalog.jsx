@@ -13,12 +13,17 @@ export default function Catalog() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('Todas');
 
+  const { data: settings = [] } = useQuery({
+    queryKey: ['company-settings'],
+    queryFn: () => base44.entities.CompanySettings.list(),
+  });
+  const company = settings[0];
+
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products'],
     queryFn: () => base44.entities.Product.list(),
   });
 
-  // Fetch price group for this user
   const { data: priceGroups = [] } = useQuery({
     queryKey: ['price-groups'],
     queryFn: () => base44.entities.PriceGroup.list(),
@@ -41,17 +46,27 @@ export default function Catalog() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-6 space-y-8">
-      {/* Hero */}
-      <div className="relative rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-8 md:p-12 overflow-hidden">
+      {/* Hero Banner */}
+      <div
+        className="relative rounded-2xl overflow-hidden p-8 md:p-12"
+        style={company?.banner_url
+          ? { backgroundImage: `url(${company.banner_url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+          : {}}
+      >
+        {/* overlay */}
+        <div className={`absolute inset-0 rounded-2xl ${company?.banner_url ? 'bg-black/45' : 'bg-gradient-to-br from-primary/10 via-primary/5 to-transparent'}`} />
         <div className="relative z-10">
-          <div className="flex items-center gap-2 text-primary mb-2">
+          <div className={`flex items-center gap-2 mb-2 ${company?.banner_url ? 'text-white/80' : 'text-primary'}`}>
             <Leaf className="w-5 h-5" />
-            <span className="text-sm font-semibold tracking-wide uppercase">Atacado HortiFruti</span>
+            <span className="text-sm font-semibold tracking-wide uppercase">{company?.company_name || 'Atacado HortiFruti'}</span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
-            Produtos frescos direto <br className="hidden sm:block" />do CEASA para sua loja
+          <h1 className={`text-3xl md:text-4xl font-extrabold tracking-tight ${company?.banner_url ? 'text-white' : ''}`}>
+            {company?.banner_title || <>Produtos frescos direto <br className="hidden sm:block" />do CEASA para sua loja</>}
           </h1>
-          <p className="text-muted-foreground mt-3 max-w-lg">
+          {company?.banner_subtitle && (
+            <p className={`mt-2 text-lg font-medium ${company?.banner_url ? 'text-white/90' : 'text-foreground/70'}`}>{company.banner_subtitle}</p>
+          )}
+          <p className={`mt-3 max-w-lg ${company?.banner_url ? 'text-white/75' : 'text-muted-foreground'}`}>
             {user
               ? 'Navegue pelo catálogo, adicione ao carrinho e faça seu pedido online.'
               : 'Faça login para ver preços e realizar pedidos.'}
@@ -63,9 +78,11 @@ export default function Catalog() {
             </Badge>
           )}
         </div>
-        <div className="absolute right-0 bottom-0 opacity-10">
-          <Leaf className="w-64 h-64 -mr-10 -mb-10" />
-        </div>
+        {!company?.banner_url && (
+          <div className="absolute right-0 bottom-0 opacity-10">
+            <Leaf className="w-64 h-64 -mr-10 -mb-10" />
+          </div>
+        )}
       </div>
 
       <CatalogFilters search={search} setSearch={setSearch} category={category} setCategory={setCategory} />

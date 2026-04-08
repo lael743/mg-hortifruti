@@ -25,9 +25,10 @@ export default function Navbar({ user }) {
   const { data: settings = [] } = useQuery({
     queryKey: ['company-settings'],
     queryFn: () => base44.entities.CompanySettings.list(),
-    enabled: !!user && !isAdmin,
+    enabled: !!user,
   });
-  const adminWhatsApp = settings[0]?.whatsapp;
+  const company = settings[0];
+  const adminWhatsApp = company?.whatsapp;
 
   const navLinks = user ? [
     { label: 'Catálogo', path: '/' },
@@ -43,10 +44,16 @@ export default function Navbar({ user }) {
     <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-            <Leaf className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <span className="font-bold text-lg tracking-tight hidden sm:block">HortiFruti<span className="text-primary">B2B</span></span>
+          {company?.logo_url ? (
+            <img src={company.logo_url} alt="logo" className="h-9 w-auto object-contain rounded" />
+          ) : (
+            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
+              <Leaf className="w-5 h-5 text-primary-foreground" />
+            </div>
+          )}
+          <span className="font-bold text-lg tracking-tight hidden sm:block">
+            {company?.company_name || <><span>HortiFruti</span><span className="text-primary">B2B</span></>}
+          </span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">

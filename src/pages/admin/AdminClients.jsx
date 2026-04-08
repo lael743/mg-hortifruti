@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Search, UserPlus, Phone, MapPin, Building2, Pencil, Check, X, FileText, Clock } from 'lucide-react';
+import { Search, UserPlus, Phone, MapPin, Building2, Pencil, Check, X, FileText, Clock, TrendingUp, ShoppingBag, Star } from 'lucide-react';
 import InviteClientDialog from '../../components/admin/InviteClientDialog';
 import ClientFormDialog from '../../components/admin/ClientFormDialog';
 import { toast } from 'sonner';
@@ -30,6 +30,23 @@ export default function AdminClients() {
     queryKey: ['admin-clients'],
     queryFn: () => base44.entities.User.list(),
   });
+
+  const { data: orders = [] } = useQuery({
+    queryKey: ['admin-orders'],
+    queryFn: () => base44.entities.Order.list(),
+  });
+
+  // Build stats per client email
+  const statsByEmail = orders.reduce((acc, o) => {
+    if (!acc[o.customer_email]) acc[o.customer_email] = { total: 0, count: 0, lastOrder: null };
+    acc[o.customer_email].total += o.total || 0;
+    acc[o.customer_email].count += 1;
+    const d = new Date(o.created_date);
+    if (!acc[o.customer_email].lastOrder || d > new Date(acc[o.customer_email].lastOrder)) {
+      acc[o.customer_email].lastOrder = o.created_date;
+    }
+    return acc;
+  }, {});
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.User.update(id, data),
@@ -65,7 +82,9 @@ export default function AdminClients() {
     );
   });
 
-  const ClientCard = ({ client, showActions }) => (
+  const ClientCard = ({ client, showActions }) => {
+    const stats = statsByEmail[client.email];
+    return (
     <Card key={client.id} className="p-4">
       <div className="flex items-start gap-4">
         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -109,11 +128,25 @@ export default function AdminClients() {
             )}
           </div>
 
+          {stats && (
+            <div className="flex flex-wrap gap-3 mt-2 pt-2 border-t border-border/50">
+              <span className="flex items-center gap-1 text-xs font-semibold text-primary">
+                <TrendingUp className="w-3 h-3" />R$ {stats.total.toFixed(2)}
+              </span>
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <ShoppingBag className="w-3 h-3" />{stats.count} pedido{stats.count !== 1 ? 's' : ''}
+              </span>
+              {stats.lastOrder && (
+                <span className="text-xs text-muted-foreground">
+                  Último: {new Date(stats.lastOrder).toLocaleDateString('pt-BR')}
+                </span>
+              )}
+            </div>
+          )}
           {client.notes && (
             <p className="text-xs text-muted-foreground italic mt-2 border-l-2 border-border pl-2">{client.notes}</p>
           )}
         </div>
-
         <div className="flex flex-col gap-1 flex-shrink-0">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditClient(client)}>
             <Pencil className="w-4 h-4" />
@@ -142,6 +175,13 @@ export default function AdminClients() {
       </div>
     </Card>
   );
+  };
+
+  // Top clients by total spend
+  const topClients = [...clients]
+    .filter(c => statsByEmail[c.email])
+    .sort((a, b) => (statsByEmail[b.email]?.total || 0) - (statsByEmail[a.email]?.total || 0))
+    .slice(0, 10);
 
   return (
     <div className="space-y-4">
@@ -160,24 +200,53 @@ export default function AdminClients() {
       ) : (
         <Tabs defaultValue="pending">
           <TabsList className="w-full">
+            <TabsTrigger value="top" className="flex-1 gap-1.5">
+              <Star className="w-3.5 h-3.5" />Melhores
+            </TabsTrigger>
             <TabsTrigger value="pending" className="flex-1 gap-1.5">
-              <Clock className="w-3.5 h-3.5" />
-              Pendentes
+              <Clock className="w-3.5 h-3.5" />Pendentes
               {pending.length > 0 && (
                 <span className="bg-yellow-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{pending.length}</span>
               )}
             </TabsTrigger>
             <TabsTrigger value="approved" className="flex-1 gap-1.5">
-              <Check className="w-3.5 h-3.5" />
-              Aprovados
+              <Check className="w-3.5 h-3.5" />Aprovados
               <span className="bg-muted text-muted-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">{approved.length}</span>
             </TabsTrigger>
             <TabsTrigger value="rejected" className="flex-1 gap-1.5">
-              <X className="w-3.5 h-3.5" />
-              Rejeitados
+              <X className="w-3.5 h-3.5" />Rejeitados
               <span className="bg-muted text-muted-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">{rejected.length}</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="top" className="mt-4 space-y-3">
+            {topClients.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">Nenhum pedido registrado ainda.</div>
+            ) : (
+              <>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="bg-muted/50 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-primary">{clients.filter(c => statsByEmail[c.email]).length}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Clientes ativos</p>
+                  </div>
+                  <div className="bg-muted/50 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-primary">R$ {Object.values(statsByEmail).reduce((s, v) => s + v.total, 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Total faturado</p>
+                  </div>
+                  <div className="bg-muted/50 rounded-xl p-4 text-center">
+                    <p className="text-2xl font-bold text-primary">{orders.length}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Pedidos totais</p>
+                  </div>
+                </div>
+                {topClients.map((c, idx) => (
+                  <div key={c.id} className="flex items-center gap-3">
+                    <span className={`w-6 text-center font-bold text-sm ${idx < 3 ? 'text-accent' : 'text-muted-foreground'}`}>{idx + 1}</span>
+                    <div className="flex-1"><ClientCard client={c} showActions={false} /></div>
+                  </div>
+                ))}
+              </>
+            )}
+          </TabsContent>
 
           <TabsContent value="pending" className="mt-4 space-y-3">
             {filterList(pending).length === 0 ? (

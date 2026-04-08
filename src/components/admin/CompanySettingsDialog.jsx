@@ -14,7 +14,8 @@ const STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG'
 export default function CompanySettingsDialog({ onClose }) {
   const [form, setForm] = useState({
     company_name: '', cnpj: '', address: '', city: '', state: '',
-    whatsapp: '', whatsapp2: '', email: '', logo_url: '', report_footer: '',
+    whatsapp: '', whatsapp2: '', email: '', logo_url: '',
+    banner_url: '', banner_title: '', banner_subtitle: '', report_footer: '',
   });
   const [existingId, setExistingId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -35,6 +36,9 @@ export default function CompanySettingsDialog({ onClose }) {
           whatsapp2: s.whatsapp2 || '',
           email: s.email || '',
           logo_url: s.logo_url || '',
+          banner_url: s.banner_url || '',
+          banner_title: s.banner_title || '',
+          banner_subtitle: s.banner_subtitle || '',
           report_footer: s.report_footer || '',
         });
       }
@@ -125,6 +129,30 @@ export default function CompanySettingsDialog({ onClose }) {
               </label>
             </div>
             {form.logo_url && <img src={form.logo_url} alt="Logo" className="h-12 mt-2 object-contain" />}
+          </div>
+          <div>
+            <Label>Banner do Catálogo — Imagem de fundo</Label>
+            <div className="flex gap-2 mt-1">
+              <Input value={form.banner_url} onChange={e => set('banner_url', e.target.value)} placeholder="URL da imagem do banner" className="flex-1" />
+              <label className="cursor-pointer">
+                <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                  const file = e.target.files[0]; if (!file) return;
+                  setUploading(true);
+                  const { file_url } = await base44.integrations.Core.UploadFile({ file });
+                  set('banner_url', file_url); setUploading(false);
+                }} />
+                <Button variant="outline" size="icon" asChild disabled={uploading}><span><Upload className="w-4 h-4" /></span></Button>
+              </label>
+            </div>
+            {form.banner_url && <img src={form.banner_url} alt="Banner" className="h-20 mt-2 w-full object-cover rounded-lg" />}
+          </div>
+          <div>
+            <Label>Título do Banner</Label>
+            <Input value={form.banner_title} onChange={e => set('banner_title', e.target.value)} placeholder="Ex: Produtos frescos direto do CEASA" />
+          </div>
+          <div>
+            <Label>Subtítulo do Banner</Label>
+            <Input value={form.banner_subtitle} onChange={e => set('banner_subtitle', e.target.value)} placeholder="Ex: Atacado direto para sua loja" />
           </div>
           <div>
             <Label>Rodapé dos Relatórios</Label>
