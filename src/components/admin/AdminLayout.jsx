@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useOutletContext, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings, BarChart2, FileText, MessageCircle } from 'lucide-react';
+import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings, BarChart2, FileText, MessageCircle, ShieldOff, ShieldCheck } from 'lucide-react';
 import CompanySettingsDialog from './CompanySettingsDialog';
+import { base44 } from '@/api/base44Client';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 const tabs = [
   { label: 'Dashboard', path: '/admin/dashboard', icon: BarChart2 },
@@ -18,6 +21,30 @@ export default function AdminLayout() {
   const { user } = useOutletContext();
   const location = useLocation();
   const [showSettings, setShowSettings] = useState(false);
+  const [catalogActive, setCatalogActive] = useState(true);
+  const [settingsId, setSettingsId] = useState(null);
+  const [toggling, setToggling] = useState(false);
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    base44.entities.CompanySettings.list().then(list => {
+      if (list[0]) {
+        setSettingsId(list[0].id);
+        setCatalogActive(list[0].catalog_active !== false);
+      }
+    });
+  }, []);
+
+  const toggleCatalog = async () => {
+    if (!settingsId) return;
+    setToggling(true);
+    const next = !catalogActive;
+    await base44.entities.CompanySettings.update(settingsId, { catalog_active: next });
+    setCatalogActive(next);
+    queryClient.invalidateQueries({ queryKey: ['company-settings'] });
+    toast.success(next ? 'Catálogo ativado!' : 'Catálogo em manutenção.');
+    setToggling(false);
+  };
 
   if (!user || user.role !== 'admin') {
     return <Navigate to="/" replace />;
@@ -28,6 +55,17 @@ export default function AdminLayout() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Painel Administrativo</h1>
         <div className="flex gap-2">
+          <Button
+            variant={catalogActive ? 'outline' : 'destructive'}
+            size="sm"
+            onClick={toggleCatalog}
+            disabled={toggling}
+            title={catalogActive ? 'Desativar catálogo (manutenção)' : 'Ativar catálogo'}
+          >
+            {catalogActive
+              ? <><ShieldOff className="w-4 h-4 mr-1" />Desativar Catálogo</>
+              : <><ShieldCheck className="w-4 h-4 mr-1" />Ativar Catálogo</>}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
             <Settings className="w-4 h-4 mr-1" />Empresa
           </Button>

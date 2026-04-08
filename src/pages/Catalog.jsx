@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import ProductCard from '../components/catalog/ProductCard';
 import CatalogFilters from '../components/catalog/CatalogFilters';
-import { Leaf, TrendingUp } from 'lucide-react';
+import { Leaf, TrendingUp, Wrench } from 'lucide-react';
 import ProductRecommendations from '../components/catalog/ProductRecommendations';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +55,35 @@ export default function Catalog() {
     queryFn: () => base44.entities.Order.list(),
     enabled: !!user,
   });
+
+  const isCatalogActive = company?.catalog_active !== false;
+
+  // Show maintenance screen for non-admin users when catalog is off
+  if (!isCatalogActive && user?.role !== 'admin') {
+    return (
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
+          <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
+            <Wrench className="w-10 h-10 text-muted-foreground" />
+          </div>
+          <h2 className="text-2xl font-bold">Catálogo em Manutenção</h2>
+          <p className="text-muted-foreground max-w-sm">
+            Estamos atualizando nossos produtos. Em breve o catálogo estará disponível novamente.
+          </p>
+          {company?.whatsapp && (
+            <a
+              href={`https://wa.me/${company.whatsapp.replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-green-500 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-green-600 transition-colors"
+            >
+              Falar pelo WhatsApp
+            </a>
+          )}
+        </div>
+      </main>
+    );
+  }
 
   const activeProducts = products.filter(p => p.active !== false);
   const maxPrice = Math.max(0, ...activeProducts.map(p => p.promo_active && p.promo_price ? p.promo_price : p.price || 0));

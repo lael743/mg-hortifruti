@@ -50,6 +50,11 @@
     "report_footer": {
       "type": "string",
       "description": "Texto de rodap\u00e9 nos relat\u00f3rios"
+    },
+    "catalog_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Cat\u00e1logo vis\u00edvel para clientes"
     }
   },
   "required": [
