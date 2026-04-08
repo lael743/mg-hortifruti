@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +13,7 @@ import { Upload } from 'lucide-react';
 const STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
 export default function CompanySettingsDialog({ onClose }) {
+  const queryClient = useQueryClient();
   const [form, setForm] = useState({
     company_name: '', cnpj: '', address: '', city: '', state: '',
     whatsapp: '', whatsapp2: '', email: '', logo_url: '',
@@ -66,6 +68,7 @@ export default function CompanySettingsDialog({ onClose }) {
     }
     toast.success('Configurações salvas!');
     setSaving(false);
+    queryClient.invalidateQueries({ queryKey: ['company-settings'] });
     onClose();
   };
 
