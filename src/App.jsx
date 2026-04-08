@@ -6,6 +6,7 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { TenantProvider } from '@/lib/TenantContext';
 
 import AppLayout from './components/layout/AppLayout';
 import Catalog from './pages/Catalog';
@@ -72,13 +73,15 @@ const AuthenticatedApp = () => {
 function App() {
   return (
     <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
+      <TenantProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <Router>
           <AuthenticatedApp />
-        </Router>
-        <Toaster />
-        <SonnerToaster position="top-center" richColors />
-      </QueryClientProvider>
+          </Router>
+          <Toaster />
+          <SonnerToaster position="top-center" richColors />
+        </QueryClientProvider>
+      </TenantProvider>
     </AuthProvider>
   )
 }
