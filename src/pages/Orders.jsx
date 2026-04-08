@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Package, RefreshCw, ChevronDown, Calendar, X } from 'lucide-react';
+import { Package, RefreshCw, ChevronDown, Calendar, X, Eye } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { addToCart, clearCart } from '@/lib/cartStore';
