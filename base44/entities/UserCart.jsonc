@@ -1,0 +1,20 @@
+{
+  "name": "UserCart",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio dono do carrinho"
+    },
+    "items": {
+      "type": "array",
+      "description": "Itens do carrinho",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "required": [
+    "user_email"
+  ]
+}

@@ -4,6 +4,8 @@ import Navbar from './Navbar';
 import PendingApproval from './PendingApproval';
 import { base44 } from '@/api/base44Client';
 import ClientChatWidget from '../chat/ClientChatWidget';
+import { syncCartFromServer } from '@/lib/cartStore';
+import { syncFavoritesFromServer } from '@/lib/favoritesStore';
 
 export default function AppLayout() {
   const [user, setUser] = useState(null);
@@ -15,6 +17,8 @@ export default function AppLayout() {
       if (isAuth) {
         const me = await base44.auth.me();
         setUser(me);
+        syncCartFromServer(me.email);
+        syncFavoritesFromServer(me.email);
       }
       setLoading(false);
     }

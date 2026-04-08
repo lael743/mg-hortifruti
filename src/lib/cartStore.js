@@ -1,14 +1,37 @@
-// Simple cart store using localStorage
+import { base44 } from '@/api/base44Client';
+
 const CART_KEY = 'hortifruti_cart';
+let _currentUserEmail = null;
+let _cartRecordId = null;
+
+export function setCartUser(email, recordId) {
+  _currentUserEmail = email;
+  _cartRecordId = recordId;
+}
 
 export function getCart() {
   const raw = localStorage.getItem(CART_KEY);
   return raw ? JSON.parse(raw) : [];
 }
 
+async function persistCartToServer(items) {
+  if (!_currentUserEmail) return;
+  try {
+    if (_cartRecordId) {
+      await base44.entities.UserCart.update(_cartRecordId, { items });
+    } else {
+      const record = await base44.entities.UserCart.create({ user_email: _currentUserEmail, items });
+      _cartRecordId = record.id;
+    }
+  } catch (e) {
+    // silently fail - localStorage still works
+  }
+}
+
 export function saveCart(items) {
   localStorage.setItem(CART_KEY, JSON.stringify(items));
   window.dispatchEvent(new Event('cart-updated'));
+  persistCartToServer(items);
 }
 
 export function addToCart(product, quantity = 1) {
@@ -54,4 +77,27 @@ export function getCartTotal(cart) {
 
 export function getCartCount(cart) {
   return cart.reduce((sum, item) => sum + item.quantity, 0);
+}
+
+export async function syncCartFromServer(userEmail) {
+  try {
+    const records = await base44.entities.UserCart.filter({ user_email: userEmail });
+    if (records.length > 0) {
+      const record = records[0];
+      _cartRecordId = record.id;
+      _currentUserEmail = userEmail;
+      const serverItems = record.items || [];
+      localStorage.setItem(CART_KEY, JSON.stringify(serverItems));
+      window.dispatchEvent(new Event('cart-updated'));
+    } else {
+      // No server record yet — push local cart to server
+      _currentUserEmail = userEmail;
+      const localItems = getCart();
+      if (localItems.length > 0) {
+        persistCartToServer(localItems);
+      }
+    }
+  } catch (e) {
+    _currentUserEmail = userEmail;
+  }
 }

@@ -1,0 +1,20 @@
+{
+  "name": "UserFavorites",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio"
+    },
+    "product_ids": {
+      "type": "array",
+      "description": "IDs dos produtos favoritos",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "user_email"
+  ]
+}
