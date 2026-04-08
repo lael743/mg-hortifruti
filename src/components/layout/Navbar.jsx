@@ -52,7 +52,7 @@ export default function Navbar({ user }) {
             </div>
           )}
           <span className="font-bold text-lg tracking-tight hidden sm:block">
-            {company?.company_name || <><span>HortiFruti</span><span className="text-primary">B2B</span></>}
+            {company?.company_name || <span>Horta</span>}
           </span>
         </Link>
 
