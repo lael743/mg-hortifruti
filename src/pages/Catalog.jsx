@@ -3,6 +3,8 @@ import { getFavorites } from '../lib/favoritesStore';
 import { useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useTenantQuery } from '@/lib/useTenantQuery';
+import { useTenant } from '@/lib/TenantContext';
 import ProductCard from '../components/catalog/ProductCard';
 import CatalogFilters from '../components/catalog/CatalogFilters';
 import { Leaf, TrendingUp, Wrench, Printer, ChevronUp, Phone, Mail, MapPin } from 'lucide-react';
@@ -12,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 
 export default function Catalog() {
   const { user } = useOutletContext();
+  const { tenantId } = useTenant();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('Todas');
   const [priceRange, setPriceRange] = useState([0, 9999]);
@@ -33,38 +36,40 @@ export default function Catalog() {
   }, []);
 
   const { data: settings = [] } = useQuery({
-    queryKey: ['company-settings'],
-    queryFn: () => base44.entities.CompanySettings.list(),
+    queryKey: ['company-settings', tenantId],
+    queryFn: () => tenantId ? base44.entities.CompanySettings.filter({ tenant_id: tenantId }) : [],
+    enabled: !!tenantId,
   });
   const company = settings[0];
 
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => base44.entities.Product.list(),
-  });
+  const { data: products = [], isLoading } = useTenantQuery('Product', {}, { enabled: !!tenantId });
 
-  const { data: priceGroups = [] } = useQuery({
-    queryKey: ['price-groups'],
-    queryFn: () => base44.entities.PriceGroup.list(),
-    enabled: !!user,
-  });
+  const { data: priceGroups = [] } = useTenantQuery('PriceGroup', {}, { enabled: !!user && !!tenantId });
   const userPriceGroup = user?.price_group_id
     ? priceGroups.find(g => g.id === user.price_group_id)
     : null;
 
   const { data: myOrders = [] } = useQuery({
-    queryKey: ['my-orders-catalog', user?.email],
-    queryFn: () => base44.entities.Order.filter({ customer_email: user.email }, '-created_date'),
-    enabled: !!user,
+    queryKey: ['my-orders-catalog', user?.email, tenantId],
+    queryFn: () => tenantId ? base44.entities.Order.filter({ tenant_id: tenantId, customer_email: user.email }, '-created_date') : [],
+    enabled: !!user && !!tenantId,
   });
 
   const { data: allOrders = [] } = useQuery({
-    queryKey: ['all-orders-reco'],
-    queryFn: () => base44.entities.Order.list(),
-    enabled: !!user,
+    queryKey: ['all-orders-reco', tenantId],
+    queryFn: () => tenantId ? base44.entities.Order.list() : [],
+    enabled: !!user && !!tenantId,
   });
 
   const isCatalogActive = company?.catalog_active !== false;
+
+  if (!tenantId && !isLoading) {
+    return (
+      <main className="max-w-7xl mx-auto px-4 py-6 text-center">
+        <p className="text-muted-foreground">Tenant não encontrado</p>
+      </main>
+    );
+  }
 
   const handlePrintCatalog = () => {
     const activeProds = products.filter(p => p.active !== false);
@@ -137,7 +142,7 @@ export default function Catalog() {
     );
   }
 
-  const activeProducts = products.filter(p => p.active !== false);
+  const activeProducts = products.filter(p => p.active !== false && p.tenant_id === tenantId);
   const maxPrice = Math.max(0, ...activeProducts.map(p => p.promo_active && p.promo_price ? p.promo_price : p.price || 0));
 
   const filtered = activeProducts.filter(p => {
