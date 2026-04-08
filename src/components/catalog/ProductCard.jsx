@@ -46,12 +46,14 @@ export default function ProductCard({ product, isLoggedIn, priceGroup }) {
             <Package className="w-12 h-12 opacity-30" />
           </div>
         )}
-        <button
-          onClick={handleToggleFav}
-          className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/80 backdrop-blur flex items-center justify-center shadow hover:scale-110 transition-transform"
-        >
-          <Heart className={`w-4 h-4 transition-colors ${fav ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
-        </button>
+        {isLoggedIn && (
+          <button
+            onClick={handleToggleFav}
+            className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/80 backdrop-blur flex items-center justify-center shadow hover:scale-110 transition-transform"
+          >
+            <Heart className={`w-4 h-4 transition-colors ${fav ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
+          </button>
+        )}
         {hasPromo && (
           <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground font-bold shadow-lg">
             <Tag className="w-3 h-3 mr-1" />PROMO

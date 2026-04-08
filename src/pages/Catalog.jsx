@@ -214,6 +214,7 @@ export default function Catalog() {
         priceRange={priceRange} setPriceRange={setPriceRange}
         onlyFavorites={onlyFavorites} setOnlyFavorites={setOnlyFavorites}
         maxPrice={maxPrice || 500}
+        isLoggedIn={!!user}
       />
 
       {user && myOrders.length > 0 && (
