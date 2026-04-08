@@ -16,7 +16,7 @@ export default function PendingApproval({ status }) {
         </div>
 
         <div>
-          <h1 className="text-2xl font-bold">HortiFruti<span className="text-primary">B2B</span></h1>
+          <h1 className="text-2xl font-bold">Horta</h1>
           <p className="text-muted-foreground text-sm mt-1">Portal de Atacado</p>
         </div>
 
