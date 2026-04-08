@@ -63,13 +63,7 @@ export default function Catalog() {
 
   const isCatalogActive = company?.catalog_active !== false;
 
-  if (!tenantId && !isLoading) {
-    return (
-      <main className="max-w-7xl mx-auto px-4 py-6 text-center">
-        <p className="text-muted-foreground">Tenant não encontrado</p>
-      </main>
-    );
-  }
+
 
   const handlePrintCatalog = () => {
     const activeProds = products.filter(p => p.active !== false);
@@ -142,7 +136,7 @@ export default function Catalog() {
     );
   }
 
-  const activeProducts = products.filter(p => p.active !== false && p.tenant_id === tenantId);
+  const activeProducts = products.filter(p => p.active !== false);
   const maxPrice = Math.max(0, ...activeProducts.map(p => p.promo_active && p.promo_price ? p.promo_price : p.price || 0));
 
   const filtered = activeProducts.filter(p => {

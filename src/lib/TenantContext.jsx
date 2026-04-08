@@ -16,11 +16,24 @@ export function TenantProvider({ children }) {
         
         if (subdomain) {
           // Busca o tenant pelo subdomínio
-          const tenants = await base44.entities.Tenant.filter({ subdomain });
-          if (tenants.length > 0) {
-            const tenant = tenants[0];
-            setTenantId(tenant.id);
-            setTenantData(tenant);
+          try {
+            const tenants = await base44.entities.Tenant.filter({ subdomain, status: 'active' });
+            if (tenants.length > 0) {
+              const tenant = tenants[0];
+              setTenantId(tenant.id);
+              setTenantData(tenant);
+            } else {
+              console.warn(`Tenant com subdomínio '${subdomain}' não encontrado ou inativo`);
+            }
+          } catch (filterErr) {
+            console.warn('Erro ao filtrar tenant:', filterErr);
+            // Tenta listar todos e encontra manualmente
+            const allTenants = await base44.entities.Tenant.list();
+            const tenant = allTenants.find(t => t.subdomain === subdomain && t.status === 'active');
+            if (tenant) {
+              setTenantId(tenant.id);
+              setTenantData(tenant);
+            }
           }
         }
         // Se não há subdomínio, é super-admin (tenantId = null)
@@ -44,7 +57,8 @@ export function TenantProvider({ children }) {
 export function useTenant() {
   const context = useContext(TenantContext);
   if (!context) {
-    throw new Error('useTenant deve ser usado dentro de TenantProvider');
+    console.error('useTenant: contexto não disponível');
+    return { tenantId: null, tenantData: null, loading: false };
   }
   return context;
 }
