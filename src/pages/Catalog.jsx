@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useTenantQuery } from '@/lib/useTenantQuery';
 import { useTenant } from '@/lib/TenantContext';
+import { useProductsQuery } from '@/lib/useTenantQuery';
 import ProductCard from '../components/catalog/ProductCard';
 import CatalogFilters from '../components/catalog/CatalogFilters';
 import { Leaf, TrendingUp, Wrench, Printer, ChevronUp, Phone, Mail, MapPin } from 'lucide-react';
@@ -42,7 +43,7 @@ export default function Catalog() {
   });
   const company = settings[0];
 
-  const { data: products = [], isLoading } = useTenantQuery('Product', {}, { enabled: !!tenantId });
+  const { data: products = [], isLoading } = useProductsQuery();
 
   const { data: priceGroups = [] } = useTenantQuery('PriceGroup', {}, { enabled: !!user && !!tenantId });
   const userPriceGroup = user?.price_group_id

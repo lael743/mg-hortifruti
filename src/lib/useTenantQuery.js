@@ -39,3 +39,26 @@ export function useSuperAdminQuery(entityName, filters = {}, options = {}) {
     ...options,
   });
 }
+
+/**
+ * Query que funciona com ou sem tenant (fallback para listar tudo se não há tenant)
+ */
+export function useProductsQuery(filters = {}, options = {}) {
+  const { tenantId, loading: tenantLoading } = useTenant();
+
+  return useQuery({
+    queryKey: ['Product', tenantId, JSON.stringify(filters)],
+    queryFn: async () => {
+      if (tenantId) {
+        // Com tenant: filtra por tenant_id
+        const mergedFilters = { tenant_id: tenantId, ...filters };
+        return await base44.entities.Product.filter(mergedFilters);
+      } else {
+        // Sem tenant (super-admin ou preview): lista todos
+        return await base44.entities.Product.list();
+      }
+    },
+    enabled: !tenantLoading,
+    ...options,
+  });
+}
