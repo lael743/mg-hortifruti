@@ -6,6 +6,7 @@ import { base44 } from '@/api/base44Client';
 import ProductCard from '../components/catalog/ProductCard';
 import CatalogFilters from '../components/catalog/CatalogFilters';
 import { Leaf, TrendingUp } from 'lucide-react';
+import ProductRecommendations from '../components/catalog/ProductRecommendations';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
@@ -42,6 +43,18 @@ export default function Catalog() {
   const userPriceGroup = user?.price_group_id
     ? priceGroups.find(g => g.id === user.price_group_id)
     : null;
+
+  const { data: myOrders = [] } = useQuery({
+    queryKey: ['my-orders-catalog', user?.email],
+    queryFn: () => base44.entities.Order.filter({ customer_email: user.email }, '-created_date'),
+    enabled: !!user,
+  });
+
+  const { data: allOrders = [] } = useQuery({
+    queryKey: ['all-orders-reco'],
+    queryFn: () => base44.entities.Order.list(),
+    enabled: !!user,
+  });
 
   const activeProducts = products.filter(p => p.active !== false);
   const maxPrice = Math.max(0, ...activeProducts.map(p => p.promo_active && p.promo_price ? p.promo_price : p.price || 0));
@@ -106,6 +119,16 @@ export default function Catalog() {
         onlyFavorites={onlyFavorites} setOnlyFavorites={setOnlyFavorites}
         maxPrice={maxPrice || 500}
       />
+
+      {user && myOrders.length > 0 && (
+        <ProductRecommendations
+          allProducts={products}
+          myOrders={myOrders}
+          allOrders={allOrders}
+          isLoggedIn={!!user}
+          priceGroup={userPriceGroup}
+        />
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

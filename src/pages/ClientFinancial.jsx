@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TrendingUp, FileDown, DollarSign, ShoppingBag, CheckCircle2, Clock } from 'lucide-react';
+import ProductRecommendations from '../components/catalog/ProductRecommendations';
 
 const statusColors = {
   Pendente:  'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -32,6 +33,17 @@ export default function ClientFinancial() {
     queryFn: () => base44.entities.CompanySettings.list(),
   });
   const company = settings[0] || {};
+
+  const { data: allProducts = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => base44.entities.Product.list(),
+  });
+
+  const { data: allOrders = [] } = useQuery({
+    queryKey: ['all-orders-reco'],
+    queryFn: () => base44.entities.Order.list(),
+    enabled: !!user,
+  });
 
   const stats = useMemo(() => {
     const active = orders.filter(o => o.status !== 'Cancelado');
@@ -178,6 +190,18 @@ export default function ClientFinancial() {
             </table>
           </div>
         </Card>
+      )}
+
+      {/* Recommendations */}
+      {orders.length > 0 && (
+        <ProductRecommendations
+          allProducts={allProducts}
+          myOrders={orders}
+          allOrders={allOrders}
+          isLoggedIn={true}
+          priceGroup={null}
+          maxPerSection={4}
+        />
       )}
 
       {/* WhatsApp Admin Button */}
