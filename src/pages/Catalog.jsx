@@ -64,20 +64,37 @@ export default function Catalog() {
       const discount = userPriceGroup?.discount_percent || 0;
       const basePrice = p.promo_active && p.promo_price ? p.promo_price : p.price || 0;
       const finalPrice = basePrice * (1 - discount / 100);
-      return `<tr>
-        <td>${p.name}</td>
-        <td>${p.category}</td>
-        <td>${p.packaging_type}${p.weight ? ' / ' + p.weight : ''}</td>
-        <td>${p.description || '-'}</td>
-        <td style="text-align:right">R$ ${finalPrice.toFixed(2)}</td>
-        ${p.promo_active ? '<td style="color:green;text-align:center">Sim</td>' : '<td style="text-align:center">-</td>'}
-      </tr>`;
+      return `<div class="item">
+        <div class="item-name">${p.name}${p.promo_active ? ' <span class="promo">PROMO</span>' : ''}</div>
+        <div class="item-meta">${p.packaging_type}${p.weight ? ' · ' + p.weight : ''}${p.description ? ' · ' + p.description : ''}</div>
+        <div class="item-bottom">
+          <span class="item-price">R$ ${finalPrice.toFixed(2)}</span>
+          <span class="item-qty">Qtd: ______</span>
+        </div>
+      </div>`;
     }).join('');
-    const tableGroup = userPriceGroup ? `<p style="margin-bottom:8px">Tabela de preços: <b>${userPriceGroup.name}</b>${userPriceGroup.discount_percent ? ` (${userPriceGroup.discount_percent}% de desconto)` : ''}</p>` : '';
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Catálogo de Produtos</title>
-    <style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px}h2{margin-bottom:4px}table{width:100%;border-collapse:collapse;margin-top:12px}th{background:#2d7a3a;color:#fff;padding:8px 6px;text-align:left}td{padding:6px;border-bottom:1px solid #ddd}tr:nth-child(even){background:#f5f5f5}p{font-size:11px;color:#555}@media print{button{display:none}}</style></head>
-    <body><h2>${company?.company_name || 'Catálogo de Produtos'}</h2><p>Emitido em: ${new Date().toLocaleDateString('pt-BR')} • ${activeProds.length} produtos</p>${tableGroup}
-    <table><thead><tr><th>Produto</th><th>Categoria</th><th>Embalagem</th><th>Descrição</th><th>Preço</th><th>Promo</th></tr></thead><tbody>${rows}</tbody></table></body></html>`;
+    const tableGroup = userPriceGroup ? `<p class="subtitle">Tabela: <b>${userPriceGroup.name}</b>${userPriceGroup.discount_percent ? ` (${userPriceGroup.discount_percent}% de desconto)` : ''}</p>` : '';
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Tabela de Produtos</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: Arial, sans-serif; font-size: 9px; padding: 10px 12px; }
+      h2 { font-size: 13px; margin-bottom: 2px; }
+      .subtitle { font-size: 9px; color: #555; margin-bottom: 6px; }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+      .item { border: 1px solid #ccc; border-radius: 3px; padding: 5px 6px; display: flex; flex-direction: column; gap: 2px; }
+      .item-name { font-weight: bold; font-size: 9px; line-height: 1.2; }
+      .item-meta { color: #666; font-size: 8px; line-height: 1.3; }
+      .item-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
+      .item-price { font-weight: bold; color: #2d7a3a; font-size: 9.5px; }
+      .item-qty { font-size: 8px; color: #444; }
+      .promo { background: #f59e0b; color: #fff; font-size: 7px; padding: 0 3px; border-radius: 2px; font-weight: bold; }
+      @media print { @page { margin: 8mm; size: A4; } }
+    </style></head>
+    <body>
+      <h2>${company?.company_name || 'Tabela de Produtos'} &nbsp;·&nbsp; <span style="font-size:10px;font-weight:normal">${new Date().toLocaleDateString('pt-BR')} &nbsp;·&nbsp; ${activeProds.length} produtos</span></h2>
+      ${tableGroup}
+      <div class="grid">${rows}</div>
+    </body></html>`;
     const w = window.open('', '_blank');
     w.document.write(html);
     w.document.close();
