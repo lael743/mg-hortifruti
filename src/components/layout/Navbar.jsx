@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Menu, User, LogOut, Package, LayoutDashboard, Leaf, TrendingUp, MessageCircle } from 'lucide-react';
+import { ShoppingCart, Menu, User, LogOut, Package, LayoutDashboard, Leaf, TrendingUp, MessageCircle, UserCog } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -104,6 +104,9 @@ export default function Navbar({ user }) {
                   <p className="text-sm font-medium truncate">{user.full_name || user.email}</p>
                   <p className="text-xs text-muted-foreground">{isAdmin ? 'Administrador' : 'Cliente'}</p>
                 </div>
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                  <UserCog className="w-4 h-4 mr-2" />Meu Perfil
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/orders')}>
                   <Package className="w-4 h-4 mr-2" />Meus Pedidos
                 </DropdownMenuItem>

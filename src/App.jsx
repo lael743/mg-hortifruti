@@ -20,6 +20,7 @@ import AdminPriceGroups from './pages/admin/AdminPriceGroups';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminReports from './pages/admin/AdminReports';
 import ClientFinancial from './pages/ClientFinancial';
+import Profile from './pages/Profile';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -49,6 +50,7 @@ const AuthenticatedApp = () => {
         <Route path="/orders" element={<Orders />} />
         <Route path="/orders/:id" element={<OrderDetail />} />
         <Route path="/financial" element={<ClientFinancial />} />
+        <Route path="/profile" element={<Profile />} />
         <Route element={<AdminLayout />}>
           <Route path="/admin" element={<AdminProducts />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
