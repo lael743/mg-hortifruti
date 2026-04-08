@@ -78,48 +78,50 @@ export default function ProductCard({ product, isLoggedIn, priceGroup }) {
         </div>
 
         {isLoggedIn ? (
-          <div className="flex items-end justify-between pt-1">
+          <div className="space-y-3 pt-1">
             <div>
               {(hasPromo || hasGroupDiscount) && (
                 <span className="text-xs text-muted-foreground line-through block">
                   R$ {product.price.toFixed(2)}
                 </span>
               )}
-              <span className="text-xl font-bold text-primary">
+              <span className="text-2xl font-bold text-primary">
                 R$ {displayPrice.toFixed(2)}
               </span>
               {hasGroupDiscount && (
-                <span className="text-[10px] text-green-600 font-semibold">
+                <span className="text-xs text-green-600 font-semibold">
                   {discount > 0 ? `-${discount}%` : `+${Math.abs(discount)}%`} {priceGroup.name}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setQty(q => Math.max(1, q - 1))}
-                className="w-7 h-7 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors"
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 border border-border rounded-lg p-1">
+                <button
+                  onClick={() => setQty(q => Math.max(1, q - 1))}
+                  className="w-7 h-7 rounded-md hover:bg-muted transition-colors flex items-center justify-center"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="w-8 text-center text-sm font-semibold">{qty}</span>
+                <button
+                  onClick={() => setQty(q => q + 1)}
+                  className="w-7 h-7 rounded-md hover:bg-muted transition-colors flex items-center justify-center"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              <Button
+                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={handleAdd}
               >
-                <Minus className="w-3 h-3" />
-              </button>
-              <span className="w-7 text-center text-sm font-semibold">{qty}</span>
-              <button
-                onClick={() => setQty(q => q + 1)}
-                className="w-7 h-7 rounded-md border border-border flex items-center justify-center hover:bg-muted transition-colors"
-              >
-                <Plus className="w-3 h-3" />
-              </button>
+                <ShoppingCart className="w-4 h-4 mr-1" />
+                Adicionar
+              </Button>
             </div>
-            <Button
-              size="sm"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-3"
-              onClick={handleAdd}
-            >
-              <ShoppingCart className="w-4 h-4" />
-            </Button>
           </div>
         ) : (
           <div className="pt-1">
-            <p className="text-sm text-muted-foreground italic">Faça login para ver o preço</p>
+            <p className="text-xs text-muted-foreground italic">Faça login para ver preço</p>
           </div>
         )}
       </div>
