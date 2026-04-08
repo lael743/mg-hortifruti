@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { Link, Outlet, useLocation, useOutletContext, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings } from 'lucide-react';
+import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings, BarChart2, FileText } from 'lucide-react';
 import CompanySettingsDialog from './CompanySettingsDialog';
 
 const tabs = [
+  { label: 'Dashboard', path: '/admin/dashboard', icon: BarChart2 },
   { label: 'Produtos', path: '/admin', icon: Package },
   { label: 'Pedidos', path: '/admin/orders', icon: ClipboardList },
   { label: 'Clientes', path: '/admin/clients', icon: Users },
   { label: 'Tabelas', path: '/admin/price-groups', icon: Tag },
+  { label: 'Relatórios', path: '/admin/reports', icon: FileText },
 ];
 
 export default function AdminLayout() {

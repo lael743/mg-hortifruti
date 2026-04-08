@@ -17,6 +17,8 @@ import AdminProducts from './pages/admin/AdminProducts';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminClients from './pages/admin/AdminClients';
 import AdminPriceGroups from './pages/admin/AdminPriceGroups';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminReports from './pages/admin/AdminReports';
 import ClientFinancial from './pages/ClientFinancial';
 
 const AuthenticatedApp = () => {
@@ -52,6 +54,8 @@ const AuthenticatedApp = () => {
           <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/admin/clients" element={<AdminClients />} />
           <Route path="/admin/price-groups" element={<AdminPriceGroups />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/reports" element={<AdminReports />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />
