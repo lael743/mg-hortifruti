@@ -6,6 +6,7 @@ import ProductCard from '../components/catalog/ProductCard';
 import CatalogFilters from '../components/catalog/CatalogFilters';
 import { Leaf, TrendingUp } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 
 export default function Catalog() {
   const { user } = useOutletContext();
@@ -16,6 +17,16 @@ export default function Catalog() {
     queryKey: ['products'],
     queryFn: () => base44.entities.Product.list(),
   });
+
+  // Fetch price group for this user
+  const { data: priceGroups = [] } = useQuery({
+    queryKey: ['price-groups'],
+    queryFn: () => base44.entities.PriceGroup.list(),
+    enabled: !!user,
+  });
+  const userPriceGroup = user?.price_group_id
+    ? priceGroups.find(g => g.id === user.price_group_id)
+    : null;
 
   const activeProducts = products.filter(p => p.active !== false);
 
@@ -45,6 +56,12 @@ export default function Catalog() {
               ? 'Navegue pelo catálogo, adicione ao carrinho e faça seu pedido online.'
               : 'Faça login para ver preços e realizar pedidos.'}
           </p>
+          {userPriceGroup && (
+            <Badge className="mt-3 bg-primary/10 text-primary border-primary/20 border">
+              Tabela: {userPriceGroup.name}
+              {userPriceGroup.discount_percent > 0 && ` — ${userPriceGroup.discount_percent}% de desconto`}
+            </Badge>
+          )}
         </div>
         <div className="absolute right-0 bottom-0 opacity-10">
           <Leaf className="w-64 h-64 -mr-10 -mb-10" />
@@ -73,7 +90,7 @@ export default function Catalog() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {promoProducts.map(p => (
-                  <ProductCard key={p.id} product={p} isLoggedIn={!!user} />
+                  <ProductCard key={p.id} product={p} isLoggedIn={!!user} priceGroup={userPriceGroup} />
                 ))}
               </div>
             </section>
@@ -88,7 +105,7 @@ export default function Catalog() {
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {regularProducts.map(p => (
-                  <ProductCard key={p.id} product={p} isLoggedIn={!!user} />
+                  <ProductCard key={p.id} product={p} isLoggedIn={!!user} priceGroup={userPriceGroup} />
                 ))}
               </div>
             )}

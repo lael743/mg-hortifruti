@@ -16,6 +16,8 @@ import AdminLayout from './components/admin/AdminLayout';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminClients from './pages/admin/AdminClients';
+import AdminPriceGroups from './pages/admin/AdminPriceGroups';
+import ClientFinancial from './pages/ClientFinancial';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -44,10 +46,12 @@ const AuthenticatedApp = () => {
         <Route path="/cart" element={<Cart />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/orders/:id" element={<OrderDetail />} />
+        <Route path="/financial" element={<ClientFinancial />} />
         <Route element={<AdminLayout />}>
           <Route path="/admin" element={<AdminProducts />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/admin/clients" element={<AdminClients />} />
+          <Route path="/admin/price-groups" element={<AdminPriceGroups />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />

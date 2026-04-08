@@ -1,17 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, Outlet, useLocation, useOutletContext, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Package, Users, ClipboardList, ArrowLeft } from 'lucide-react';
+import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings } from 'lucide-react';
+import CompanySettingsDialog from './CompanySettingsDialog';
 
 const tabs = [
   { label: 'Produtos', path: '/admin', icon: Package },
   { label: 'Pedidos', path: '/admin/orders', icon: ClipboardList },
   { label: 'Clientes', path: '/admin/clients', icon: Users },
+  { label: 'Tabelas', path: '/admin/price-groups', icon: Tag },
 ];
 
 export default function AdminLayout() {
   const { user } = useOutletContext();
   const location = useLocation();
+  const [showSettings, setShowSettings] = useState(false);
 
   if (!user || user.role !== 'admin') {
     return <Navigate to="/" replace />;
@@ -21,12 +24,18 @@ export default function AdminLayout() {
     <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Painel Administrativo</h1>
-        <Link to="/">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="w-4 h-4 mr-1" />Catálogo
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
+            <Settings className="w-4 h-4 mr-1" />Empresa
           </Button>
-        </Link>
+          <Link to="/">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-1" />Catálogo
+            </Button>
+          </Link>
+        </div>
       </div>
+      {showSettings && <CompanySettingsDialog onClose={() => setShowSettings(false)} />}
 
       <div className="flex gap-1 bg-muted p-1 rounded-xl">
         {tabs.map(tab => {

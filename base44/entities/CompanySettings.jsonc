@@ -1,0 +1,46 @@
+{
+  "name": "CompanySettings",
+  "type": "object",
+  "properties": {
+    "company_name": {
+      "type": "string",
+      "description": "Nome da empresa distribuidora"
+    },
+    "cnpj": {
+      "type": "string",
+      "description": "CNPJ da empresa"
+    },
+    "address": {
+      "type": "string",
+      "description": "Endere\u00e7o da empresa"
+    },
+    "city": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "whatsapp": {
+      "type": "string",
+      "description": "WhatsApp principal para contato dos clientes"
+    },
+    "whatsapp2": {
+      "type": "string",
+      "description": "WhatsApp secund\u00e1rio"
+    },
+    "email": {
+      "type": "string"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "URL do logo da empresa"
+    },
+    "report_footer": {
+      "type": "string",
+      "description": "Texto de rodap\u00e9 nos relat\u00f3rios"
+    }
+  },
+  "required": [
+    "company_name"
+  ]
+}

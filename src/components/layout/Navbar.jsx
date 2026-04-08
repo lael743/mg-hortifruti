@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Menu, X, User, LogOut, Package, LayoutDashboard, Leaf } from 'lucide-react';
+import { ShoppingCart, Menu, User, LogOut, Package, LayoutDashboard, Leaf, TrendingUp, MessageCircle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { base44 } from '@/api/base44Client';
 import { getCart, getCartCount } from '@/lib/cartStore';
 
 export default function Navbar({ user }) {
@@ -21,9 +22,17 @@ export default function Navbar({ user }) {
     return () => window.removeEventListener('cart-updated', update);
   }, []);
 
+  const { data: settings = [] } = useQuery({
+    queryKey: ['company-settings'],
+    queryFn: () => base44.entities.CompanySettings.list(),
+    enabled: !!user && !isAdmin,
+  });
+  const adminWhatsApp = settings[0]?.whatsapp;
+
   const navLinks = user ? [
     { label: 'Catálogo', path: '/' },
     { label: 'Meus Pedidos', path: '/orders' },
+    ...(!isAdmin ? [{ label: 'Financeiro', path: '/financial' }] : []),
   ] : [];
 
   if (isAdmin) {
@@ -49,6 +58,20 @@ export default function Navbar({ user }) {
         </nav>
 
         <div className="flex items-center gap-2">
+          {/* WhatsApp admin shortcut for clients */}
+          {user && !isAdmin && adminWhatsApp && (
+            <a
+              href={`https://wa.me/${adminWhatsApp.replace(/\D/g, '')}?text=Olá! Sou ${user.company_name || user.full_name || user.email} e preciso de ajuda.`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex"
+            >
+              <button className="flex items-center gap-1.5 text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-full font-medium transition-colors">
+                <MessageCircle className="w-3.5 h-3.5" />WhatsApp
+              </button>
+            </a>
+          )}
+
           {user && (
             <Link to="/cart" className="relative">
               <Button variant="ghost" size="icon" className="relative">
@@ -77,6 +100,11 @@ export default function Navbar({ user }) {
                 <DropdownMenuItem onClick={() => navigate('/orders')}>
                   <Package className="w-4 h-4 mr-2" />Meus Pedidos
                 </DropdownMenuItem>
+                {!isAdmin && (
+                  <DropdownMenuItem onClick={() => navigate('/financial')}>
+                    <TrendingUp className="w-4 h-4 mr-2" />Financeiro
+                  </DropdownMenuItem>
+                )}
                 {isAdmin && (
                   <DropdownMenuItem onClick={() => navigate('/admin')}>
                     <LayoutDashboard className="w-4 h-4 mr-2" />Painel Admin

@@ -1,0 +1,26 @@
+{
+  "name": "PriceGroup",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome da tabela de pre\u00e7os (ex: Atacado, Varejo)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o da tabela"
+    },
+    "discount_percent": {
+      "type": "number",
+      "description": "Desconto percentual aplicado sobre o pre\u00e7o base (negativo = acr\u00e9scimo)",
+      "default": 0
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

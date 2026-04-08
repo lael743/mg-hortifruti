@@ -6,12 +6,18 @@ import { ShoppingCart, Tag, Package } from 'lucide-react';
 import { addToCart } from '@/lib/cartStore';
 import { toast } from 'sonner';
 
-export default function ProductCard({ product, isLoggedIn }) {
+export default function ProductCard({ product, isLoggedIn, priceGroup }) {
   const hasPromo = product.promo_active && product.promo_price;
-  const displayPrice = hasPromo ? product.promo_price : product.price;
+  const basePrice = hasPromo ? product.promo_price : product.price;
+
+  // Apply price group discount/surcharge
+  const discount = priceGroup?.discount_percent || 0;
+  const displayPrice = basePrice * (1 - discount / 100);
+  const hasGroupDiscount = discount !== 0 && isLoggedIn;
 
   const handleAdd = () => {
-    addToCart(product);
+    // Pass the adjusted price to cart
+    addToCart({ ...product, price: displayPrice, promo_price: hasPromo ? displayPrice : product.promo_price });
     toast.success(`${product.name} adicionado ao carrinho`);
   };
 
@@ -55,7 +61,7 @@ export default function ProductCard({ product, isLoggedIn }) {
         {isLoggedIn ? (
           <div className="flex items-end justify-between pt-1">
             <div>
-              {hasPromo && (
+              {(hasPromo || hasGroupDiscount) && (
                 <span className="text-xs text-muted-foreground line-through block">
                   R$ {product.price.toFixed(2)}
                 </span>
@@ -63,6 +69,11 @@ export default function ProductCard({ product, isLoggedIn }) {
               <span className="text-xl font-bold text-primary">
                 R$ {displayPrice.toFixed(2)}
               </span>
+              {hasGroupDiscount && (
+                <span className="text-[10px] text-green-600 font-semibold">
+                  {discount > 0 ? `-${discount}%` : `+${Math.abs(discount)}%`} {priceGroup.name}
+                </span>
+              )}
             </div>
             <Button
               size="sm"
