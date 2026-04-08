@@ -2,19 +2,13 @@
   "name": "User",
   "type": "object",
   "properties": {
-    "tenant_id": {
-      "type": "string",
-      "description": "ID do tenant a que o usu\u00e1rio pertence (vazio para super-admin)"
-    },
     "role": {
       "type": "string",
       "enum": [
         "admin",
-        "user",
-        "superadmin"
+        "client"
       ],
-      "default": "user",
-      "description": "Papel do usu\u00e1rio"
+      "default": "client"
     },
     "status": {
       "type": "string",
@@ -24,21 +18,43 @@
         "rejected"
       ],
       "default": "pending",
-      "description": "Status de aprova\u00e7\u00e3o do usu\u00e1rio"
+      "description": "Status de aprova\u00e7\u00e3o do cliente"
     },
     "company_name": {
       "type": "string",
-      "description": "Nome da empresa do usu\u00e1rio"
-    },
-    "phone": {
-      "type": "string"
+      "description": "Nome do estabelecimento / raz\u00e3o social"
     },
     "cnpj_cpf": {
-      "type": "string"
+      "type": "string",
+      "description": "CNPJ ou CPF do cliente"
+    },
+    "whatsapp": {
+      "type": "string",
+      "description": "WhatsApp do cliente"
+    },
+    "address": {
+      "type": "string",
+      "description": "Endere\u00e7o completo (rua, n\u00famero, bairro)"
+    },
+    "city": {
+      "type": "string",
+      "description": "Cidade"
+    },
+    "state": {
+      "type": "string",
+      "description": "Estado (UF)"
     },
     "price_group_id": {
       "type": "string",
-      "description": "ID do grupo de pre\u00e7o do usu\u00e1rio"
+      "description": "ID da tabela de pre\u00e7os aplicada a este cliente"
+    },
+    "price_group_name": {
+      "type": "string",
+      "description": "Nome da tabela de pre\u00e7os (cache para exibi\u00e7\u00e3o)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es internas do admin sobre o cliente"
     }
   }
 }

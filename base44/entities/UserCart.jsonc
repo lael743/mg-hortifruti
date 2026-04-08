@@ -2,10 +2,6 @@
   "name": "UserCart",
   "type": "object",
   "properties": {
-    "tenant_id": {
-      "type": "string",
-      "description": "ID do tenant"
-    },
     "user_email": {
       "type": "string",
       "description": "Email do usu\u00e1rio dono do carrinho"
@@ -19,7 +15,6 @@
     }
   },
   "required": [
-    "tenant_id",
     "user_email"
   ]
 }

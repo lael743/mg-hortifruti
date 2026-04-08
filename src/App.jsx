@@ -6,12 +6,10 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
-import { TenantProvider } from '@/lib/TenantContext';
 
 import AppLayout from './components/layout/AppLayout';
 import Catalog from './pages/Catalog';
 import Cart from './pages/Cart';
-import SuperAdminDashboard from './pages/admin/SuperAdminDashboard';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
 import AdminLayout from './components/admin/AdminLayout';
@@ -47,7 +45,6 @@ const AuthenticatedApp = () => {
 
   return (
     <Routes>
-      <Route path="/super-admin" element={<SuperAdminDashboard />} />
       <Route element={<AppLayout />}>
         <Route path="/" element={<Catalog />} />
         <Route path="/cart" element={<Cart />} />
@@ -73,15 +70,13 @@ const AuthenticatedApp = () => {
 function App() {
   return (
     <AuthProvider>
-      <TenantProvider>
-        <QueryClientProvider client={queryClientInstance}>
-          <Router>
+      <QueryClientProvider client={queryClientInstance}>
+        <Router>
           <AuthenticatedApp />
-          </Router>
-          <Toaster />
-          <SonnerToaster position="top-center" richColors />
-        </QueryClientProvider>
-      </TenantProvider>
+        </Router>
+        <Toaster />
+        <SonnerToaster position="top-center" richColors />
+      </QueryClientProvider>
     </AuthProvider>
   )
 }

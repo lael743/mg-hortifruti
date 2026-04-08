@@ -14,8 +14,6 @@ import { ptBR } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import OrderPurchaseListDialog from '../../components/admin/OrderPurchaseListDialog';
-import { useTenantQuery } from '@/lib/useTenantQuery';
-import { useTenant } from '@/lib/TenantContext';
 
 const statusColors = {
   Pendente: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -52,7 +50,6 @@ function getPeriodRange(period, customStart, customEnd) {
 
 export default function AdminOrders() {
   const queryClient = useQueryClient();
-  const { tenantId } = useTenant();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [expandedOrder, setExpandedOrder] = useState(null);
@@ -62,9 +59,15 @@ export default function AdminOrders() {
   const [groupFilter, setGroupFilter] = useState(''); // city or company_name filter
   const [showPurchaseList, setShowPurchaseList] = useState(false);
 
-  const { data: orders = [], isLoading } = useTenantQuery('Order', {}, { enabled: !!tenantId });
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ['admin-orders'],
+    queryFn: () => base44.entities.Order.list('-created_date'),
+  });
 
-  const { data: users = [] } = useTenantQuery('User', {}, { enabled: !!tenantId });
+  const { data: users = [] } = useQuery({
+    queryKey: ['admin-clients'],
+    queryFn: () => base44.entities.User.list(),
+  });
 
   const userByEmail = Object.fromEntries(users.map(u => [u.email, u]));
 
@@ -74,7 +77,7 @@ export default function AdminOrders() {
   const updateMutation = useMutation({
     mutationFn: ({ id, status }) => base44.entities.Order.update(id, { status }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['Order', tenantId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       toast.success('Status atualizado');
     },
   });
@@ -163,8 +166,6 @@ export default function AdminOrders() {
   };
 
   const hasActiveFilters = period !== 'all' || groupFilter || statusFilter !== 'Todos' || search;
-
-  if (!tenantId) return <div className="text-center py-16 text-muted-foreground">Carregando...</div>;
 
   return (
     <div className="space-y-4">

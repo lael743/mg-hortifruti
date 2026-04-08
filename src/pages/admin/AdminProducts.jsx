@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { useTenantQuery } from '@/lib/useTenantQuery';
-import { useTenant } from '@/lib/TenantContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +16,6 @@ import { toast } from 'sonner';
 
 export default function AdminProducts() {
   const queryClient = useQueryClient();
-  const { tenantId } = useTenant();
   const [search, setSearch] = useState('');
   const [editProduct, setEditProduct] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -27,19 +24,22 @@ export default function AdminProducts() {
   const [priceEdit, setPriceEdit] = useState(null);
   const [sortAZ, setSortAZ] = useState(null); // null = default, true = A-Z, false = Z-A
 
-  const { data: products = [], isLoading } = useTenantQuery('Product', {}, { enabled: !!tenantId });
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['admin-products'],
+    queryFn: () => base44.entities.Product.list(),
+  });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Product.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['Product', tenantId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Product.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['Product', tenantId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       toast.success('Produto excluído');
       setDeleteTarget(null);
     },
@@ -65,10 +65,7 @@ export default function AdminProducts() {
     );
   };
 
-  if (!tenantId) return <div className="text-center py-16 text-muted-foreground">Carregando...</div>;
-
   const filtered = products
-    .filter(p => p.tenant_id === tenantId)
     .filter(p => !search || p.name?.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
       if (sortAZ === null) return 0;
@@ -186,13 +183,12 @@ export default function AdminProducts() {
 
       {showForm && (
         <ProductFormDialog
-            product={editProduct}
-            tenantId={tenantId}
-            onClose={() => setShowForm(false)}
-            onSaved={() => {
-              setShowForm(false);
-              queryClient.invalidateQueries({ queryKey: ['Product', tenantId] });
-            }}
+          product={editProduct}
+          onClose={() => setShowForm(false)}
+          onSaved={() => {
+            setShowForm(false);
+            queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+          }}
         />
       )}
 

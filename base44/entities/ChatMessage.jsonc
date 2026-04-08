@@ -2,10 +2,6 @@
   "name": "ChatMessage",
   "type": "object",
   "properties": {
-    "tenant_id": {
-      "type": "string",
-      "description": "ID do tenant"
-    },
     "conversation_id": {
       "type": "string",
       "description": "Email do cliente (identificador da conversa)"
@@ -33,7 +29,6 @@
     }
   },
   "required": [
-    "tenant_id",
     "conversation_id",
     "sender_email",
     "message"
