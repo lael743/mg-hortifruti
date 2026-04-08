@@ -66,7 +66,7 @@ export default function Catalog() {
       const finalPrice = basePrice * (1 - discount / 100);
       return `<div class="item">
         <div class="item-name">${p.name}${p.promo_active ? ' <span class="promo">PROMO</span>' : ''}</div>
-        <div class="item-meta">${p.packaging_type}${p.weight ? ' · ' + p.weight : ''}${p.description ? ' · ' + p.description : ''}</div>
+        <div class="item-meta">${p.packaging_type}${p.weight ? ' · ' + p.weight : ''}</div>
         <div class="item-bottom">
           <span class="item-price">R$ ${finalPrice.toFixed(2)}</span>
           <span class="item-qty">Qtd: ______</span>
