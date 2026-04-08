@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Printer, Eye, ChevronDown, Building2, MapPin, FileText, ShoppingBasket, X } from 'lucide-react';
+import { Search, Printer, Eye, ChevronDown, Building2, MapPin, FileText, ShoppingBasket, X, MessageCircle } from 'lucide-react';
 import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -305,6 +305,17 @@ export default function AdminOrders() {
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    {(u.whatsapp || u.phone) && (
+                      <a
+                        href={`https://wa.me/55${(u.whatsapp || u.phone).replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${order.customer_name || ''}! Passando para confirmar seu pedido de R$ ${order.total?.toFixed(2)}.`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:bg-green-50" title="Abrir WhatsApp">
+                          <MessageCircle className="w-4 h-4" />
+                        </Button>
+                      </a>
+                    )}
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrintSeparation(order)}>
                       <Printer className="w-4 h-4" />
                     </Button>
