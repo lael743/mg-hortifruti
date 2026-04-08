@@ -61,7 +61,7 @@ export default function ClientFinancial() {
     const rows = orders.map(o => `
       <tr>
         <td>${format(new Date(o.created_date), 'dd/MM/yyyy')}</td>
-        <td>${o.id.slice(-8)}</td>
+        <td>#${o.order_number || o.id.slice(-6)}</td>
         <td>${o.items?.length || 0} itens</td>
         <td>${o.status}</td>
         <td style="text-align:right"><strong>R$ ${o.total?.toFixed(2)}</strong></td>
@@ -168,7 +168,7 @@ export default function ClientFinancial() {
                     <td className="px-4 py-3 text-muted-foreground">
                       {format(new Date(order.created_date), 'dd/MM/yyyy', { locale: ptBR })}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">#{order.id.slice(-8)}</td>
+                    <td className="px-4 py-3 font-mono text-sm font-bold">#{order.order_number || order.id.slice(-6)}</td>
                     <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{order.items?.length || 0}</td>
                     <td className="px-4 py-3">
                       <Badge className={`${statusColors[order.status]} border text-[10px]`}>{order.status}</Badge>

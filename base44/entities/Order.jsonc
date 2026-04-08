@@ -2,6 +2,10 @@
   "name": "Order",
   "type": "object",
   "properties": {
+    "order_number": {
+      "type": "number",
+      "description": "N\u00famero do pedido (sequencial e curto)"
+    },
     "customer_email": {
       "type": "string",
       "description": "Email do cliente"

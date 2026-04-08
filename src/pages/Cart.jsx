@@ -8,6 +8,7 @@ import { Trash2, Minus, Plus, ShoppingCart, ArrowLeft, Package } from 'lucide-re
 import { getCart, saveCart, removeFromCart, updateCartQuantity, clearCart, getCartTotal } from '@/lib/cartStore';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import { generateOrderNumber } from '@/lib/orderNumberService';
 
 export default function Cart() {
   const { user } = useOutletContext();
@@ -40,7 +41,9 @@ export default function Cart() {
   const handleFinalize = async () => {
     if (cart.length === 0) return;
     setSubmitting(true);
+    const orderNumber = await generateOrderNumber();
     await base44.entities.Order.create({
+      order_number: orderNumber,
       customer_email: user.email,
       customer_name: user.full_name || user.company_name || user.email,
       items: cart.map(({ image_url, ...rest }) => rest),
@@ -49,7 +52,7 @@ export default function Cart() {
       notes,
     });
     clearCart();
-    toast.success('Pedido realizado com sucesso!');
+    toast.success(`Pedido #${orderNumber} realizado com sucesso!`);
     navigate('/orders');
     setSubmitting(false);
   };

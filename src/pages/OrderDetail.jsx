@@ -39,7 +39,7 @@ export default function OrderDetail() {
     const content = printRef.current;
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
-      <html><head><title>Pedido ${order?.id}</title>
+      <html><head><title>Pedido #${order?.order_number || order?.id.slice(-6)}</title>
       <style>
         body { font-family: Arial, sans-serif; padding: 24px; }
         table { width: 100%; border-collapse: collapse; margin-top: 16px; }
@@ -110,9 +110,8 @@ export default function OrderDetail() {
         <Card className="p-6">
           <div className="header flex items-start justify-between mb-6">
             <div>
-              <h1 className="text-xl font-bold">Pedido</h1>
-              <p className="text-sm text-muted-foreground mt-1">ID: {order.id}</p>
-              <p className="text-sm text-muted-foreground">
+              <h1 className="text-xl font-bold">Pedido #{order.order_number || order.id.slice(-6)}</h1>
+              <p className="text-sm text-muted-foreground mt-1">
                 {format(new Date(order.created_date), "dd 'de' MMMM, yyyy 'às' HH:mm", { locale: ptBR })}
               </p>
               {order.customer_name && (

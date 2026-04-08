@@ -71,11 +71,11 @@ export default function Orders() {
             <Card key={order.id} className="p-5">
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <p className="text-sm text-muted-foreground">
-                    {format(new Date(order.created_date), "dd 'de' MMMM, yyyy 'às' HH:mm", { locale: ptBR })}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">ID: {order.id}</p>
-                </div>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(order.created_date), "dd 'de' MMMM, yyyy 'às' HH:mm", { locale: ptBR })}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Pedido #{order.order_number || order.id.slice(-6)}</p>
+                  </div>
                 <Badge className={`${statusColors[order.status]} border`}>
                   {order.status}
                 </Badge>
