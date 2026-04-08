@@ -78,7 +78,8 @@ export default function Profile() {
           <CardContent className="space-y-4">
             <div>
               <Label className="text-xs mb-1 block">Nome completo</Label>
-              <Input value={form.full_name} onChange={set('full_name')} placeholder="Seu nome" />
+              <Input value={user.full_name || ''} readOnly className="bg-muted cursor-not-allowed opacity-70" />
+              <p className="text-xs text-muted-foreground mt-1">O nome é gerenciado pelo sistema de login e não pode ser alterado aqui.</p>
             </div>
           </CardContent>
         </Card>
