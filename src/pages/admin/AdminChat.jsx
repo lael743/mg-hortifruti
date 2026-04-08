@@ -5,7 +5,10 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Send, Loader2, User } from 'lucide-react';
+import { MessageCircle, Send, Loader2, User, Trash2, X } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 export default function AdminChat() {
   const [messages, setMessages] = useState([]);
@@ -83,6 +86,15 @@ export default function AdminChat() {
 
   const selectedConvData = conversations.find(c => c.id === selectedConv);
 
+  const handleDeleteConversation = async (convId) => {
+    if (!window.confirm('Excluir todas as mensagens desta conversa?')) return;
+    const toDelete = allMessages.filter(m => m.conversation_id === convId);
+    await Promise.all(toDelete.map(m => base44.entities.ChatMessage.delete(m.id)));
+    if (selectedConv === convId) setSelectedConv(null);
+    refetch();
+    toast.success('Conversa excluída.');
+  };
+
   return (
     <div className="flex h-[calc(100vh-160px)] gap-4">
       {/* Conversation list */}
@@ -97,19 +109,33 @@ export default function AdminChat() {
             <p className="text-xs text-muted-foreground text-center mt-8 px-4">Nenhuma conversa ainda.</p>
           )}
           {conversations.map(conv => (
-            <button
+            <div
               key={conv.id}
-              onClick={() => setSelectedConv(conv.id)}
-              className={`w-full text-left px-3 py-3 border-b hover:bg-muted/50 transition-colors ${selectedConv === conv.id ? 'bg-primary/5 border-l-2 border-l-primary' : ''}`}
+              className={`relative group flex items-start border-b hover:bg-muted/50 transition-colors ${selectedConv === conv.id ? 'bg-primary/5 border-l-2 border-l-primary' : ''}`}
             >
-              <div className="flex items-center justify-between mb-0.5">
-                <span className="text-sm font-medium truncate">{conv.name}</span>
-                {conv.unread > 0 && (
-                  <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0">{conv.unread}</Badge>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground truncate">{conv.lastMessage.message}</p>
-            </button>
+              <button
+                onClick={() => setSelectedConv(conv.id)}
+                className="flex-1 text-left px-3 py-3 min-w-0"
+              >
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-sm font-medium truncate">{conv.name}</span>
+                  {conv.unread > 0 && (
+                    <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0">{conv.unread}</Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{conv.lastMessage.message}</p>
+                <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+                  {format(new Date(conv.lastMessage.created_date), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                </p>
+              </button>
+              <button
+                onClick={() => handleDeleteConversation(conv.id)}
+                className="opacity-0 group-hover:opacity-100 p-2 mt-2 mr-1 text-muted-foreground hover:text-destructive transition-all"
+                title="Excluir conversa"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           ))}
         </div>
       </Card>
@@ -129,15 +155,21 @@ export default function AdminChat() {
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                 <User className="w-4 h-4 text-primary" />
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-semibold">{selectedConvData?.name}</p>
                 <p className="text-xs text-muted-foreground">{selectedConv}</p>
               </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteConversation(selectedConv)} title="Excluir conversa">
+                <Trash2 className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedConv(null)} title="Fechar">
+                <X className="w-4 h-4" />
+              </Button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {messages.map(m => (
-                <div key={m.id} className={`flex ${m.is_admin ? 'justify-end' : 'justify-start'}`}>
+                <div key={m.id} className={`flex flex-col gap-0.5 ${m.is_admin ? 'items-end' : 'items-start'}`}>
                   <div className={`max-w-[70%] px-3 py-2 rounded-2xl text-sm ${
                     m.is_admin
                       ? 'bg-primary text-primary-foreground rounded-tr-sm'
@@ -145,6 +177,9 @@ export default function AdminChat() {
                   }`}>
                     <p className="leading-snug">{m.message}</p>
                   </div>
+                  <span className="text-[10px] text-muted-foreground px-1">
+                    {format(new Date(m.created_date), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                  </span>
                 </div>
               ))}
               <div ref={bottomRef} />
