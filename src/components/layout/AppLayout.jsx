@@ -17,8 +17,10 @@ export default function AppLayout() {
       if (isAuth) {
         const me = await base44.auth.me();
         setUser(me);
-        syncCartFromServer(me.email);
-        syncFavoritesFromServer(me.email);
+        await Promise.all([
+          syncCartFromServer(me.email),
+          syncFavoritesFromServer(me.email)
+        ]);
       }
       setLoading(false);
     }

@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 const KEY = 'catalog_favorites';
 let _currentUserEmail = null;
 let _favRecordId = null;
+let _persistPromise = null;
 
 export function setFavoritesUser(email, recordId) {
   _currentUserEmail = email;
@@ -15,16 +16,24 @@ export function getFavorites() {
 
 async function persistFavoritesToServer(product_ids) {
   if (!_currentUserEmail) return;
-  try {
-    if (_favRecordId) {
-      await base44.entities.UserFavorites.update(_favRecordId, { product_ids });
-    } else {
-      const record = await base44.entities.UserFavorites.create({ user_email: _currentUserEmail, product_ids });
-      _favRecordId = record.id;
+  if (_persistPromise) await _persistPromise;
+  
+  _persistPromise = (async () => {
+    try {
+      if (_favRecordId) {
+        await base44.entities.UserFavorites.update(_favRecordId, { product_ids });
+      } else {
+        const record = await base44.entities.UserFavorites.create({ user_email: _currentUserEmail, product_ids });
+        _favRecordId = record.id;
+      }
+    } catch (e) {
+      console.error('Favorites sync error:', e);
+    } finally {
+      _persistPromise = null;
     }
-  } catch (e) {
-    // silently fail
-  }
+  })();
+  
+  return _persistPromise;
 }
 
 function saveFavorites(ids) {
@@ -45,23 +54,22 @@ export function isFavorite(productId) {
 }
 
 export async function syncFavoritesFromServer(userEmail) {
+  _currentUserEmail = userEmail;
   try {
     const records = await base44.entities.UserFavorites.filter({ user_email: userEmail });
     if (records.length > 0) {
       const record = records[0];
       _favRecordId = record.id;
-      _currentUserEmail = userEmail;
       const serverIds = record.product_ids || [];
       localStorage.setItem(KEY, JSON.stringify(serverIds));
       window.dispatchEvent(new Event('favorites-updated'));
     } else {
-      _currentUserEmail = userEmail;
       const localIds = getFavorites();
       if (localIds.length > 0) {
-        persistFavoritesToServer(localIds);
+        await persistFavoritesToServer(localIds);
       }
     }
   } catch (e) {
-    _currentUserEmail = userEmail;
+    console.error('Favorites server sync error:', e);
   }
 }

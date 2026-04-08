@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 const CART_KEY = 'hortifruti_cart';
 let _currentUserEmail = null;
 let _cartRecordId = null;
+let _persistPromise = null;
 
 export function setCartUser(email, recordId) {
   _currentUserEmail = email;
@@ -16,16 +17,24 @@ export function getCart() {
 
 async function persistCartToServer(items) {
   if (!_currentUserEmail) return;
-  try {
-    if (_cartRecordId) {
-      await base44.entities.UserCart.update(_cartRecordId, { items });
-    } else {
-      const record = await base44.entities.UserCart.create({ user_email: _currentUserEmail, items });
-      _cartRecordId = record.id;
+  if (_persistPromise) await _persistPromise;
+  
+  _persistPromise = (async () => {
+    try {
+      if (_cartRecordId) {
+        await base44.entities.UserCart.update(_cartRecordId, { items });
+      } else {
+        const record = await base44.entities.UserCart.create({ user_email: _currentUserEmail, items });
+        _cartRecordId = record.id;
+      }
+    } catch (e) {
+      console.error('Cart sync error:', e);
+    } finally {
+      _persistPromise = null;
     }
-  } catch (e) {
-    // silently fail - localStorage still works
-  }
+  })();
+  
+  return _persistPromise;
 }
 
 export function saveCart(items) {
@@ -80,24 +89,23 @@ export function getCartCount(cart) {
 }
 
 export async function syncCartFromServer(userEmail) {
+  _currentUserEmail = userEmail;
   try {
     const records = await base44.entities.UserCart.filter({ user_email: userEmail });
     if (records.length > 0) {
       const record = records[0];
       _cartRecordId = record.id;
-      _currentUserEmail = userEmail;
       const serverItems = record.items || [];
       localStorage.setItem(CART_KEY, JSON.stringify(serverItems));
       window.dispatchEvent(new Event('cart-updated'));
     } else {
       // No server record yet — push local cart to server
-      _currentUserEmail = userEmail;
       const localItems = getCart();
       if (localItems.length > 0) {
-        persistCartToServer(localItems);
+        await persistCartToServer(localItems);
       }
     }
   } catch (e) {
-    _currentUserEmail = userEmail;
+    console.error('Cart server sync error:', e);
   }
 }
