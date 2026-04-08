@@ -72,6 +72,7 @@ export default function OrderPurchaseListDialog({ orders, userByEmail, periodLab
       </tr>`;
     }).join('');
 
+    const orderNumbers = orders.map(o => o.order_number).join(', ');
     const clientNames = [...new Set(orders.map(o => {
       const u = userByEmail[o.customer_email];
       return u?.company_name || o.customer_name || o.customer_email;
@@ -94,11 +95,12 @@ export default function OrderPurchaseListDialog({ orders, userByEmail, periodLab
       </style></head><body>
       <h1>📋 Lista de Compra Consolidada</h1>
       <div class="meta">
-        <p><strong>Período / Filtro:</strong> ${periodLabel}</p>
-        <p><strong>Pedidos compilados:</strong> ${orders.length}</p>
-        ${clientNames ? `<p><strong>Clientes:</strong> ${clientNames}</p>` : ''}
-        <p><strong>Gerado em:</strong> ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
-      </div>
+         <p><strong>Período / Filtro:</strong> ${periodLabel}</p>
+         <p><strong>Pedidos compilados:</strong> ${orders.length}</p>
+         ${orderNumbers ? `<p><strong>Pedidos #:</strong> ${orderNumbers}</p>` : ''}
+         ${clientNames ? `<p><strong>Clientes:</strong> ${clientNames}</p>` : ''}
+         <p><strong>Gerado em:</strong> ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+       </div>
       <table>
         <tr>
           <th>Produto</th><th>Embalagem</th>

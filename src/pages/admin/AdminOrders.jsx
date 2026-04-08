@@ -144,7 +144,7 @@ export default function AdminOrders() {
         ${(u.city || u.state) ? `<p><strong>Cidade:</strong> ${[u.city, u.state].filter(Boolean).join(' - ')}</p>` : ''}
         ${u.whatsapp ? `<p><strong>WhatsApp:</strong> ${u.whatsapp}</p>` : ''}
         <p><strong>Data do pedido:</strong> ${format(new Date(order.created_date), "dd/MM/yyyy HH:mm")}</p>
-        <p><strong>Pedido #:</strong> ${order.id}</p>
+        <p><strong>Pedido #:</strong> ${order.order_number}</p>
       </div>
       <table>
         <tr><th>Produto</th><th>Embalagem</th><th>Peso</th><th>Qtd</th><th>Unit.</th><th>Subtotal</th></tr>
