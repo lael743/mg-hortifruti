@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
 import PendingApproval from './PendingApproval';
 import { base44 } from '@/api/base44Client';
+import ClientChatWidget from '../chat/ClientChatWidget';
 
 export default function AppLayout() {
   const [user, setUser] = useState(null);
@@ -40,6 +41,7 @@ export default function AppLayout() {
     <div className="min-h-screen bg-background">
       <Navbar user={user} />
       <Outlet context={{ user }} />
+      <ClientChatWidget user={user} />
     </div>
   );
 }

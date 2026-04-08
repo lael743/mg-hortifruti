@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, Outlet, useLocation, useOutletContext, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings, BarChart2, FileText } from 'lucide-react';
+import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings, BarChart2, FileText, MessageCircle } from 'lucide-react';
 import CompanySettingsDialog from './CompanySettingsDialog';
 
 const tabs = [
@@ -11,6 +11,7 @@ const tabs = [
   { label: 'Clientes', path: '/admin/clients', icon: Users },
   { label: 'Tabelas', path: '/admin/price-groups', icon: Tag },
   { label: 'Relatórios', path: '/admin/reports', icon: FileText },
+  { label: 'Chat', path: '/admin/chat', icon: MessageCircle },
 ];
 
 export default function AdminLayout() {

@@ -1,0 +1,36 @@
+{
+  "name": "ChatMessage",
+  "type": "object",
+  "properties": {
+    "conversation_id": {
+      "type": "string",
+      "description": "Email do cliente (identificador da conversa)"
+    },
+    "sender_email": {
+      "type": "string"
+    },
+    "sender_name": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "is_admin": {
+      "type": "boolean",
+      "default": false
+    },
+    "read_by_client": {
+      "type": "boolean",
+      "default": false
+    },
+    "read_by_admin": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "conversation_id",
+    "sender_email",
+    "message"
+  ]
+}

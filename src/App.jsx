@@ -19,6 +19,7 @@ import AdminClients from './pages/admin/AdminClients';
 import AdminPriceGroups from './pages/admin/AdminPriceGroups';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminReports from './pages/admin/AdminReports';
+import AdminChat from './pages/admin/AdminChat';
 import ClientFinancial from './pages/ClientFinancial';
 import Profile from './pages/Profile';
 
@@ -58,6 +59,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/price-groups" element={<AdminPriceGroups />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/reports" element={<AdminReports />} />
+          <Route path="/admin/chat" element={<AdminChat />} />
         </Route>
       </Route>
       <Route path="*" element={<PageNotFound />} />
