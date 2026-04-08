@@ -2,9 +2,15 @@ import React from 'react';
 import { Clock, LogOut, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
+import { useQuery } from '@tanstack/react-query';
 
 export default function PendingApproval({ status }) {
   const isRejected = status === 'rejected';
+  const { data: settings = [] } = useQuery({
+    queryKey: ['company-settings'],
+    queryFn: () => base44.entities.CompanySettings.list(),
+  });
+  const company = settings[0];
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -16,7 +22,7 @@ export default function PendingApproval({ status }) {
         </div>
 
         <div>
-          <h1 className="text-2xl font-bold">Horta</h1>
+          <h1 className="text-2xl font-bold">{company?.company_name || 'Horta'}</h1>
           <p className="text-muted-foreground text-sm mt-1">Portal de Atacado</p>
         </div>
 
