@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import ProductCard from '../components/catalog/ProductCard';
 import CatalogFilters from '../components/catalog/CatalogFilters';
-import { Leaf, TrendingUp, Wrench } from 'lucide-react';
+import { Leaf, TrendingUp, Wrench, Printer } from 'lucide-react';
 import ProductRecommendations from '../components/catalog/ProductRecommendations';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +58,33 @@ export default function Catalog() {
 
   const isCatalogActive = company?.catalog_active !== false;
 
+  const handlePrintCatalog = () => {
+    const activeProds = products.filter(p => p.active !== false);
+    const rows = activeProds.map(p => {
+      const discount = userPriceGroup?.discount_percent || 0;
+      const basePrice = p.promo_active && p.promo_price ? p.promo_price : p.price || 0;
+      const finalPrice = basePrice * (1 - discount / 100);
+      return `<tr>
+        <td>${p.name}</td>
+        <td>${p.category}</td>
+        <td>${p.packaging_type}${p.weight ? ' / ' + p.weight : ''}</td>
+        <td>${p.description || '-'}</td>
+        <td style="text-align:right">R$ ${finalPrice.toFixed(2)}</td>
+        ${p.promo_active ? '<td style="color:green;text-align:center">Sim</td>' : '<td style="text-align:center">-</td>'}
+      </tr>`;
+    }).join('');
+    const tableGroup = userPriceGroup ? `<p style="margin-bottom:8px">Tabela de preços: <b>${userPriceGroup.name}</b>${userPriceGroup.discount_percent ? ` (${userPriceGroup.discount_percent}% de desconto)` : ''}</p>` : '';
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Catálogo de Produtos</title>
+    <style>body{font-family:Arial,sans-serif;font-size:12px;padding:20px}h2{margin-bottom:4px}table{width:100%;border-collapse:collapse;margin-top:12px}th{background:#2d7a3a;color:#fff;padding:8px 6px;text-align:left}td{padding:6px;border-bottom:1px solid #ddd}tr:nth-child(even){background:#f5f5f5}p{font-size:11px;color:#555}@media print{button{display:none}}</style></head>
+    <body><h2>${company?.company_name || 'Catálogo de Produtos'}</h2><p>Emitido em: ${new Date().toLocaleDateString('pt-BR')} • ${activeProds.length} produtos</p>${tableGroup}
+    <table><thead><tr><th>Produto</th><th>Categoria</th><th>Embalagem</th><th>Descrição</th><th>Preço</th><th>Promo</th></tr></thead><tbody>${rows}</tbody></table></body></html>`;
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 500);
+  };
+
   // Show maintenance screen for non-admin users when catalog is off
   if (!isCatalogActive && user?.role !== 'admin') {
     return (
@@ -102,6 +129,19 @@ export default function Catalog() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-6 space-y-8">
+      {/* Print button */}
+      {user && (
+        <div className="flex justify-end">
+          <button
+            onClick={handlePrintCatalog}
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
+          >
+            <Printer className="w-4 h-4" />
+            Imprimir tabela de preços
+          </button>
+        </div>
+      )}
+
       {/* Hero Banner */}
       <div
         className="relative rounded-2xl overflow-hidden p-8 md:p-12"
