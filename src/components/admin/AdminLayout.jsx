@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useOutletContext, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings, BarChart2, FileText, MessageCircle, ShieldOff, ShieldCheck, Database } from 'lucide-react';
+import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings, BarChart2, FileText, MessageCircle, ShieldOff, ShieldCheck, Database, ChevronDown } from 'lucide-react';
 import CompanySettingsDialog from './CompanySettingsDialog';
 import { base44 } from '@/api/base44Client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Link as RouterLink } from 'react-router-dom';
 
 const tabs = [
   { label: 'Dashboard', path: '/admin/dashboard', icon: BarChart2 },
@@ -15,7 +17,6 @@ const tabs = [
   { label: 'Tabelas', path: '/admin/price-groups', icon: Tag },
   { label: 'Relatórios', path: '/admin/reports', icon: FileText },
   { label: 'Chat', path: '/admin/chat', icon: MessageCircle },
-  { label: 'Backup', path: '/admin/backup', icon: Database },
 ];
 
 export default function AdminLayout() {
@@ -67,9 +68,26 @@ export default function AdminLayout() {
               ? <><ShieldOff className="w-4 h-4 mr-1" />Desativar Catálogo</>
               : <><ShieldCheck className="w-4 h-4 mr-1" />Ativar Catálogo</>}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
-            <Settings className="w-4 h-4 mr-1" />Empresa
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1">
+                <Settings className="w-4 h-4" />
+                <ChevronDown className="w-3 h-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => setShowSettings(true)} className="gap-2 cursor-pointer">
+                <Settings className="w-4 h-4" />
+                Empresa
+              </DropdownMenuItem>
+              <RouterLink to="/admin/backup">
+                <DropdownMenuItem className="gap-2 cursor-pointer">
+                  <Database className="w-4 h-4" />
+                  Backup
+                </DropdownMenuItem>
+              </RouterLink>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Link to="/">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="w-4 h-4 mr-1" />Catálogo
