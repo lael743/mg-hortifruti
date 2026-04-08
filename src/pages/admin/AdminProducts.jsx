@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Pencil, Trash2, Search, Package, Eye, EyeOff, Check, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Package, Eye, EyeOff, Check, X, ArrowUpAZ, ArrowDownAZ } from 'lucide-react';
 import ProductFormDialog from '../../components/admin/ProductFormDialog';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -22,6 +22,7 @@ export default function AdminProducts() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   // inline price edit state: { id, value }
   const [priceEdit, setPriceEdit] = useState(null);
+  const [sortAZ, setSortAZ] = useState(null); // null = default, true = A-Z, false = Z-A
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['admin-products'],
@@ -64,9 +65,12 @@ export default function AdminProducts() {
     );
   };
 
-  const filtered = products.filter(p =>
-    !search || p.name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = products
+    .filter(p => !search || p.name?.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      if (sortAZ === null) return 0;
+      return sortAZ ? a.name?.localeCompare(b.name) : b.name?.localeCompare(a.name);
+    });
 
   return (
     <div className="space-y-4">
@@ -75,6 +79,14 @@ export default function AdminProducts() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Buscar produto..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
+        <Button
+          variant="outline"
+          size="icon"
+          title={sortAZ === null ? 'Ordenar A-Z' : sortAZ ? 'Ordenar Z-A' : 'Remover ordenação'}
+          onClick={() => setSortAZ(prev => prev === null ? true : prev === true ? false : null)}
+        >
+          {sortAZ === false ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
+        </Button>
         <Button className="bg-primary text-primary-foreground" onClick={() => { setEditProduct(null); setShowForm(true); }}>
           <Plus className="w-4 h-4 mr-1" />Novo Produto
         </Button>
