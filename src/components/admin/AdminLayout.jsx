@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useOutletContext, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings, BarChart2, FileText, MessageCircle, ShieldOff, ShieldCheck } from 'lucide-react';
+import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings, BarChart2, FileText, MessageCircle, ShieldOff, ShieldCheck, Database } from 'lucide-react';
 import CompanySettingsDialog from './CompanySettingsDialog';
 import { base44 } from '@/api/base44Client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -15,6 +15,7 @@ const tabs = [
   { label: 'Tabelas', path: '/admin/price-groups', icon: Tag },
   { label: 'Relatórios', path: '/admin/reports', icon: FileText },
   { label: 'Chat', path: '/admin/chat', icon: MessageCircle },
+  { label: 'Backup', path: '/admin/backup', icon: Database },
 ];
 
 export default function AdminLayout() {
