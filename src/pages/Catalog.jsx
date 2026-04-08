@@ -61,7 +61,7 @@ export default function Catalog() {
             <span className="text-sm font-semibold tracking-wide uppercase">{company?.company_name || 'Atacado HortiFruti'}</span>
           </div>
           <h1 className={`text-3xl md:text-4xl font-extrabold tracking-tight ${company?.banner_url ? 'text-white' : ''}`}>
-            {company?.banner_title || <>Produtos frescos direto <br className="hidden sm:block" />do CEASA para sua loja</>}
+            {company?.banner_title || <>Produtos frescos direto <br className="hidden sm:block" />do Produtor para sua loja</>}
           </h1>
           {company?.banner_subtitle && (
             <p className={`mt-2 text-lg font-medium ${company?.banner_url ? 'text-white/90' : 'text-foreground/70'}`}>{company.banner_subtitle}</p>
