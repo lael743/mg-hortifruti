@@ -2,12 +2,20 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Tag, Package, Minus, Plus } from 'lucide-react';
+import { ShoppingCart, Tag, Package, Minus, Plus, Heart } from 'lucide-react';
+import { toggleFavorite, isFavorite } from '@/lib/favoritesStore';
 import { addToCart } from '@/lib/cartStore';
 import { toast } from 'sonner';
 
 export default function ProductCard({ product, isLoggedIn, priceGroup }) {
   const [qty, setQty] = useState(1);
+  const [fav, setFav] = useState(() => isFavorite(product.id));
+
+  const handleToggleFav = (e) => {
+    e.stopPropagation();
+    toggleFavorite(product.id);
+    setFav(f => !f);
+  };
   const hasPromo = product.promo_active && product.promo_price;
   const basePrice = hasPromo ? product.promo_price : product.price;
 
@@ -38,12 +46,18 @@ export default function ProductCard({ product, isLoggedIn, priceGroup }) {
             <Package className="w-12 h-12 opacity-30" />
           </div>
         )}
+        <button
+          onClick={handleToggleFav}
+          className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/80 backdrop-blur flex items-center justify-center shadow hover:scale-110 transition-transform"
+        >
+          <Heart className={`w-4 h-4 transition-colors ${fav ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
+        </button>
         {hasPromo && (
           <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground font-bold shadow-lg">
             <Tag className="w-3 h-3 mr-1" />PROMO
           </Badge>
         )}
-        <Badge variant="secondary" className="absolute top-3 right-3 text-xs">
+        <Badge variant="secondary" className="absolute bottom-3 right-3 text-xs">
           {product.category}
         </Badge>
       </div>

@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, X } from 'lucide-react';
+import { Search, X, SlidersHorizontal, Heart } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 
 const CATEGORIES = ['Todas', 'Frutas', 'Verduras', 'Legumes', 'Temperos', 'Outros'];
 
-export default function CatalogFilters({ search, setSearch, category, setCategory }) {
+export default function CatalogFilters({ search, setSearch, category, setCategory, priceRange, setPriceRange, onlyFavorites, setOnlyFavorites, maxPrice }) {
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const hasAdvancedFilter = onlyFavorites || priceRange[1] < maxPrice || priceRange[0] > 0;
+
   return (
     <div className="space-y-4">
       <div className="relative">
@@ -23,7 +27,7 @@ export default function CatalogFilters({ search, setSearch, category, setCategor
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
         {CATEGORIES.map(cat => (
           <Button
             key={cat}
@@ -35,7 +39,56 @@ export default function CatalogFilters({ search, setSearch, category, setCategor
             {cat}
           </Button>
         ))}
+        <Button
+          variant={hasAdvancedFilter ? 'default' : 'outline'}
+          size="sm"
+          className={`ml-auto gap-1.5 ${hasAdvancedFilter ? 'bg-primary text-primary-foreground' : ''}`}
+          onClick={() => setShowAdvanced(v => !v)}
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5" />
+          Filtros{hasAdvancedFilter ? ' ●' : ''}
+        </Button>
       </div>
+
+      {showAdvanced && (
+        <div className="bg-card border rounded-xl p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold">Filtros avançados</span>
+            {hasAdvancedFilter && (
+              <button
+                className="text-xs text-primary underline"
+                onClick={() => { setPriceRange([0, maxPrice]); setOnlyFavorites(false); }}
+              >
+                Limpar
+              </button>
+            )}
+          </div>
+
+          <div>
+            <label className="text-xs text-muted-foreground mb-2 block">
+              Faixa de preço: <strong>R$ {priceRange[0].toFixed(0)} – R$ {priceRange[1].toFixed(0)}</strong>
+            </label>
+            <Slider
+              min={0}
+              max={maxPrice}
+              step={1}
+              value={priceRange}
+              onValueChange={setPriceRange}
+              className="mt-2"
+            />
+          </div>
+
+          <button
+            onClick={() => setOnlyFavorites(v => !v)}
+            className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg border w-full transition-colors ${
+              onlyFavorites ? 'bg-red-50 border-red-200 text-red-600' : 'border-border hover:bg-muted'
+            }`}
+          >
+            <Heart className={`w-4 h-4 ${onlyFavorites ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
+            Mostrar apenas favoritos
+          </button>
+        </div>
+      )}
     </div>
   );
 }

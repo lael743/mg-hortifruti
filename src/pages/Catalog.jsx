@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getFavorites } from '../lib/favoritesStore';
 import { useOutletContext } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -12,6 +13,15 @@ export default function Catalog() {
   const { user } = useOutletContext();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('Todas');
+  const [priceRange, setPriceRange] = useState([0, 9999]);
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const [favorites, setFavorites] = useState(() => getFavorites());
+
+  useEffect(() => {
+    const update = () => setFavorites(getFavorites());
+    window.addEventListener('favorites-updated', update);
+    return () => window.removeEventListener('favorites-updated', update);
+  }, []);
 
   const { data: settings = [] } = useQuery({
     queryKey: ['company-settings'],
@@ -34,11 +44,15 @@ export default function Catalog() {
     : null;
 
   const activeProducts = products.filter(p => p.active !== false);
+  const maxPrice = Math.max(0, ...activeProducts.map(p => p.promo_active && p.promo_price ? p.promo_price : p.price || 0));
 
   const filtered = activeProducts.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
     const matchCategory = category === 'Todas' || p.category === category;
-    return matchSearch && matchCategory;
+    const productPrice = p.promo_active && p.promo_price ? p.promo_price : p.price || 0;
+    const matchPrice = productPrice >= priceRange[0] && productPrice <= priceRange[1];
+    const matchFav = !onlyFavorites || favorites.includes(p.id);
+    return matchSearch && matchCategory && matchPrice && matchFav;
   });
 
   const promoProducts = filtered.filter(p => p.promo_active);
@@ -85,7 +99,13 @@ export default function Catalog() {
         )}
       </div>
 
-      <CatalogFilters search={search} setSearch={setSearch} category={category} setCategory={setCategory} />
+      <CatalogFilters
+        search={search} setSearch={setSearch}
+        category={category} setCategory={setCategory}
+        priceRange={priceRange} setPriceRange={setPriceRange}
+        onlyFavorites={onlyFavorites} setOnlyFavorites={setOnlyFavorites}
+        maxPrice={maxPrice || 500}
+      />
 
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
