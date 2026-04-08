@@ -82,10 +82,10 @@ export default function Catalog() {
       .subtitle { font-size: 9px; color: #555; margin-bottom: 6px; }
       .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
       .item { border: 1px solid #ccc; border-radius: 3px; padding: 5px 6px; display: flex; flex-direction: column; gap: 2px; }
-      .item-name { font-weight: bold; font-size: 9px; line-height: 1.2; }
+      .item-name { font-weight: bold; font-size: 11px; line-height: 1.2; }
       .item-meta { color: #666; font-size: 8px; line-height: 1.3; }
       .item-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
-      .item-price { font-weight: bold; color: #2d7a3a; font-size: 9.5px; }
+      .item-price { font-weight: bold; color: #2d7a3a; font-size: 12px; }
       .item-qty { font-size: 8px; color: #444; }
       .promo { background: #f59e0b; color: #fff; font-size: 7px; padding: 0 3px; border-radius: 2px; font-weight: bold; }
       @media print { @page { margin: 8mm; size: A4; } }
