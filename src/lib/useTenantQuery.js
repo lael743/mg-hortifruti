@@ -1,5 +1,6 @@
 import { useTenant } from './TenantContext';
 import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 
 /**
  * Hook customizado que automaticamente filtra queries por tenant_id
@@ -9,7 +10,6 @@ import { useQuery } from '@tanstack/react-query';
  */
 export function useTenantQuery(entityName, filters = {}, options = {}) {
   const { tenantId, loading: tenantLoading } = useTenant();
-  const { base44 } = require('@/api/base44Client');
 
   return useQuery({
     queryKey: [entityName, tenantId, JSON.stringify(filters)],
@@ -29,7 +29,6 @@ export function useTenantQuery(entityName, filters = {}, options = {}) {
  */
 export function useSuperAdminQuery(entityName, filters = {}, options = {}) {
   const { tenantId, loading: tenantLoading } = useTenant();
-  const { base44 } = require('@/api/base44Client');
 
   return useQuery({
     queryKey: [`admin-${entityName}`, JSON.stringify(filters)],
