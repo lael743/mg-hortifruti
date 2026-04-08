@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, PhoneOff } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function ClientChatWidget({ user }) {
   const [open, setOpen] = useState(false);
@@ -56,6 +57,15 @@ export default function ClientChatWidget({ user }) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, open]);
 
+  const handleEndConversation = async () => {
+    if (!window.confirm('Encerrar a conversa? Todas as mensagens serão apagadas.')) return;
+    const toDelete = messages;
+    await Promise.all(toDelete.map(m => base44.entities.ChatMessage.delete(m.id)));
+    setMessages([]);
+    setOpen(false);
+    toast.success('Conversa encerrada.');
+  };
+
   const handleSend = async () => {
     if (!text.trim() || sending) return;
     setSending(true);
@@ -84,9 +94,16 @@ export default function ClientChatWidget({ user }) {
               <MessageCircle className="w-4 h-4" />
               <span className="font-semibold text-sm">Chat com a equipe</span>
             </div>
-            <button onClick={() => setOpen(false)}>
-              <X className="w-4 h-4 opacity-80 hover:opacity-100" />
-            </button>
+            <div className="flex items-center gap-2">
+              {messages.length > 0 && (
+                <button onClick={handleEndConversation} title="Encerrar conversa" className="opacity-80 hover:opacity-100">
+                  <PhoneOff className="w-4 h-4" />
+                </button>
+              )}
+              <button onClick={() => setOpen(false)}>
+                <X className="w-4 h-4 opacity-80 hover:opacity-100" />
+              </button>
+            </div>
           </div>
 
           {/* Messages */}

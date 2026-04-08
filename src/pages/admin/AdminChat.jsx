@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Send, Loader2, User, Trash2, X } from 'lucide-react';
+import { MessageCircle, Send, Loader2, User, Trash2, X, PhoneOff } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -95,6 +95,23 @@ export default function AdminChat() {
     toast.success('Conversa excluída.');
   };
 
+  const handleEndConversation = async (convId) => {
+    if (!window.confirm('Encerrar esta conversa? O cliente não poderá mais enviar mensagens até iniciar uma nova.')) return;
+    // Send a closing message
+    await base44.entities.ChatMessage.create({
+      conversation_id: convId,
+      sender_email: adminUser?.email || 'admin',
+      sender_name: 'Equipe',
+      message: '✅ Conversa encerrada pela equipe. Para dúvidas, inicie um novo atendimento.',
+      is_admin: true,
+      read_by_client: false,
+      read_by_admin: true,
+      is_closed: true,
+    });
+    refetch();
+    toast.success('Conversa encerrada.');
+  };
+
   return (
     <div className="flex h-[calc(100vh-160px)] gap-4">
       {/* Conversation list */}
@@ -159,6 +176,9 @@ export default function AdminChat() {
                 <p className="text-sm font-semibold">{selectedConvData?.name}</p>
                 <p className="text-xs text-muted-foreground">{selectedConv}</p>
               </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-orange-500 hover:bg-orange-50" onClick={() => handleEndConversation(selectedConv)} title="Encerrar conversa">
+                <PhoneOff className="w-4 h-4" />
+              </Button>
               <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDeleteConversation(selectedConv)} title="Excluir conversa">
                 <Trash2 className="w-4 h-4" />
               </Button>
