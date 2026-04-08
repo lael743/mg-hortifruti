@@ -10,21 +10,43 @@
       ],
       "default": "client"
     },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Status de aprova\u00e7\u00e3o do cliente"
+    },
+    "company_name": {
+      "type": "string",
+      "description": "Nome do estabelecimento / raz\u00e3o social"
+    },
+    "cnpj_cpf": {
+      "type": "string",
+      "description": "CNPJ ou CPF do cliente"
+    },
     "whatsapp": {
       "type": "string",
       "description": "WhatsApp do cliente"
     },
     "address": {
       "type": "string",
-      "description": "Endere\u00e7o do cliente"
+      "description": "Endere\u00e7o completo (rua, n\u00famero, bairro)"
     },
     "city": {
       "type": "string",
       "description": "Cidade"
     },
-    "company_name": {
+    "state": {
       "type": "string",
-      "description": "Nome do estabelecimento"
+      "description": "Estado (UF)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es internas do admin sobre o cliente"
     }
   }
 }

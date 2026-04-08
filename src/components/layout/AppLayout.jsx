@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
+import PendingApproval from './PendingApproval';
 import { base44 } from '@/api/base44Client';
 
 export default function AppLayout() {
@@ -25,6 +26,14 @@ export default function AppLayout() {
         <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
       </div>
     );
+  }
+
+  // Non-admin logged-in users must be approved
+  if (user && user.role !== 'admin') {
+    const status = user.status || 'pending';
+    if (status !== 'approved') {
+      return <PendingApproval status={status} />;
+    }
   }
 
   return (
