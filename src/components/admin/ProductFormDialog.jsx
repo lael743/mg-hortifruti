@@ -8,10 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { Upload } from 'lucide-react';
+import { Upload, Plus } from 'lucide-react';
 
-const CATEGORIES = ['Frutas', 'Verduras', 'Legumes', 'Temperos', 'Outros'];
-const PACKAGING = ['Caixa', 'Saco', 'Fardo', 'Unidade'];
+const DEFAULT_CATEGORIES = ['Frutas', 'Verduras', 'Legumes', 'Temperos', 'Outros'];
+const DEFAULT_PACKAGING = ['Caixa', 'Saco', 'Fardo', 'Unidade'];
 
 export default function ProductFormDialog({ product, onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -28,6 +28,32 @@ export default function ProductFormDialog({ product, onClose, onSaved }) {
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const [packagings, setPackagings] = useState(DEFAULT_PACKAGING);
+  const [newCategory, setNewCategory] = useState('');
+  const [newPackaging, setNewPackaging] = useState('');
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [addingPackaging, setAddingPackaging] = useState(false);
+
+  const handleAddCategory = () => {
+    const val = newCategory.trim();
+    if (val && !categories.includes(val)) {
+      setCategories(prev => [...prev, val]);
+      handleChange('category', val);
+    }
+    setNewCategory('');
+    setAddingCategory(false);
+  };
+
+  const handleAddPackaging = () => {
+    const val = newPackaging.trim();
+    if (val && !packagings.includes(val)) {
+      setPackagings(prev => [...prev, val]);
+      handleChange('packaging_type', val);
+    }
+    setNewPackaging('');
+    setAddingPackaging(false);
+  };
 
   const handleChange = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
@@ -76,21 +102,43 @@ export default function ProductFormDialog({ product, onClose, onSaved }) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Categoria *</Label>
-              <Select value={form.category} onValueChange={(v) => handleChange('category', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-1">
+                <Select value={form.category} onValueChange={(v) => handleChange('category', v)}>
+                  <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" size="icon" onClick={() => setAddingCategory(v => !v)}>
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              {addingCategory && (
+                <div className="flex gap-1 mt-1">
+                  <Input value={newCategory} onChange={e => setNewCategory(e.target.value)} placeholder="Nova categoria" className="flex-1" onKeyDown={e => e.key === 'Enter' && handleAddCategory()} />
+                  <Button type="button" size="sm" onClick={handleAddCategory}>OK</Button>
+                </div>
+              )}
             </div>
             <div>
               <Label>Embalagem *</Label>
-              <Select value={form.packaging_type} onValueChange={(v) => handleChange('packaging_type', v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {PACKAGING.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-1">
+                <Select value={form.packaging_type} onValueChange={(v) => handleChange('packaging_type', v)}>
+                  <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {packagings.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" size="icon" onClick={() => setAddingPackaging(v => !v)}>
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              {addingPackaging && (
+                <div className="flex gap-1 mt-1">
+                  <Input value={newPackaging} onChange={e => setNewPackaging(e.target.value)} placeholder="Nova embalagem" className="flex-1" onKeyDown={e => e.key === 'Enter' && handleAddPackaging()} />
+                  <Button type="button" size="sm" onClick={handleAddPackaging}>OK</Button>
+                </div>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
