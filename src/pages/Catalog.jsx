@@ -282,27 +282,27 @@ export default function Catalog() {
       )}
 
       {/* Footer */}
-      <footer className="mt-12 border-t border-border pt-8 pb-4 text-sm text-muted-foreground">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <footer className="mt-16 bg-primary text-primary-foreground rounded-2xl px-8 py-8 text-sm">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
-            <p className="font-semibold text-foreground text-base">{company?.company_name}</p>
+            <p className="font-bold text-lg">{company?.company_name}</p>
             {company?.address && (
-              <p className="flex items-center gap-1 mt-1"><MapPin className="w-3.5 h-3.5" />{company.address}{company.city ? `, ${company.city}` : ''}{company.state ? ` - ${company.state}` : ''}</p>
+              <p className="flex items-center gap-1 mt-1 opacity-80"><MapPin className="w-3.5 h-3.5" />{company.address}{company.city ? `, ${company.city}` : ''}{company.state ? ` - ${company.state}` : ''}</p>
             )}
           </div>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1.5">
             {company?.whatsapp && (
-              <a href={`https://wa.me/${company.whatsapp.replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+              <a href={`https://wa.me/${company.whatsapp.replace(/\D/g,'')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 opacity-80 hover:opacity-100 transition-opacity">
                 <Phone className="w-3.5 h-3.5" />{company.whatsapp}
               </a>
             )}
             {company?.email && (
-              <a href={`mailto:${company.email}`} className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+              <a href={`mailto:${company.email}`} className="flex items-center gap-1.5 opacity-80 hover:opacity-100 transition-opacity">
                 <Mail className="w-3.5 h-3.5" />{company.email}
               </a>
             )}
           </div>
-          <p className="text-xs">&copy; {new Date().getFullYear()} {company?.company_name}. Todos os direitos reservados.</p>
+          <p className="text-xs opacity-60">&copy; {new Date().getFullYear()} {company?.company_name}. Todos os direitos reservados.</p>
         </div>
       </footer>
 
