@@ -35,6 +35,18 @@
       "type": "string",
       "description": "URL do logo da empresa"
     },
+    "banner_url": {
+      "type": "string",
+      "description": "URL da imagem de fundo do banner do cat\u00e1logo"
+    },
+    "banner_title": {
+      "type": "string",
+      "description": "T\u00edtulo do banner do cat\u00e1logo"
+    },
+    "banner_subtitle": {
+      "type": "string",
+      "description": "Subt\u00edtulo do banner do cat\u00e1logo"
+    },
     "report_footer": {
       "type": "string",
       "description": "Texto de rodap\u00e9 nos relat\u00f3rios"
