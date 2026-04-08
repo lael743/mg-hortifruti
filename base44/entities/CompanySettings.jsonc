@@ -2,6 +2,10 @@
   "name": "CompanySettings",
   "type": "object",
   "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID do tenant"
+    },
     "company_name": {
       "type": "string",
       "description": "Nome da empresa distribuidora"
@@ -58,6 +62,7 @@
     }
   },
   "required": [
+    "tenant_id",
     "company_name"
   ]
 }

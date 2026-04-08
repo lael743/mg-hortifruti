@@ -2,6 +2,10 @@
   "name": "Product",
   "type": "object",
   "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID do tenant a que o produto pertence"
+    },
     "name": {
       "type": "string",
       "description": "Nome do produto"
@@ -59,6 +63,7 @@
     }
   },
   "required": [
+    "tenant_id",
     "name",
     "category",
     "price",

@@ -2,6 +2,10 @@
   "name": "PriceGroup",
   "type": "object",
   "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID do tenant"
+    },
     "name": {
       "type": "string",
       "description": "Nome da tabela de pre\u00e7os (ex: Atacado, Varejo)"
@@ -21,6 +25,7 @@
     }
   },
   "required": [
+    "tenant_id",
     "name"
   ]
 }

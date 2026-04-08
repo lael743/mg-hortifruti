@@ -10,6 +10,7 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import AppLayout from './components/layout/AppLayout';
 import Catalog from './pages/Catalog';
 import Cart from './pages/Cart';
+import SuperAdminDashboard from './pages/admin/SuperAdminDashboard';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
 import AdminLayout from './components/admin/AdminLayout';
@@ -45,6 +46,7 @@ const AuthenticatedApp = () => {
 
   return (
     <Routes>
+      <Route path="/super-admin" element={<SuperAdminDashboard />} />
       <Route element={<AppLayout />}>
         <Route path="/" element={<Catalog />} />
         <Route path="/cart" element={<Cart />} />

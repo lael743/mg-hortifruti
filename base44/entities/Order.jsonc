@@ -2,6 +2,10 @@
   "name": "Order",
   "type": "object",
   "properties": {
+    "tenant_id": {
+      "type": "string",
+      "description": "ID do tenant a que o pedido pertence"
+    },
     "customer_email": {
       "type": "string",
       "description": "Email do cliente"
@@ -58,6 +62,7 @@
     }
   },
   "required": [
+    "tenant_id",
     "customer_email",
     "items",
     "total"

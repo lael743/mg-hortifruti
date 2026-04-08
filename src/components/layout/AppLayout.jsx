@@ -6,13 +6,17 @@ import { base44 } from '@/api/base44Client';
 import ClientChatWidget from '../chat/ClientChatWidget';
 import { syncCartFromServer } from '@/lib/cartStore';
 import { syncFavoritesFromServer } from '@/lib/favoritesStore';
+import { getTenantFromSubdomain } from '@/lib/tenantUtils';
 
 export default function AppLayout() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [tenant, setTenant] = useState(null);
 
   useEffect(() => {
     async function loadUser() {
+      const subdomain = getTenantFromSubdomain();
+      setTenant(subdomain);
       const isAuth = await base44.auth.isAuthenticated();
       if (isAuth) {
         const me = await base44.auth.me();
@@ -46,7 +50,7 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar user={user} />
-      <Outlet context={{ user }} />
+      <Outlet context={{ user, tenant }} />
       <ClientChatWidget user={user} />
     </div>
   );
