@@ -4,12 +4,13 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TrendingUp, ShoppingBag, Users, DollarSign } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { TrendingUp, ShoppingBag, Users, DollarSign, UserX, Package, Award } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell
 } from 'recharts';
-import { format, subDays, subMonths, startOfDay, parseISO } from 'date-fns';
+import { format, subDays, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const COLORS = ['#22c55e', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
@@ -23,10 +24,16 @@ const PERIODS = [
 
 export default function AdminDashboard() {
   const [period, setPeriod] = useState('30d');
+  const [topMode, setTopMode] = useState('qty'); // 'qty' | 'revenue'
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders-dashboard'],
-    queryFn: () => base44.entities.Order.list('-created_date', 500),
+    queryFn: () => base44.entities.Order.list('-created_date', 1000),
+  });
+
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['users-list'],
+    queryFn: () => base44.entities.User.list(),
   });
 
   const cutoff = useMemo(() => {
@@ -43,8 +50,18 @@ export default function AdminDashboard() {
 
   const totalRevenue = useMemo(() => filtered.reduce((s, o) => s + (o.total || 0), 0), [filtered]);
   const totalOrders = filtered.length;
-  const uniqueClients = useMemo(() => new Set(filtered.map(o => o.customer_email)).size, [filtered]);
+  const uniqueClientsInPeriod = useMemo(() => new Set(filtered.map(o => o.customer_email)), [filtered]);
   const avgTicket = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+  // Clients who ordered before but NOT in the period
+  const inactiveClients = useMemo(() => {
+    const emailsBeforePeriod = new Set(
+      orders
+        .filter(o => o.status !== 'Cancelado' && new Date(o.created_date) < cutoff)
+        .map(o => o.customer_email)
+    );
+    return [...emailsBeforePeriod].filter(e => !uniqueClientsInPeriod.has(e));
+  }, [orders, cutoff, uniqueClientsInPeriod]);
 
   // Sales over time
   const salesByDay = useMemo(() => {
@@ -56,7 +73,7 @@ export default function AdminDashboard() {
     return Object.entries(map).map(([date, total]) => ({ date, total }));
   }, [filtered, period]);
 
-  // Top products
+  // Top products by qty and revenue
   const topProducts = useMemo(() => {
     const map = {};
     filtered.forEach(o => {
@@ -66,14 +83,30 @@ export default function AdminDashboard() {
         map[item.product_name].revenue += (item.unit_price || 0) * (item.quantity || 0);
       });
     });
-    return Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 8);
-  }, [filtered]);
+    return Object.values(map).sort((a, b) => b[topMode] - a[topMode]).slice(0, 8);
+  }, [filtered, topMode]);
+
+  // Top clients by revenue in period
+  const topClients = useMemo(() => {
+    const map = {};
+    filtered.forEach(o => {
+      if (!map[o.customer_email]) {
+        const u = allUsers.find(u => u.email === o.customer_email);
+        map[o.customer_email] = { email: o.customer_email, name: u?.company_name || o.customer_name || o.customer_email, total: 0, orders: 0 };
+      }
+      map[o.customer_email].total += o.total || 0;
+      map[o.customer_email].orders++;
+    });
+    return Object.values(map).sort((a, b) => b.total - a.total).slice(0, 5);
+  }, [filtered, allUsers]);
 
   const stats = [
     { title: 'Faturamento', value: `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: DollarSign, color: 'text-green-600' },
     { title: 'Pedidos', value: totalOrders, icon: ShoppingBag, color: 'text-blue-600' },
-    { title: 'Clientes Únicos', value: uniqueClients, icon: Users, color: 'text-purple-600' },
+    { title: 'Clientes Ativos', value: uniqueClientsInPeriod.size, icon: Users, color: 'text-purple-600' },
     { title: 'Ticket Médio', value: `R$ ${avgTicket.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: TrendingUp, color: 'text-orange-500' },
+    { title: 'Clientes Inativos', value: inactiveClients.length, icon: UserX, color: 'text-red-500', subtitle: 'compraram antes mas não no período' },
+    { title: 'Produtos Distintos', value: topProducts.length > 0 ? Object.keys((() => { const m = {}; filtered.forEach(o => (o.items||[]).forEach(i => { m[i.product_name] = 1; })); return m; })()).length : 0, icon: Package, color: 'text-teal-600' },
   ];
 
   if (isLoading) return (
@@ -97,16 +130,17 @@ export default function AdminDashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {stats.map(s => (
           <Card key={s.title}>
             <CardContent className="p-4 flex items-start gap-3">
-              <div className={`p-2 rounded-lg bg-muted ${s.color}`}>
-                <s.icon className="w-5 h-5" />
+              <div className={`p-2 rounded-lg bg-muted ${s.color} flex-shrink-0`}>
+                <s.icon className="w-4 h-4" />
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">{s.title}</p>
+              <div className="min-w-0">
+                <p className="text-xs text-muted-foreground leading-tight">{s.title}</p>
                 <p className="text-lg font-bold leading-tight">{s.value}</p>
+                {s.subtitle && <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">{s.subtitle}</p>}
               </div>
             </CardContent>
           </Card>
@@ -141,29 +175,106 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
 
-      {/* Top Products */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Produtos Mais Vendidos (por faturamento)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {topProducts.length === 0 ? (
-            <p className="text-muted-foreground text-sm text-center py-8">Sem dados no período</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={topProducts} layout="vertical" margin={{ left: 16 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={v => `R$${(v/1000).toFixed(0)}k`} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
-                <Tooltip formatter={v => [`R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Receita']} />
-                <Bar dataKey="revenue" radius={[0, 4, 4, 0]}>
-                  {topProducts.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Products */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Award className="w-4 h-4 text-primary" /> Produtos Mais Vendidos
+              </CardTitle>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setTopMode('qty')}
+                  className={`text-xs px-2 py-1 rounded ${topMode === 'qty' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                >
+                  Qtd.
+                </button>
+                <button
+                  onClick={() => setTopMode('revenue')}
+                  className={`text-xs px-2 py-1 rounded ${topMode === 'revenue' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+                >
+                  R$
+                </button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {topProducts.length === 0 ? (
+              <p className="text-muted-foreground text-sm text-center py-8">Sem dados no período</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={topProducts} layout="vertical" margin={{ left: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={topMode === 'revenue' ? v => `R$${(v/1000).toFixed(0)}k` : undefined} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={90} />
+                  <Tooltip formatter={v => topMode === 'revenue'
+                    ? [`R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Receita']
+                    : [v, 'Quantidade']} />
+                  <Bar dataKey={topMode} radius={[0, 4, 4, 0]}>
+                    {topProducts.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top Clients */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="w-4 h-4 text-primary" /> Top Clientes no Período
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topClients.length === 0 ? (
+              <p className="text-muted-foreground text-sm text-center py-8">Sem dados no período</p>
+            ) : (
+              <div className="space-y-2">
+                {topClients.map((c, i) => (
+                  <div key={c.email} className="flex items-center gap-3 py-2 border-b last:border-0">
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0`}
+                      style={{ backgroundColor: COLORS[i % COLORS.length] }}>
+                      {i + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{c.name}</p>
+                      <p className="text-xs text-muted-foreground">{c.orders} pedido(s)</p>
+                    </div>
+                    <p className="text-sm font-bold text-primary whitespace-nowrap">
+                      R$ {c.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Inactive Clients */}
+      {inactiveClients.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <UserX className="w-4 h-4 text-red-500" /> Clientes que não compraram no período ({inactiveClients.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {inactiveClients.map(email => {
+                const u = allUsers.find(u => u.email === email);
+                return (
+                  <Badge key={email} variant="outline" className="text-xs text-muted-foreground">
+                    {u?.company_name || u?.full_name || email}
+                  </Badge>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

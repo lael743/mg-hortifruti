@@ -17,6 +17,7 @@ export default function AdminChat() {
   const [sending, setSending] = useState(false);
   const [unreadByConv, setUnreadByConv] = useState({});
   const bottomRef = useRef(null);
+  const prevUnreadTotal = useRef(0);
 
   const { data: adminUser } = useQuery({
     queryKey: ['admin-me'],
@@ -56,10 +57,26 @@ export default function AdminChat() {
     });
   }, [selectedConv, allMessages]);
 
-  // Real-time subscription
+  // Real-time subscription + browser notifications
   useEffect(() => {
-    const unsubscribe = base44.entities.ChatMessage.subscribe(() => {
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    const unsubscribe = base44.entities.ChatMessage.subscribe((event) => {
       refetch();
+      // Notify if new client message
+      if (event.type === 'create' && event.data && !event.data.is_admin) {
+        const senderName = event.data.sender_name || event.data.sender_email || 'Cliente';
+        toast(`💬 Nova mensagem de ${senderName}`, { description: event.data.message?.slice(0, 80) });
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(`Nova mensagem de ${senderName}`, {
+            body: event.data.message?.slice(0, 100),
+            icon: '/favicon.ico',
+          });
+        }
+      }
     });
     return unsubscribe;
   }, []);

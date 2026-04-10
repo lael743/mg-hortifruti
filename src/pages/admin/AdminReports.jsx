@@ -33,6 +33,17 @@ export default function AdminReports() {
     queryFn: () => base44.entities.Order.list('-created_date', 1000),
   });
 
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['users-list'],
+    queryFn: () => base44.entities.User.list(),
+  });
+
+  const userByEmail = useMemo(() => {
+    const map = {};
+    allUsers.forEach(u => { map[u.email] = u; });
+    return map;
+  }, [allUsers]);
+
   const filtered = useMemo(() => {
     const [year, month] = monthFilter.split('-').map(Number);
     const start = startOfMonth(new Date(year, month - 1));
@@ -232,7 +243,7 @@ export default function AdminReports() {
                         {format(new Date(order.created_date), 'dd/MM/yyyy HH:mm')}
                       </td>
                       <td className="p-3">
-                        <p className="font-medium">{order.customer_name || '—'}</p>
+                        <p className="font-medium">{userByEmail[order.customer_email]?.company_name || order.customer_name || '—'}</p>
                         <p className="text-xs text-muted-foreground">{order.customer_email}</p>
                       </td>
                       <td className="p-3 text-muted-foreground">
