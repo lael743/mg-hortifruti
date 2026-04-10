@@ -29,13 +29,13 @@ export default function Orders() {
     enabled: !!user,
   });
 
+  const [expandedOrder, setExpandedOrder] = useState(null);
+  const [dateFilter, setDateFilter] = useState('all');
+
   if (!user) {
     navigate('/');
     return null;
   }
-
-  const [expandedOrder, setExpandedOrder] = useState(null);
-  const [dateFilter, setDateFilter] = useState('all');
 
   const handleRepeatOrder = (order) => {
     clearCart();

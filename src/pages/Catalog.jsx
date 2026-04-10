@@ -19,6 +19,7 @@ export default function Catalog() {
   const [favorites, setFavorites] = useState(() => getFavorites());
   const [visibleCount, setVisibleCount] = useState(20);
   const [showTopBtn, setShowTopBtn] = useState(false);
+  const [sortAZ, setSortAZ] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setShowTopBtn(window.scrollY > 400);
@@ -140,14 +141,18 @@ export default function Catalog() {
   const activeProducts = products.filter(p => p.active !== false);
   const maxPrice = Math.max(0, ...activeProducts.map(p => p.promo_active && p.promo_price ? p.promo_price : p.price || 0));
 
+  const normalizeStr = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
   const filtered = activeProducts.filter(p => {
-    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search || normalizeStr(p.name).includes(normalizeStr(search));
     const matchCategory = category === 'Todas' || p.category === category;
     const productPrice = p.promo_active && p.promo_price ? p.promo_price : p.price || 0;
     const matchPrice = productPrice >= priceRange[0] && productPrice <= priceRange[1];
     const matchFav = !onlyFavorites || favorites.includes(p.id);
     return matchSearch && matchCategory && matchPrice && matchFav;
   });
+
+  if (sortAZ) filtered.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 
   const promoProducts = filtered.filter(p => p.promo_active);
   const regularProducts = filtered.filter(p => !p.promo_active);
@@ -208,14 +213,27 @@ export default function Catalog() {
         )}
       </div>
 
-      <CatalogFilters
-        search={search} setSearch={setSearch}
-        category={category} setCategory={setCategory}
-        priceRange={priceRange} setPriceRange={setPriceRange}
-        onlyFavorites={onlyFavorites} setOnlyFavorites={setOnlyFavorites}
-        maxPrice={maxPrice || 500}
-        isLoggedIn={!!user}
-      />
+      <div className="space-y-3">
+        <CatalogFilters
+          search={search} setSearch={setSearch}
+          category={category} setCategory={setCategory}
+          priceRange={priceRange} setPriceRange={setPriceRange}
+          onlyFavorites={onlyFavorites} setOnlyFavorites={setOnlyFavorites}
+          maxPrice={maxPrice || 500}
+          isLoggedIn={!!user}
+        />
+        <div className="flex justify-end">
+          <button
+            onClick={() => setSortAZ(v => !v)}
+            className={`inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors ${
+              sortAZ ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <span className="font-bold text-xs">A→Z</span>
+            {sortAZ ? 'Ordenado' : 'Ordenar A-Z'}
+          </button>
+        </div>
+      </div>
 
       {user && myOrders.length > 0 && (
         <ProductRecommendations

@@ -7,16 +7,21 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { getCart, getCartCount } from '@/lib/cartStore';
+import { getCart, getCartCount, getCartTotal } from '@/lib/cartStore';
 
 export default function Navbar({ user }) {
   const [cartCount, setCartCount] = useState(0);
+  const [cartTotal, setCartTotal] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
-    const update = () => setCartCount(getCartCount(getCart()));
+    const update = () => {
+      const c = getCart();
+      setCartCount(getCartCount(c));
+      setCartTotal(getCartTotal(c));
+    };
     update();
     window.addEventListener('cart-updated', update);
     return () => window.removeEventListener('cart-updated', update);
@@ -80,7 +85,7 @@ export default function Navbar({ user }) {
           )}
 
           {user && (
-            <Link to="/cart" className="relative">
+            <Link to="/cart" className="relative flex items-center gap-1.5">
               <Button variant="ghost" size="icon" className="relative">
                 <ShoppingCart className="w-5 h-5" />
                 {cartCount > 0 && (
@@ -89,6 +94,11 @@ export default function Navbar({ user }) {
                   </Badge>
                 )}
               </Button>
+              {cartTotal > 0 && (
+                <span className="hidden sm:block text-sm font-semibold text-primary whitespace-nowrap">
+                  R$ {cartTotal.toFixed(2)}
+                </span>
+              )}
             </Link>
           )}
 
