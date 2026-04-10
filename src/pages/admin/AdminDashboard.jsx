@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Input } from '@/components/ui/input';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +16,45 @@ import { ptBR } from 'date-fns/locale';
 
 const COLORS = ['#22c55e', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
+function InactiveClientTable({ clients }) {
+  const handleWhatsApp = (client) => {
+    const number = client.whatsapp?.replace(/\D/g, '');
+    if (!number) {
+      alert('WhatsApp não cadastrado para este cliente.');
+      return;
+    }
+    const msg = encodeURIComponent(`Olá ${client.name}! Temos novidades no catálogo e gostaríamos de receber seu pedido. Acesse e confira as ofertas! 🛒`);
+    window.open(`https://wa.me/55${number}?text=${msg}`, '_blank');
+  };
+
+  return (
+    <div className="divide-y">
+      {clients.map(c => (
+        <div key={c.email} className="flex items-center gap-3 px-4 py-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{c.name}</p>
+            <p className="text-xs text-muted-foreground">{c.email}</p>
+          </div>
+          {c.daysSince !== null && (
+            <span className="text-xs text-muted-foreground whitespace-nowrap">{c.daysSince}d sem comprar</span>
+          )}
+          <button
+            onClick={() => handleWhatsApp(c)}
+            title={c.whatsapp ? `WhatsApp: ${c.whatsapp}` : 'WhatsApp não cadastrado'}
+            className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors ${
+              c.whatsapp
+                ? 'bg-green-500 hover:bg-green-600 text-white'
+                : 'bg-muted text-muted-foreground cursor-not-allowed'
+            }`}
+          >
+            💬 WhatsApp
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const PERIODS = [
   { label: 'Últimos 7 dias', value: '7d' },
   { label: 'Últimos 30 dias', value: '30d' },
@@ -24,7 +64,8 @@ const PERIODS = [
 
 export default function AdminDashboard() {
   const [period, setPeriod] = useState('30d');
-  const [topMode, setTopMode] = useState('qty'); // 'qty' | 'revenue'
+  const [topMode, setTopMode] = useState('qty');
+  const [inactiveDays, setInactiveDays] = useState(30);
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders-dashboard'],
@@ -53,15 +94,56 @@ export default function AdminDashboard() {
   const uniqueClientsInPeriod = useMemo(() => new Set(filtered.map(o => o.customer_email)), [filtered]);
   const avgTicket = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-  // Clients who ordered before but NOT in the period
+  // Clients who ordered before but NOT in the selected period
   const inactiveClients = useMemo(() => {
     const emailsBeforePeriod = new Set(
       orders
         .filter(o => o.status !== 'Cancelado' && new Date(o.created_date) < cutoff)
         .map(o => o.customer_email)
     );
-    return [...emailsBeforePeriod].filter(e => !uniqueClientsInPeriod.has(e));
-  }, [orders, cutoff, uniqueClientsInPeriod]);
+    return [...emailsBeforePeriod]
+      .filter(e => !uniqueClientsInPeriod.has(e))
+      .map(email => {
+        const u = allUsers.find(u => u.email === email);
+        const lastOrder = orders
+          .filter(o => o.customer_email === email && o.status !== 'Cancelado')
+          .sort((a, b) => new Date(b.created_date) - new Date(a.created_date))[0];
+        const daysSince = lastOrder
+          ? Math.floor((new Date() - new Date(lastOrder.created_date)) / 86400000)
+          : null;
+        return {
+          email,
+          name: u?.company_name || u?.full_name || email,
+          whatsapp: u?.whatsapp || u?.phone || null,
+          daysSince,
+        };
+      })
+      .sort((a, b) => (b.daysSince || 0) - (a.daysSince || 0));
+  }, [orders, cutoff, uniqueClientsInPeriod, allUsers]);
+
+  // Clients who haven't bought in X days (separate, based on inactiveDays input)
+  const notBoughtInDays = useMemo(() => {
+    const dayCutoff = subDays(new Date(), inactiveDays);
+    const lastOrderByEmail = {};
+    orders.filter(o => o.status !== 'Cancelado').forEach(o => {
+      const d = new Date(o.created_date);
+      if (!lastOrderByEmail[o.customer_email] || d > lastOrderByEmail[o.customer_email].date) {
+        lastOrderByEmail[o.customer_email] = { date: d, order: o };
+      }
+    });
+    return Object.entries(lastOrderByEmail)
+      .filter(([, v]) => v.date < dayCutoff)
+      .map(([email, v]) => {
+        const u = allUsers.find(u => u.email === email);
+        return {
+          email,
+          name: u?.company_name || u?.full_name || email,
+          whatsapp: u?.whatsapp || u?.phone || null,
+          daysSince: Math.floor((new Date() - v.date) / 86400000),
+        };
+      })
+      .sort((a, b) => b.daysSince - a.daysSince);
+  }, [orders, inactiveDays, allUsers]);
 
   // Sales over time
   const salesByDay = useMemo(() => {
@@ -253,28 +335,45 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Inactive Clients */}
+      {/* Inactive in period */}
       {inactiveClients.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
-              <UserX className="w-4 h-4 text-red-500" /> Clientes que não compraram no período ({inactiveClients.length})
+              <UserX className="w-4 h-4 text-red-500" /> Não compraram no período selecionado ({inactiveClients.length})
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {inactiveClients.map(email => {
-                const u = allUsers.find(u => u.email === email);
-                return (
-                  <Badge key={email} variant="outline" className="text-xs text-muted-foreground">
-                    {u?.company_name || u?.full_name || email}
-                  </Badge>
-                );
-              })}
-            </div>
+          <CardContent className="p-0">
+            <InactiveClientTable clients={inactiveClients} />
           </CardContent>
         </Card>
       )}
+
+      {/* Not bought in X days */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <UserX className="w-4 h-4 text-orange-500" /> Sem compras há mais de
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={1}
+                value={inactiveDays}
+                onChange={e => setInactiveDays(Number(e.target.value))}
+                className="w-20 h-8 text-sm"
+              />
+              <span className="text-sm text-muted-foreground">dias ({notBoughtInDays.length} clientes)</span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {notBoughtInDays.length === 0
+            ? <p className="text-sm text-muted-foreground text-center py-6">Nenhum cliente nesse critério.</p>
+            : <InactiveClientTable clients={notBoughtInDays} />}
+        </CardContent>
+      </Card>
     </div>
   );
 }
