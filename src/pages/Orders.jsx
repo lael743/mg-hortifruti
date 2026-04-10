@@ -32,11 +32,6 @@ export default function Orders() {
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [dateFilter, setDateFilter] = useState('all');
 
-  if (!user) {
-    navigate('/');
-    return null;
-  }
-
   const handleRepeatOrder = (order) => {
     clearCart();
     order.items.forEach(item => {
@@ -63,6 +58,11 @@ export default function Orders() {
       return orderDate >= startDate && orderDate <= endDate;
     });
   }, [orders, dateFilter]);
+
+  if (!user) {
+    navigate('/');
+    return null;
+  }
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">

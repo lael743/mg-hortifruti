@@ -221,6 +221,7 @@ export default function Catalog() {
           onlyFavorites={onlyFavorites} setOnlyFavorites={setOnlyFavorites}
           maxPrice={maxPrice || 500}
           isLoggedIn={!!user}
+          extraCategories={company?.custom_categories || []}
         />
         <div className="flex justify-end">
           <button

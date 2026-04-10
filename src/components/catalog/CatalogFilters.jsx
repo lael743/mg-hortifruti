@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Search, X, SlidersHorizontal, Heart } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 
-const CATEGORIES = ['Todas', 'Frutas', 'Verduras', 'Legumes', 'Temperos', 'Outros'];
+const DEFAULT_CATEGORIES = ['Todas', 'Frutas', 'Verduras', 'Legumes', 'Temperos', 'Outros'];
 
-export default function CatalogFilters({ search, setSearch, category, setCategory, priceRange, setPriceRange, onlyFavorites, setOnlyFavorites, maxPrice, isLoggedIn }) {
+export default function CatalogFilters({ search, setSearch, category, setCategory, priceRange, setPriceRange, onlyFavorites, setOnlyFavorites, maxPrice, isLoggedIn, extraCategories = [] }) {
+  const categories = [...new Set([...DEFAULT_CATEGORIES, ...extraCategories])];
   const [showAdvanced, setShowAdvanced] = useState(false);
   const hasAdvancedFilter = onlyFavorites || priceRange[1] < maxPrice || priceRange[0] > 0;
 
@@ -28,7 +29,7 @@ export default function CatalogFilters({ search, setSearch, category, setCategor
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">
-        {CATEGORIES.map(cat => (
+        {categories.map(cat => (
           <Button
             key={cat}
             variant={category === cat ? 'default' : 'outline'}

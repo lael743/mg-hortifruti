@@ -55,6 +55,22 @@
       "type": "boolean",
       "default": true,
       "description": "Cat\u00e1logo vis\u00edvel para clientes"
+    },
+    "custom_categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Categorias personalizadas de produtos",
+      "default": []
+    },
+    "custom_packagings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tipos de embalagem personalizados",
+      "default": []
     }
   },
   "required": [
