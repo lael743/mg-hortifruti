@@ -86,29 +86,40 @@ export default function Catalog() {
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Tabela de Produtos</title>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
-      body { font-family: Arial, sans-serif; font-size: 9px; padding: 10px 12px; }
-      h2 { font-size: 13px; margin-bottom: 2px; }
-      .subtitle { font-size: 9px; color: #555; margin-bottom: 6px; }
-      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
-      .item { border: 1px solid #ccc; border-radius: 3px; padding: 5px 6px; display: flex; flex-direction: column; gap: 2px; }
-      .item-name { font-weight: bold; font-size: 11px; line-height: 1.2; }
-      .item-meta { color: #666; font-size: 8px; line-height: 1.3; }
-      .item-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
-      .item-price { font-weight: bold; color: #2d7a3a; font-size: 12px; }
-      .item-qty { font-size: 8px; color: #444; }
-      .promo { background: #f59e0b; color: #fff; font-size: 7px; padding: 0 3px; border-radius: 2px; font-weight: bold; }
-      @media print { @page { margin: 8mm; size: A4; } }
+      body { font-family: Arial, sans-serif; font-size: 7px; padding: 6px 8px; }
+      h2 { font-size: 11px; margin-bottom: 1px; }
+      .subtitle { font-size: 7px; color: #555; margin-bottom: 4px; }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+      .item { border: 1px solid #ccc; border-radius: 2px; padding: 3px 4px; display: flex; flex-direction: column; gap: 1px; page-break-inside: avoid; break-inside: avoid; }
+      .item-name { font-weight: bold; font-size: 8px; line-height: 1.15; }
+      .item-meta { color: #666; font-size: 6.5px; line-height: 1.2; }
+      .item-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 1px; }
+      .item-price { font-weight: bold; color: #2d7a3a; font-size: 8.5px; }
+      .item-qty { font-size: 6.5px; color: #444; }
+      .promo { background: #f59e0b; color: #fff; font-size: 6px; padding: 0 2px; border-radius: 2px; font-weight: bold; }
+      @media print { @page { margin: 6mm; size: A4; } }
     </style></head>
     <body>
-      <h2>${company?.company_name || 'Tabela de Produtos'} &nbsp;·&nbsp; <span style="font-size:10px;font-weight:normal">${new Date().toLocaleDateString('pt-BR')} &nbsp;·&nbsp; ${activeProds.length} produtos</span></h2>
+      <h2>${company?.company_name || 'Tabela de Produtos'} &nbsp;·&nbsp; <span style="font-size:9px;font-weight:normal">${new Date().toLocaleDateString('pt-BR')} &nbsp;·&nbsp; ${activeProds.length} produtos</span></h2>
       ${tableGroup}
       <div class="grid">${rows}</div>
     </body></html>`;
-    const w = window.open('', '_blank');
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => w.print(), 500);
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+    iframe.contentDocument.write(html);
+    iframe.contentDocument.close();
+    iframe.contentWindow.focus();
+    setTimeout(() => {
+      iframe.contentWindow.print();
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, 500);
   };
 
   // Show maintenance screen for non-admin users when catalog is off
