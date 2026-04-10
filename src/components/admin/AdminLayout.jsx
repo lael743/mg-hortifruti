@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useOutletContext, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings, BarChart2, FileText, MessageCircle, ShieldOff, ShieldCheck, Database, ChevronDown } from 'lucide-react';
+import { useQuery, useQueryClient as _useQueryClient } from '@tanstack/react-query';
 import CompanySettingsDialog from './CompanySettingsDialog';
 import { base44 } from '@/api/base44Client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -27,6 +28,21 @@ export default function AdminLayout() {
   const [settingsId, setSettingsId] = useState(null);
   const [toggling, setToggling] = useState(false);
   const queryClient = useQueryClient();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    // Load initial unread count
+    base44.entities.ChatMessage.list('-created_date', 200).then(msgs => {
+      setUnreadCount(msgs.filter(m => !m.is_admin && !m.read_by_admin).length);
+    });
+    // Subscribe for real-time updates
+    const unsub = base44.entities.ChatMessage.subscribe(() => {
+      base44.entities.ChatMessage.list('-created_date', 200).then(msgs => {
+        setUnreadCount(msgs.filter(m => !m.is_admin && !m.read_by_admin).length);
+      });
+    });
+    return unsub;
+  }, []);
 
   useEffect(() => {
     base44.entities.CompanySettings.list().then(list => {
@@ -101,14 +117,21 @@ export default function AdminLayout() {
         {tabs.map(tab => {
           const isActive = location.pathname === tab.path;
           const Icon = tab.icon;
+          const isChat = tab.path === '/admin/chat';
+          const badge = isChat && unreadCount > 0 ? unreadCount : 0;
           return (
             <Link key={tab.path} to={tab.path} className="flex-1">
               <Button
                 variant={isActive ? 'default' : 'ghost'}
-                className={`w-full ${isActive ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
+                className={`w-full relative ${isActive ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
                 size="sm"
               >
                 <Icon className="w-4 h-4 mr-1.5" />{tab.label}
+                {badge > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
+                    {badge > 99 ? '99+' : badge}
+                  </span>
+                )}
               </Button>
             </Link>
           );
