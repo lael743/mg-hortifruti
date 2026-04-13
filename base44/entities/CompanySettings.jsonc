@@ -71,6 +71,10 @@
       },
       "description": "Tipos de embalagem personalizados",
       "default": []
+    },
+    "whatsapp_campaign_message": {
+      "type": "string",
+      "description": "Mensagem padr\u00e3o de campanha WhatsApp para clientes"
     }
   },
   "required": [

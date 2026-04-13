@@ -6,55 +6,43 @@
       "type": "string",
       "enum": [
         "admin",
-        "client"
+        "user"
       ],
-      "default": "client"
+      "default": "user"
     },
-    "status": {
-      "type": "string",
-      "enum": [
-        "pending",
-        "approved",
-        "rejected"
-      ],
-      "default": "pending",
-      "description": "Status de aprova\u00e7\u00e3o do cliente"
+    "approved": {
+      "type": "boolean",
+      "default": false
     },
     "company_name": {
       "type": "string",
-      "description": "Nome do estabelecimento / raz\u00e3o social"
+      "description": "Nome da empresa do cliente"
     },
-    "cnpj_cpf": {
-      "type": "string",
-      "description": "CNPJ ou CPF do cliente"
+    "cnpj": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
     },
     "whatsapp": {
-      "type": "string",
-      "description": "WhatsApp do cliente"
+      "type": "string"
     },
     "address": {
-      "type": "string",
-      "description": "Endere\u00e7o completo (rua, n\u00famero, bairro)"
+      "type": "string"
     },
     "city": {
-      "type": "string",
-      "description": "Cidade"
+      "type": "string"
     },
     "state": {
-      "type": "string",
-      "description": "Estado (UF)"
+      "type": "string"
     },
     "price_group_id": {
       "type": "string",
-      "description": "ID da tabela de pre\u00e7os aplicada a este cliente"
+      "description": "ID da tabela de pre\u00e7os do cliente"
     },
-    "price_group_name": {
+    "last_whatsapp_campaign_date": {
       "type": "string",
-      "description": "Nome da tabela de pre\u00e7os (cache para exibi\u00e7\u00e3o)"
-    },
-    "notes": {
-      "type": "string",
-      "description": "Observa\u00e7\u00f5es internas do admin sobre o cliente"
+      "description": "Data do \u00faltimo envio de mensagem de campanha via WhatsApp"
     }
   }
 }
