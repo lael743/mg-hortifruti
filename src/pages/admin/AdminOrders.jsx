@@ -264,7 +264,7 @@ export default function AdminOrders() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-sm">{order.customer_name || order.customer_email}</span>
+                      <span className="font-semibold text-sm">{u.company_name || order.customer_name || order.customer_email}</span>
                       <Badge className={`${statusColors[order.status]} border text-xs`}>{order.status}</Badge>
                     </div>
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">

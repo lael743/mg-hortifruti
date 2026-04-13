@@ -52,8 +52,10 @@ export default function AdminReports() {
     return orders.filter(o => {
       const inMonth = isWithinInterval(new Date(o.created_date), { start, end });
       const inStatus = statusFilter === 'all' || o.status === statusFilter;
+      const u = userByEmail[o.customer_email] || {};
       const inSearch = !search || 
         (o.customer_name || '').toLowerCase().includes(search.toLowerCase()) ||
+        (u.company_name || '').toLowerCase().includes(search.toLowerCase()) ||
         (o.customer_email || '').toLowerCase().includes(search.toLowerCase());
       return inMonth && inStatus && inSearch;
     });
@@ -95,7 +97,7 @@ export default function AdminReports() {
     const rows = filtered.map(o => `
       <tr>
         <td>${format(new Date(o.created_date), 'dd/MM/yyyy')}</td>
-        <td>${o.customer_name || o.customer_email}</td>
+        <td>${userByEmail[o.customer_email]?.company_name || o.customer_name || o.customer_email}</td>
         <td>${o.status}</td>
         <td>${(o.items || []).length} item(s)</td>
         <td style="text-align:right">R$ ${(o.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>

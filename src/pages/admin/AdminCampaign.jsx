@@ -86,6 +86,7 @@ export default function AdminCampaign() {
       return;
     }
     const name = client.contact_name || client.company_name || client.full_name || client.email;
+    const displayName = client.company_name || client.full_name || client.email;
     const text = message
       .replace('{nome}', name)
       .replace('{empresa}', name);
@@ -141,13 +142,15 @@ export default function AdminCampaign() {
           ) : (
             <div className="divide-y">
               {clients.map(client => {
-                const name = client.company_name || client.full_name || client.email;
+                const name = client.contact_name || client.company_name || client.full_name || client.email;
+                const displayName = client.company_name || client.full_name || client.email;
                 const notSentYet = !client.lastCampaign;
                 return (
                   <div key={client.id} className="flex items-center gap-3 px-4 py-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold truncate">{name}</p>
+                        <p className="text-sm font-semibold truncate">{displayName}</p>
+                        {client.contact_name && <span className="text-xs text-muted-foreground">({client.contact_name})</span>}
                         {notSentYet && (
                           <Badge variant="outline" className="text-[10px] border-orange-300 text-orange-600 bg-orange-50">
                             Nunca enviado

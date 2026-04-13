@@ -145,13 +145,16 @@ export default function AdminClients() {
       <div className="flex items-start gap-4">
         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
           <span className="text-sm font-bold text-primary">
-            {(client.full_name || client.email || '?')[0].toUpperCase()}
+            {(client.company_name || client.full_name || client.email || '?')[0].toUpperCase()}
           </span>
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-sm">{client.full_name || '(sem nome)'}</h3>
+            <h3 className="font-semibold text-sm">{client.company_name || client.full_name || '(sem nome)'}</h3>
+            {client.company_name && client.full_name && (
+              <span className="text-xs text-muted-foreground">({client.full_name})</span>
+            )}
             <Badge className={`${statusColors[client.status || 'pending']} border text-[10px]`}>
               {statusLabel[client.status || 'pending']}
             </Badge>

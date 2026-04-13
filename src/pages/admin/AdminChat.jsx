@@ -19,6 +19,12 @@ export default function AdminChat() {
   const bottomRef = useRef(null);
   const prevUnreadTotal = useRef(0);
 
+  const { data: allUsers = [] } = useQuery({
+    queryKey: ['users-list'],
+    queryFn: () => base44.entities.User.list(),
+  });
+  const userByEmail = React.useMemo(() => Object.fromEntries(allUsers.map(u => [u.email, u])), [allUsers]);
+
   const { data: adminUser } = useQuery({
     queryKey: ['admin-me'],
     queryFn: () => base44.auth.me(),
@@ -35,7 +41,9 @@ export default function AdminChat() {
     const convMap = {};
     allMessages.forEach(m => {
       if (!convMap[m.conversation_id]) {
-        convMap[m.conversation_id] = { id: m.conversation_id, name: m.is_admin ? m.conversation_id : (m.sender_name || m.sender_email), lastMessage: m, unread: 0 };
+        const u = userByEmail[m.conversation_id];
+        const displayName = u?.company_name || u?.full_name || (m.is_admin ? m.conversation_id : (m.sender_name || m.conversation_id));
+        convMap[m.conversation_id] = { id: m.conversation_id, name: displayName, lastMessage: m, unread: 0 };
       }
       const c = convMap[m.conversation_id];
       if (new Date(m.created_date) > new Date(c.lastMessage.created_date)) c.lastMessage = m;
