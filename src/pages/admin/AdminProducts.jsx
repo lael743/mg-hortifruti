@@ -22,7 +22,7 @@ export default function AdminProducts() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   // inline price edit state: { id, value }
   const [priceEdit, setPriceEdit] = useState(null);
-  const [sortAZ, setSortAZ] = useState(null); // null = default, true = A-Z, false = Z-A
+  const [sortAZ, setSortAZ] = useState(true); // true = A-Z, false = Z-A, null = default
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['admin-products'],
@@ -68,7 +68,7 @@ export default function AdminProducts() {
   const filtered = products
     .filter(p => !search || p.name?.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
-      if (sortAZ === null) return 0;
+      if (sortAZ === null) return a.name?.localeCompare(b.name, 'pt-BR');
       return sortAZ ? a.name?.localeCompare(b.name) : b.name?.localeCompare(a.name);
     });
 

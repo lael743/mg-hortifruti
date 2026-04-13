@@ -19,7 +19,7 @@ export default function Catalog() {
   const [favorites, setFavorites] = useState(() => getFavorites());
   const [visibleCount, setVisibleCount] = useState(20);
   const [showTopBtn, setShowTopBtn] = useState(false);
-  const [sortAZ, setSortAZ] = useState(false);
+  const [sortAZ, setSortAZ] = useState(true);
 
   useEffect(() => {
     const onScroll = () => setShowTopBtn(window.scrollY > 400);

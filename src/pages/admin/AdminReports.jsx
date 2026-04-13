@@ -96,7 +96,7 @@ export default function AdminReports() {
     const monthLabel = format(new Date(year, month - 1), 'MMMM yyyy', { locale: ptBR });
     const rows = filtered.map(o => `
       <tr>
-        <td>${format(new Date(o.created_date), 'dd/MM/yyyy')}</td>
+        <td>${format(new Date(o.created_date), 'dd/MM/yyyy HH:mm')}</td>
         <td>${userByEmail[o.customer_email]?.company_name || o.customer_name || o.customer_email}</td>
         <td>${o.status}</td>
         <td>${(o.items || []).length} item(s)</td>
