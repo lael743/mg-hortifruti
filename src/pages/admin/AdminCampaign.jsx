@@ -85,7 +85,7 @@ export default function AdminCampaign() {
       toast.error('WhatsApp não cadastrado para este cliente.');
       return;
     }
-    const name = client.company_name || client.full_name || client.email;
+    const name = client.contact_name || client.company_name || client.full_name || client.email;
     const text = message
       .replace('{nome}', name)
       .replace('{empresa}', name);

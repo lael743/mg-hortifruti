@@ -15,6 +15,7 @@ const STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG'
 export default function ClientFormDialog({ client, onClose, onSaved }) {
   const [form, setForm] = useState({
     company_name: client?.company_name || '',
+    contact_name: client?.contact_name || '',
     cnpj_cpf: client?.cnpj_cpf || '',
     whatsapp: client?.whatsapp || '',
     address: client?.address || '',
@@ -109,6 +110,11 @@ export default function ClientFormDialog({ client, onClose, onSaved }) {
           <div>
             <Label>Razão Social / Nome do Estabelecimento</Label>
             <Input value={form.company_name} onChange={(e) => set('company_name', e.target.value)} placeholder="Ex: Mercadinho do João" />
+          </div>
+          <div>
+            <Label>Nome do Contato (para mensagens)</Label>
+            <Input value={form.contact_name} onChange={(e) => set('contact_name', e.target.value)} placeholder="Ex: João, Maria..." />
+            <p className="text-xs text-muted-foreground mt-1">Usado nas mensagens de WhatsApp para personalizar o contato.</p>
           </div>
           <div>
             <Label>CNPJ / CPF</Label>

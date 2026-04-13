@@ -23,7 +23,8 @@ function InactiveClientTable({ clients }) {
       alert('WhatsApp não cadastrado para este cliente.');
       return;
     }
-    const msg = encodeURIComponent(`Olá ${client.name}! Temos novidades no catálogo e gostaríamos de receber seu pedido. Acesse e confira as ofertas! 🛒`);
+    const contactName = client.contact_name || client.name;
+    const msg = encodeURIComponent(`Olá ${contactName}! Temos novidades no catálogo e gostaríamos de receber seu pedido. Acesse e confira as ofertas! 🛒`);
     window.open(`https://wa.me/55${number}?text=${msg}`, '_blank');
   };
 
