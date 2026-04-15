@@ -32,6 +32,10 @@
           "unit_price": {
             "type": "number"
           },
+          "final_unit_price": {
+            "type": "number",
+            "description": "Pre\u00e7o final efetivo (pode ser editado pelo admin)"
+          },
           "packaging_type": {
             "type": "string"
           },
