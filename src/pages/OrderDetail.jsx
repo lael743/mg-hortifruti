@@ -141,8 +141,8 @@ export default function OrderDetail() {
                     <span className="text-xs text-muted-foreground">{item.packaging_type} {item.weight && `• ${item.weight}`}</span>
                   </td>
                   <td className="text-center py-3">{item.quantity}</td>
-                  <td className="text-right py-3">R$ {item.unit_price?.toFixed(2)}</td>
-                  <td className="text-right py-3 font-semibold">R$ {(item.unit_price * item.quantity).toFixed(2)}</td>
+                  <td className="text-right py-3">R$ {(item.final_unit_price ?? item.unit_price)?.toFixed(2)}</td>
+                  <td className="text-right py-3 font-semibold">R$ {((item.final_unit_price ?? item.unit_price) * item.quantity).toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>

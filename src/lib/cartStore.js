@@ -11,8 +11,13 @@ export function setCartUser(email, recordId) {
 }
 
 export function getCart() {
-  const raw = localStorage.getItem(CART_KEY);
-  return raw ? JSON.parse(raw) : [];
+  try {
+    const raw = localStorage.getItem(CART_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    localStorage.removeItem(CART_KEY);
+    return [];
+  }
 }
 
 async function persistCartToServer(items) {

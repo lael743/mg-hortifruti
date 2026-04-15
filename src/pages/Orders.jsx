@@ -127,14 +127,14 @@ export default function Orders() {
                   <div className="space-y-2">
                     {order.items?.map((item, idx) => (
                       <div key={idx} className="flex gap-3">
-                        {item.image_url && (
-                          <img src={item.image_url} alt={item.product_name} className="w-16 h-16 rounded object-cover flex-shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm">{item.quantity}x {item.product_name}</p>
-                          <p className="text-xs text-muted-foreground">{item.packaging_type}{item.weight && ` • ${item.weight}`}</p>
-                          <p className="font-semibold text-sm text-primary mt-1">R$ {(item.unit_price * item.quantity).toFixed(2)}</p>
-                        </div>
+                      {item.image_url && (
+                       <img src={item.image_url} alt={item.product_name} className="w-16 h-16 rounded object-cover flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                       <p className="font-medium text-sm">{item.quantity}x {item.product_name}</p>
+                       <p className="text-xs text-muted-foreground">{item.packaging_type}{item.weight && ` • ${item.weight}`}</p>
+                       <p className="font-semibold text-sm text-primary mt-1">R$ {((item.final_unit_price ?? item.unit_price) * item.quantity).toFixed(2)}</p>
+                      </div>
                       </div>
                     ))}
                   </div>

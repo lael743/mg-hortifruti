@@ -51,7 +51,7 @@ export default function ClientChatWidget({ user }) {
         base44.entities.ChatMessage.update(m.id, { read_by_client: true });
       });
     }
-  }, [open]);
+  }, [open, messages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
