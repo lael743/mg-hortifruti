@@ -186,12 +186,13 @@ export default function AdminOrders() {
         <div class="client-page${index > 0 ? ' page-break' : ''}">
           ${companyHeader}
           <div class="client-info">
-            <h3>${u.company_name || order?.customer_name || email}</h3>
+            <h3>${u.company_name || clientOrders[0]?.customer_name || email}</h3>
             ${u.company_name && clientOrders[0]?.customer_name ? `<p><strong>Contato:</strong> ${clientOrders[0].customer_name}</p>` : ''}
             ${u.cnpj_cpf ? `<p><strong>CNPJ/CPF:</strong> ${u.cnpj_cpf}</p>` : ''}
             ${u.address ? `<p><strong>Endereço:</strong> ${u.address}${u.city ? `, ${u.city}` : ''}${u.state ? ` - ${u.state}` : ''}</p>` : ''}
             ${u.whatsapp ? `<p><strong>WhatsApp:</strong> ${u.whatsapp}</p>` : ''}
             <p><strong>Email:</strong> ${email}</p>
+            ${!u.company_name && clientOrders[0]?.customer_name ? `<p><strong>Nome:</strong> ${clientOrders[0].customer_name}</p>` : ''}
           </div>
           ${orderBlocks}
           <div class="client-total">Total geral do cliente: <strong>R$ ${clientTotal.toFixed(2)}</strong> (${clientOrders.length} pedido${clientOrders.length > 1 ? 's' : ''})</div>
