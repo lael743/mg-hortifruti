@@ -42,8 +42,9 @@ export default function OrderPurchaseListDialog({ orders, userByEmail, periodLab
             orders_count: 0,
           };
         }
+        const effectivePrice = item.final_unit_price ?? item.unit_price;
         map[key].total_qty += item.quantity;
-        map[key].total_value += item.unit_price * item.quantity;
+        map[key].total_value += effectivePrice * item.quantity;
         map[key].orders_count += 1;
       });
     });

@@ -92,8 +92,8 @@ export default function AdminOrders() {
 
   const updateOrderItemsMutation = useMutation({
     mutationFn: ({ id, items, total }) => base44.entities.Order.update(id, { items, total }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+    onSuccess: async (_, variables) => {
+      await queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       toast.success('Pedido atualizado com sucesso');
       setEditingOrder(null);
     },
@@ -156,15 +156,19 @@ export default function AdminOrders() {
     const clientPages = Object.entries(grouped).map(([email, clientOrders], index) => {
       const u = userByEmail[email] || {};
       const orderBlocks = clientOrders.map(order => {
-        const itemsRows = (order.items || []).map(item => `
-          <tr>
+        const itemsRows = (order.items || []).map(item => {
+          const effPrice = item.final_unit_price ?? item.unit_price;
+          const isDisc = item.final_unit_price != null && item.final_unit_price !== item.unit_price;
+          return `
+          <tr${isDisc ? ' style="background:#fffbe6;"' : ''}>
             <td>${item.product_name}</td>
             <td style="text-align:center;">${item.packaging_type || '—'}</td>
             <td style="text-align:center;">${item.weight || '—'}</td>
             <td style="text-align:center;font-weight:bold;">${item.quantity}</td>
-            <td style="text-align:right;">R$ ${item.unit_price?.toFixed(2)}</td>
-            <td style="text-align:right;">R$ ${(item.unit_price * item.quantity).toFixed(2)}</td>
-          </tr>`).join('');
+            <td style="text-align:right;">${isDisc ? `<span style="text-decoration:line-through;color:#999;font-size:10px;">R$ ${item.unit_price?.toFixed(2)}</span> <span style="color:#b45309;font-weight:bold;">R$ ${effPrice.toFixed(2)}</span>` : `R$ ${effPrice.toFixed(2)}`}</td>
+            <td style="text-align:right;">${isDisc ? `<span style="color:#b45309;font-weight:bold;">R$ ${(effPrice * item.quantity).toFixed(2)}</span>` : `R$ ${(effPrice * item.quantity).toFixed(2)}`}</td>
+          </tr>`;
+        }).join('');
         return `
           <div class="order-block">
             <div class="order-header">
@@ -271,14 +275,17 @@ export default function AdminOrders() {
       </div>
       <table>
         <tr><th>Produto</th><th>Embalagem</th><th>Peso</th><th>Qtd</th><th>Unit.</th><th>Subtotal</th></tr>
-        ${order.items?.map(i => `<tr>
+        ${order.items?.map(i => {
+          const ep = i.final_unit_price ?? i.unit_price;
+          const isDisc = i.final_unit_price != null && i.final_unit_price !== i.unit_price;
+          return `<tr${isDisc ? ' style="background:#fffbe6;"' : ''}>
           <td>${i.product_name}</td>
           <td>${i.packaging_type || ''}</td>
           <td>${i.weight || ''}</td>
           <td><strong>${i.quantity}</strong></td>
-          <td>R$ ${i.unit_price?.toFixed(2)}</td>
-          <td>R$ ${(i.unit_price * i.quantity).toFixed(2)}</td>
-        </tr>`).join('')}
+          <td>${isDisc ? `<span style="text-decoration:line-through;color:#999;font-size:11px;">R$ ${i.unit_price?.toFixed(2)}</span><br><span style="color:#b45309;font-weight:bold;">R$ ${ep.toFixed(2)}</span>` : `R$ ${ep.toFixed(2)}`}</td>
+          <td>R$ ${(ep * i.quantity).toFixed(2)}</td>
+        </tr>`;}).join('')}
       </table>
       <div class="total"><strong>Total: R$ ${order.total?.toFixed(2)}</strong></div>
       ${order.notes ? `<div class="footer">Obs: ${order.notes}</div>` : ''}
@@ -504,13 +511,18 @@ export default function AdminOrders() {
         />
       )}
 
-      {editingOrder && (
-        <OrderEditDialog
-          order={editingOrder}
-          onSave={({ items, total }) => updateOrderItemsMutation.mutate({ id: editingOrder.id, items, total })}
-          onClose={() => setEditingOrder(null)}
-        />
-      )}
+      {editingOrder && (() => {
+        // Sempre usa o dado mais recente do query (não o snapshot antigo)
+        const freshOrder = orders.find(o => o.id === editingOrder.id) || editingOrder;
+        return (
+          <OrderEditDialog
+            key={freshOrder.id + JSON.stringify(freshOrder.items)}
+            order={freshOrder}
+            onSave={({ items, total }) => updateOrderItemsMutation.mutate({ id: freshOrder.id, items, total })}
+            onClose={() => setEditingOrder(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
