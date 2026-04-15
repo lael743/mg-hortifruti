@@ -92,8 +92,8 @@ export default function AdminOrders() {
 
   const updateOrderItemsMutation = useMutation({
     mutationFn: ({ id, items, total }) => base44.entities.Order.update(id, { items, total }),
-    onSuccess: async (_, variables) => {
-      await queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['admin-orders'] });
       toast.success('Pedido atualizado com sucesso');
       setEditingOrder(null);
     },
@@ -459,7 +459,10 @@ export default function AdminOrders() {
                     <Button variant="ghost" size="icon" className="h-8 w-8" title="Editar preços dos itens" onClick={() => setEditingOrder(order)}>
                       <Pencil className="w-4 h-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrintSeparation(order)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                      const freshOrder = orders.find(o => o.id === order.id) || order;
+                      handlePrintSeparation(freshOrder);
+                    }}>
                       <Printer className="w-4 h-4" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}>
