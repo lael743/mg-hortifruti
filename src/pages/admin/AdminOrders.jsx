@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Printer, Eye, ChevronDown, Building2, MapPin, FileText, ShoppingBasket, X, MessageCircle } from 'lucide-react';
+import { Search, Printer, Eye, ChevronDown, Building2, MapPin, FileText, ShoppingBasket, X, MessageCircle, Users } from 'lucide-react';
 import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -64,6 +64,12 @@ export default function AdminOrders() {
     queryFn: () => base44.entities.Order.list('-created_date'),
   });
 
+  const { data: settings = [] } = useQuery({
+    queryKey: ['company-settings'],
+    queryFn: () => base44.entities.CompanySettings.list(),
+  });
+  const company = settings[0];
+
   const { data: users = [] } = useQuery({
     queryKey: ['admin-clients'],
     queryFn: () => base44.entities.User.list(),
@@ -118,6 +124,111 @@ export default function AdminOrders() {
     if (search) parts.push(`Busca: "${search}"`);
     return parts.join(' • ');
   })();
+
+  const handlePrintAllClients = () => {
+    // Group filtered orders by customer_email
+    const grouped = {};
+    filtered.forEach(order => {
+      if (!grouped[order.customer_email]) grouped[order.customer_email] = [];
+      grouped[order.customer_email].push(order);
+    });
+
+    const companyHeader = `
+      <div class="company-header">
+        ${company?.logo_url ? `<img src="${company.logo_url}" style="height:48px;object-fit:contain;margin-bottom:6px;" />` : ''}
+        <h2 style="margin:0;font-size:16px;">${company?.company_name || 'Empresa'}</h2>
+        ${company?.address ? `<p style="margin:2px 0;font-size:11px;color:#555;">${company.address}${company.city ? `, ${company.city}` : ''}${company.state ? ` - ${company.state}` : ''}</p>` : ''}
+        ${company?.whatsapp ? `<p style="margin:2px 0;font-size:11px;color:#555;">WhatsApp: ${company.whatsapp}</p>` : ''}
+        ${company?.cnpj ? `<p style="margin:2px 0;font-size:11px;color:#555;">CNPJ: ${company.cnpj}</p>` : ''}
+      </div>`;
+
+    const clientPages = Object.entries(grouped).map(([email, clientOrders], index) => {
+      const u = userByEmail[email] || {};
+      const orderBlocks = clientOrders.map(order => {
+        const itemsRows = (order.items || []).map(item => `
+          <tr>
+            <td>${item.product_name}</td>
+            <td style="text-align:center;">${item.packaging_type || '—'}</td>
+            <td style="text-align:center;">${item.weight || '—'}</td>
+            <td style="text-align:center;font-weight:bold;">${item.quantity}</td>
+            <td style="text-align:right;">R$ ${item.unit_price?.toFixed(2)}</td>
+            <td style="text-align:right;">R$ ${(item.unit_price * item.quantity).toFixed(2)}</td>
+          </tr>`).join('');
+        return `
+          <div class="order-block">
+            <div class="order-header">
+              <span>Pedido #${order.order_number || '—'}</span>
+              <span>${format(new Date(order.created_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+              <span class="status-badge status-${order.status}">${order.status}</span>
+            </div>
+            <table>
+              <thead><tr>
+                <th style="text-align:left;">Produto</th>
+                <th style="text-align:center;">Embalagem</th>
+                <th style="text-align:center;">Peso</th>
+                <th style="text-align:center;">Qtd</th>
+                <th style="text-align:right;">Unit.</th>
+                <th style="text-align:right;">Subtotal</th>
+              </tr></thead>
+              <tbody>${itemsRows}</tbody>
+              <tfoot><tr>
+                <td colspan="5" style="text-align:right;font-weight:bold;">Total do pedido:</td>
+                <td style="text-align:right;font-weight:bold;">R$ ${order.total?.toFixed(2)}</td>
+              </tr></tfoot>
+            </table>
+            ${order.notes ? `<p style="margin-top:6px;font-size:11px;color:#666;"><strong>Obs:</strong> ${order.notes}</p>` : ''}
+          </div>`;
+      }).join('');
+
+      const clientTotal = clientOrders.reduce((s, o) => s + (o.total || 0), 0);
+
+      return `
+        <div class="client-page${index > 0 ? ' page-break' : ''}">
+          ${companyHeader}
+          <div class="client-info">
+            <h3>${u.company_name || order?.customer_name || email}</h3>
+            ${u.company_name && clientOrders[0]?.customer_name ? `<p><strong>Contato:</strong> ${clientOrders[0].customer_name}</p>` : ''}
+            ${u.cnpj_cpf ? `<p><strong>CNPJ/CPF:</strong> ${u.cnpj_cpf}</p>` : ''}
+            ${u.address ? `<p><strong>Endereço:</strong> ${u.address}${u.city ? `, ${u.city}` : ''}${u.state ? ` - ${u.state}` : ''}</p>` : ''}
+            ${u.whatsapp ? `<p><strong>WhatsApp:</strong> ${u.whatsapp}</p>` : ''}
+            <p><strong>Email:</strong> ${email}</p>
+          </div>
+          ${orderBlocks}
+          <div class="client-total">Total geral do cliente: <strong>R$ ${clientTotal.toFixed(2)}</strong> (${clientOrders.length} pedido${clientOrders.length > 1 ? 's' : ''})</div>
+          <div class="print-footer">Impresso em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} &nbsp;|&nbsp; ${company?.company_name || ''}</div>
+        </div>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Espelho de Pedidos</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: Arial, sans-serif; font-size: 12px; color: #222; }
+      .client-page { padding: 20px 24px; }
+      .page-break { page-break-before: always; }
+      .company-header { border-bottom: 2px solid #2d7a3a; padding-bottom: 10px; margin-bottom: 14px; }
+      .company-header h2 { color: #2d7a3a; }
+      .client-info { background: #f5f5f5; border-left: 4px solid #2d7a3a; padding: 10px 14px; margin-bottom: 14px; border-radius: 0 6px 6px 0; }
+      .client-info h3 { font-size: 15px; margin-bottom: 4px; }
+      .client-info p { font-size: 11px; color: #444; margin: 2px 0; }
+      .order-block { margin-bottom: 16px; }
+      .order-header { display: flex; gap: 16px; align-items: center; background: #2d7a3a; color: #fff; padding: 5px 10px; border-radius: 4px 4px 0 0; font-size: 11px; font-weight: bold; }
+      .status-badge { padding: 1px 6px; border-radius: 10px; font-size: 10px; background: rgba(255,255,255,0.25); }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #ddd; padding: 5px 8px; font-size: 11px; }
+      thead th { background: #e8f5e9; font-weight: 600; }
+      tfoot td { background: #f9f9f9; }
+      tbody tr:nth-child(even) { background: #fafafa; }
+      .client-total { text-align: right; margin-top: 10px; font-size: 13px; border-top: 2px solid #2d7a3a; padding-top: 6px; }
+      .print-footer { text-align: center; font-size: 10px; color: #aaa; margin-top: 16px; border-top: 1px solid #eee; padding-top: 6px; }
+      @media print { @page { margin: 10mm; size: A4; } body { font-size: 11px; } }
+    </style></head>
+    <body>${clientPages}</body></html>`;
+
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => w.print(), 400);
+  };
 
   const handlePrintSeparation = (order) => {
     const u = userByEmail[order.customer_email] || {};
@@ -240,6 +351,16 @@ export default function AdminOrders() {
           >
             <ShoppingBasket className="w-4 h-4 mr-1.5" />
             Lista de Compra ({filtered.length})
+          </Button>
+          <Button
+            onClick={handlePrintAllClients}
+            disabled={filtered.length === 0}
+            variant="outline"
+            className="h-9 shrink-0"
+            title="Imprimir espelho de entrega por cliente (quebra de página por cliente)"
+          >
+            <Users className="w-4 h-4 mr-1.5" />
+            Espelho por Cliente
           </Button>
         </div>
 
