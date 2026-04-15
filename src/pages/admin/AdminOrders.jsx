@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Printer, Eye, ChevronDown, Building2, MapPin, FileText, ShoppingBasket, X, MessageCircle, Users } from 'lucide-react';
+import { Search, Printer, Eye, ChevronDown, Building2, MapPin, FileText, ShoppingBasket, X, MessageCircle, Users, Pencil } from 'lucide-react';
+import OrderEditDialog from '../../components/admin/OrderEditDialog';
 import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -58,6 +59,7 @@ export default function AdminOrders() {
   const [customEnd, setCustomEnd] = useState('');
   const [groupFilter, setGroupFilter] = useState(''); // city or company_name filter
   const [showPurchaseList, setShowPurchaseList] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['admin-orders'],
@@ -85,6 +87,15 @@ export default function AdminOrders() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       toast.success('Status atualizado');
+    },
+  });
+
+  const updateOrderItemsMutation = useMutation({
+    mutationFn: ({ id, items, total }) => base44.entities.Order.update(id, { items, total }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      toast.success('Pedido atualizado com sucesso');
+      setEditingOrder(null);
     },
   });
 
@@ -438,6 +449,9 @@ export default function AdminOrders() {
                         </Button>
                       </a>
                     )}
+                    <Button variant="ghost" size="icon" className="h-8 w-8" title="Editar preços dos itens" onClick={() => setEditingOrder(order)}>
+                      <Pencil className="w-4 h-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrintSeparation(order)}>
                       <Printer className="w-4 h-4" />
                     </Button>
@@ -456,12 +470,22 @@ export default function AdminOrders() {
                         {u.cnpj_cpf && <p>📄 CNPJ/CPF: {u.cnpj_cpf}</p>}
                       </div>
                     )}
-                    {order.items?.map((item, idx) => (
-                      <div key={idx} className="flex justify-between text-sm">
-                        <span>{item.quantity}x {item.product_name} <span className="text-muted-foreground">({item.packaging_type}{item.weight && ` • ${item.weight}`})</span></span>
-                        <span className="font-medium">R$ {(item.unit_price * item.quantity).toFixed(2)}</span>
-                      </div>
-                    ))}
+                    {order.items?.map((item, idx) => {
+                      const effectivePrice = item.final_unit_price ?? item.unit_price;
+                      const isModified = item.final_unit_price != null && item.final_unit_price !== item.unit_price;
+                      return (
+                        <div key={idx} className="flex justify-between text-sm">
+                          <span>
+                            {item.quantity}x {item.product_name}{' '}
+                            <span className="text-muted-foreground">({item.packaging_type}{item.weight && ` • ${item.weight}`})</span>
+                          </span>
+                          <span className={`font-medium ${isModified ? 'text-amber-700' : ''}`}>
+                            {isModified && <span className="line-through text-muted-foreground mr-1 font-normal">R$ {(item.unit_price * item.quantity).toFixed(2)}</span>}
+                            R$ {(effectivePrice * item.quantity).toFixed(2)}
+                          </span>
+                        </div>
+                      );
+                    })}
                     {order.notes && <p className="text-xs text-muted-foreground mt-2 p-2 bg-muted rounded">Obs: {order.notes}</p>}
                   </div>
                 )}
@@ -477,6 +501,14 @@ export default function AdminOrders() {
           userByEmail={userByEmail}
           periodLabel={periodLabel}
           onClose={() => setShowPurchaseList(false)}
+        />
+      )}
+
+      {editingOrder && (
+        <OrderEditDialog
+          order={editingOrder}
+          onSave={({ items, total }) => updateOrderItemsMutation.mutate({ id: editingOrder.id, items, total })}
+          onClose={() => setEditingOrder(null)}
         />
       )}
     </div>
