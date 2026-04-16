@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Filter, Pencil, Trash2 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import TransactionForm from '@/components/financial/TransactionForm';
@@ -39,6 +39,11 @@ export default function Transactions() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const now = new Date();
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [year, setYear] = useState(now.getFullYear());
+  const MONTHS = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: format(new Date(2024, i, 1), 'MMM', { locale: ptBR }) }));
+  const YEARS = [2023, 2024, 2025, 2026];
 
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ['transactions'],
@@ -59,7 +64,12 @@ export default function Transactions() {
   });
 
   const filtered = useMemo(() => {
-    let r = transactions;
+    const start = startOfMonth(new Date(year, month - 1, 1));
+    const end = endOfMonth(new Date(year, month - 1, 1));
+    let r = transactions.filter(t => {
+      const d = parseISO(t.date);
+      return d >= start && d <= end;
+    });
     if (typeFilter !== 'all') r = r.filter(t => t.type === typeFilter);
     if (statusFilter !== 'all') r = r.filter(t => t.status === statusFilter);
     if (search.trim()) {
@@ -67,7 +77,7 @@ export default function Transactions() {
       r = r.filter(t => t.description?.toLowerCase().includes(q) || t.supplier_name?.toLowerCase().includes(q) || t.category_name?.toLowerCase().includes(q));
     }
     return r;
-  }, [transactions, typeFilter, statusFilter, search]);
+  }, [transactions, typeFilter, statusFilter, search, month, year]);
 
   const totals = useMemo(() => {
     const ent = filtered.filter(t => isIncome(t.type)).reduce((s, t) => s + t.amount, 0);
@@ -113,6 +123,12 @@ export default function Transactions() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input className="pl-9 h-9" placeholder="Buscar descrição, fornecedor..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
+        <select value={month} onChange={e => setMonth(Number(e.target.value))} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm outline-none cursor-pointer capitalize">
+          {MONTHS.map(m => <option key={m.value} value={m.value} className="capitalize">{m.label}</option>)}
+        </select>
+        <select value={year} onChange={e => setYear(Number(e.target.value))} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm outline-none cursor-pointer">
+          {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
         <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="h-9 rounded-md border border-input bg-transparent px-3 text-sm outline-none cursor-pointer">
           <option value="all">Todos os tipos</option>
           {Object.entries(typeLabel).map(([v, l]) => <option key={v} value={v}>{l}</option>)}

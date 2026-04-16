@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import {
   LayoutDashboard, ArrowLeftRight, Tag, Users2, FileText,
-  CheckSquare, ChevronLeft, Menu, X, TrendingUp,
+  CheckSquare, ChevronLeft, Menu, X, TrendingUp, BarChart2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -15,6 +15,7 @@ const navItems = [
   { label: 'Cheques', path: '/financeiro/cheques', icon: CheckSquare },
   { label: 'Fornecedores', path: '/financeiro/fornecedores', icon: Users2 },
   { label: 'Categorias', path: '/financeiro/categorias', icon: Tag },
+  { label: 'Relatórios', path: '/financeiro/relatorios', icon: BarChart2 },
 ];
 
 export default function FinancialLayout() {
