@@ -83,9 +83,32 @@ export default function AdminOrders() {
   const cities = [...new Set(users.map(u => u.city).filter(Boolean))].sort();
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, status }) => base44.entities.Order.update(id, { status }),
+    mutationFn: async ({ id, status, order }) => {
+      await base44.entities.Order.update(id, { status });
+      // Ao marcar como Entregue, lança receita no financeiro (evita duplicatas por document_number)
+      if (status === 'Entregue') {
+        const docNumber = `pedido-${order.order_number || id}`;
+        const existing = await base44.entities.Transaction.filter({ document_number: docNumber });
+        if (!existing || existing.length === 0) {
+          await base44.entities.Transaction.create({
+            type: 'entrada',
+            amount: order.total || 0,
+            date: new Date().toISOString().split('T')[0],
+            description: `Venda entregue - Pedido #${order.order_number || id} (${order.customer_name || order.customer_email})`,
+            customer_name: order.customer_name || '',
+            customer_email: order.customer_email || '',
+            payment_method: 'transferencia',
+            status: 'pago',
+            document_number: docNumber,
+            category_name: 'Venda de Produtos',
+            notes: `Lançamento automático ao marcar pedido como Entregue.`,
+          });
+        }
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       toast.success('Status atualizado');
     },
   });
@@ -439,7 +462,7 @@ export default function AdminOrders() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
                         {['Pendente', 'Confirmado', 'Entregue', 'Cancelado'].map(s => (
-                          <DropdownMenuItem key={s} onClick={() => updateMutation.mutate({ id: order.id, status: s })}>
+                          <DropdownMenuItem key={s} onClick={() => updateMutation.mutate({ id: order.id, status: s, order })}>
                             {s}
                           </DropdownMenuItem>
                         ))}
