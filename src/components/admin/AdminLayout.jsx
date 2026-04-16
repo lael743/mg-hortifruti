@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useOutletContext, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings, BarChart2, FileText, MessageCircle, ShieldOff, ShieldCheck, Database, ChevronDown, Megaphone } from 'lucide-react';
+import AdminNotifications from './AdminNotifications';
 import { useQuery, useQueryClient as _useQueryClient } from '@tanstack/react-query';
 import CompanySettingsDialog from './CompanySettingsDialog';
 import { base44 } from '@/api/base44Client';
@@ -105,6 +106,7 @@ export default function AdminLayout() {
               </RouterLink>
             </DropdownMenuContent>
           </DropdownMenu>
+          <AdminNotifications />
           <Link to="/">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="w-4 h-4 mr-1" />Catálogo

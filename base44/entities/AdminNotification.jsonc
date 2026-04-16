@@ -1,0 +1,40 @@
+{
+  "name": "AdminNotification",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "T\u00edtulo da notifica\u00e7\u00e3o"
+    },
+    "message": {
+      "type": "string",
+      "description": "Mensagem da notifica\u00e7\u00e3o"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "new_order",
+        "order_updated"
+      ],
+      "description": "Tipo da notifica\u00e7\u00e3o"
+    },
+    "order_id": {
+      "type": "string",
+      "description": "ID do pedido relacionado"
+    },
+    "order_number": {
+      "type": "number",
+      "description": "N\u00famero do pedido"
+    },
+    "read": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se a notifica\u00e7\u00e3o foi lida"
+    }
+  },
+  "required": [
+    "title",
+    "message",
+    "type"
+  ]
+}
