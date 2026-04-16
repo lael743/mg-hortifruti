@@ -24,7 +24,7 @@ import AdminBackup from './pages/admin/AdminBackup';
 import AdminCampaign from './pages/admin/AdminCampaign';
 import ClientFinancial from './pages/ClientFinancial';
 import Profile from './pages/Profile';
-import FinancialLayout from './components/financial/FinancialLayout';
+import FinancialLayout from './components/financial/FinancialLayout.jsx';
 import FinancialDashboard from './pages/financial/FinancialDashboard';
 import Transactions from './pages/financial/Transactions';
 import Bills from './pages/financial/Bills';
