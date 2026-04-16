@@ -5,8 +5,9 @@ import { base44 } from '@/api/base44Client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Package, RefreshCw, ChevronDown, Calendar, X, Eye } from 'lucide-react';
+import { Package, RefreshCw, Calendar, Eye, Search, X, Filter } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { addToCart, clearCart } from '@/lib/cartStore';
@@ -19,6 +20,13 @@ const statusColors = {
   Cancelado: 'bg-red-100 text-red-800 border-red-200',
 };
 
+const statusDot = {
+  Pendente: 'bg-yellow-400',
+  Confirmado: 'bg-blue-400',
+  Entregue: 'bg-green-500',
+  Cancelado: 'bg-red-400',
+};
+
 export default function Orders() {
   const { user } = useOutletContext();
   const navigate = useNavigate();
@@ -29,8 +37,9 @@ export default function Orders() {
     enabled: !!user,
   });
 
-  const [expandedOrder, setExpandedOrder] = useState(null);
   const [dateFilter, setDateFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [search, setSearch] = useState('');
 
   const handleRepeatOrder = (order) => {
     clearCart();
@@ -49,110 +58,211 @@ export default function Orders() {
   };
 
   const filteredOrders = useMemo(() => {
-    if (dateFilter === 'all') return orders;
-    const now = new Date();
-    const startDate = startOfMonth(subMonths(now, parseInt(dateFilter)));
-    const endDate = endOfMonth(now);
-    return orders.filter(o => {
-      const orderDate = new Date(o.created_date);
-      return orderDate >= startDate && orderDate <= endDate;
-    });
-  }, [orders, dateFilter]);
+    let result = orders;
 
-  if (!user) {
-    navigate('/');
-    return null;
-  }
+    // Date filter
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      const startDate = startOfMonth(subMonths(now, parseInt(dateFilter)));
+      const endDate = endOfMonth(now);
+      result = result.filter(o => {
+        const d = new Date(o.created_date);
+        return d >= startDate && d <= endDate;
+      });
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      result = result.filter(o => o.status === statusFilter);
+    }
+
+    // Search by order number
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter(o => {
+        const num = String(o.order_number || o.id.slice(-6)).toLowerCase();
+        return num.includes(q);
+      });
+    }
+
+    return result;
+  }, [orders, dateFilter, statusFilter, search]);
+
+  const hasFilters = dateFilter !== 'all' || statusFilter !== 'all' || search.trim();
+
+  const clearFilters = () => {
+    setDateFilter('all');
+    setStatusFilter('all');
+    setSearch('');
+  };
+
+  // Summary stats
+  const stats = useMemo(() => {
+    const total = orders.reduce((s, o) => s + (o.total || 0), 0);
+    const delivered = orders.filter(o => o.status === 'Entregue').length;
+    const pending = orders.filter(o => o.status === 'Pendente' || o.status === 'Confirmado').length;
+    return { count: orders.length, total, delivered, pending };
+  }, [orders]);
+
+  if (!user) { navigate('/'); return null; }
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+      {/* Header */}
+      <div>
         <h1 className="text-2xl font-bold">Meus Pedidos</h1>
-        <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-1.5 border">
-          <Calendar className="w-4 h-4 text-muted-foreground" />
-          <select
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="bg-transparent text-sm font-medium outline-none cursor-pointer"
-          >
-            <option value="all">Todos</option>
-            <option value="0">Este mês</option>
-            <option value="1">Últimos 2 meses</option>
-            <option value="3">Últimos 4 meses</option>
-            <option value="6">Últimos 7 meses</option>
-            <option value="12">Últimos 13 meses</option>
-          </select>
-        </div>
+        <p className="text-muted-foreground text-sm mt-1">Acompanhe e gerencie seus pedidos</p>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-4">
-          {Array(3).fill(0).map((_, i) => (
-            <Skeleton key={i} className="h-32 rounded-xl" />
+      {/* Stats */}
+      {!isLoading && orders.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'Total de pedidos', value: stats.count },
+            { label: 'Entregues', value: stats.delivered },
+            { label: 'Em andamento', value: stats.pending },
+          ].map(s => (
+            <div key={s.label} className="bg-muted/50 rounded-xl p-3 text-center">
+              <p className="text-xl font-bold text-primary">{s.value}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
+            </div>
           ))}
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="space-y-2">
+        <div className="flex gap-2 flex-wrap">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[160px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              className="pl-9 h-9"
+              placeholder="Nº do pedido..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+
+          {/* Date */}
+          <div className="flex items-center gap-1.5 bg-muted rounded-lg px-3 h-9 border">
+            <Calendar className="w-4 h-4 text-muted-foreground" />
+            <select
+              value={dateFilter}
+              onChange={e => setDateFilter(e.target.value)}
+              className="bg-transparent text-sm outline-none cursor-pointer"
+            >
+              <option value="all">Qualquer data</option>
+              <option value="0">Este mês</option>
+              <option value="1">Últimos 2 meses</option>
+              <option value="3">Últimos 4 meses</option>
+              <option value="6">Últimos 7 meses</option>
+            </select>
+          </div>
+
+          {/* Status */}
+          <div className="flex items-center gap-1.5 bg-muted rounded-lg px-3 h-9 border">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="bg-transparent text-sm outline-none cursor-pointer"
+            >
+              <option value="all">Todos os status</option>
+              <option value="Pendente">Pendente</option>
+              <option value="Confirmado">Confirmado</option>
+              <option value="Entregue">Entregue</option>
+              <option value="Cancelado">Cancelado</option>
+            </select>
+          </div>
+
+          {hasFilters && (
+            <button onClick={clearFilters} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors px-2">
+              <X className="w-4 h-4" /> Limpar
+            </button>
+          )}
+        </div>
+        {hasFilters && (
+          <p className="text-xs text-muted-foreground">{filteredOrders.length} pedido(s) encontrado(s)</p>
+        )}
+      </div>
+
+      {/* Orders list */}
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>
       ) : filteredOrders.length === 0 ? (
         <div className="text-center py-16">
           <Package className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
-          <p className="text-muted-foreground">Você ainda não fez nenhum pedido.</p>
-          <Button className="mt-4" onClick={() => navigate('/')}>Ver Catálogo</Button>
+          <p className="text-muted-foreground">
+            {hasFilters ? 'Nenhum pedido encontrado com esses filtros.' : 'Você ainda não fez nenhum pedido.'}
+          </p>
+          {hasFilters
+            ? <Button variant="outline" className="mt-4" onClick={clearFilters}>Limpar filtros</Button>
+            : <Button className="mt-4" onClick={() => navigate('/')}>Ver Catálogo</Button>
+          }
         </div>
       ) : (
         <div className="space-y-3">
           {filteredOrders.map(order => (
-            <Card key={order.id} className="overflow-hidden">
-              <button
-                onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
-                className="w-full p-4 flex items-start justify-between hover:bg-muted/30 transition-colors text-left"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-semibold text-sm">Pedido #{order.order_number || order.id.slice(-6)}</p>
-                    <Badge className={`${statusColors[order.status]} border text-xs`}>
-                      {order.status}
-                    </Badge>
+            <Card key={order.id} className="overflow-hidden hover:shadow-md transition-shadow">
+              <div className="p-4">
+                {/* Top row */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-base">Pedido #{order.order_number || order.id.slice(-6)}</span>
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full border ${statusColors[order.status]}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${statusDot[order.status]}`} />
+                        {order.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {format(new Date(order.created_date), "dd 'de' MMM, yyyy", { locale: ptBR })}
+                      {' · '}
+                      {order.items?.length || 0} {order.items?.length === 1 ? 'item' : 'itens'}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {format(new Date(order.created_date), "dd 'de' MMM, yyyy", { locale: ptBR })} • {order.items?.length || 0} itens
-                  </p>
+                  <span className="font-extrabold text-lg text-primary whitespace-nowrap">
+                    R$ {order.total?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="font-bold text-primary">R$ {order.total?.toFixed(2)}</span>
-                  <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expandedOrder === order.id ? 'rotate-180' : ''}`} />
-                </div>
-              </button>
 
-              {expandedOrder === order.id && (
-                <div className="border-t p-4 space-y-3">
-                  <div className="space-y-2">
-                    {order.items?.map((item, idx) => (
-                      <div key={idx} className="flex gap-3">
-                      {item.image_url && (
-                       <img src={item.image_url} alt={item.product_name} className="w-16 h-16 rounded object-cover flex-shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                       <p className="font-medium text-sm">{item.quantity}x {item.product_name}</p>
-                       <p className="text-xs text-muted-foreground">{item.packaging_type}{item.weight && ` • ${item.weight}`}</p>
-                       <p className="font-semibold text-sm text-primary mt-1">R$ {((item.final_unit_price ?? item.unit_price) * item.quantity).toFixed(2)}</p>
-                      </div>
-                      </div>
-                    ))}
-                  </div>
-                  {order.notes && (
-                    <div className="p-2 bg-muted rounded text-xs text-muted-foreground">
-                      <strong>Obs:</strong> {order.notes}
+                {/* Items preview */}
+                <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                  {order.items?.slice(0, 4).map((item, idx) => (
+                    <div key={idx} className="flex-shrink-0 flex items-center gap-1.5 bg-muted/60 rounded-lg px-2.5 py-1.5 text-xs">
+                      <span className="font-semibold">{item.quantity}x</span>
+                      <span className="text-muted-foreground max-w-[80px] truncate">{item.product_name}</span>
+                    </div>
+                  ))}
+                  {(order.items?.length || 0) > 4 && (
+                    <div className="flex-shrink-0 flex items-center bg-muted/60 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground">
+                      +{order.items.length - 4} mais
                     </div>
                   )}
-                  <div className="flex gap-2 pt-2 border-t">
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate(`/orders/${order.id}`)}>
-                      <Eye className="w-4 h-4 mr-1" />Ver detalhes completos
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex-1" onClick={() => handleRepeatOrder(order)}>
-                      <RefreshCw className="w-4 h-4 mr-1" />Repetir pedido
-                    </Button>
-                  </div>
                 </div>
-              )}
+
+                {/* Actions */}
+                <div className="flex gap-2 mt-3 pt-3 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-1.5"
+                    onClick={() => navigate(`/orders/${order.id}`)}
+                  >
+                    <Eye className="w-4 h-4" />Ver detalhes
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="flex-1 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+                    onClick={() => handleRepeatOrder(order)}
+                  >
+                    <RefreshCw className="w-4 h-4" />Repetir pedido
+                  </Button>
+                </div>
+              </div>
             </Card>
           ))}
         </div>
