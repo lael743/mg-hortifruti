@@ -24,6 +24,13 @@ import AdminBackup from './pages/admin/AdminBackup';
 import AdminCampaign from './pages/admin/AdminCampaign';
 import ClientFinancial from './pages/ClientFinancial';
 import Profile from './pages/Profile';
+import FinancialLayout from './components/financial/FinancialLayout';
+import FinancialDashboard from './pages/financial/FinancialDashboard';
+import Transactions from './pages/financial/Transactions';
+import Bills from './pages/financial/Bills';
+import Checks from './pages/financial/Checks';
+import FinancialCategories from './pages/financial/FinancialCategories';
+import Suppliers from './pages/financial/Suppliers';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -65,6 +72,14 @@ const AuthenticatedApp = () => {
           <Route path="/admin/backup" element={<AdminBackup />} />
           <Route path="/admin/campaign" element={<AdminCampaign />} />
         </Route>
+      </Route>
+      <Route element={<FinancialLayout />}>
+        <Route path="/financeiro" element={<FinancialDashboard />} />
+        <Route path="/financeiro/lancamentos" element={<Transactions />} />
+        <Route path="/financeiro/boletos" element={<Bills />} />
+        <Route path="/financeiro/cheques" element={<Checks />} />
+        <Route path="/financeiro/categorias" element={<FinancialCategories />} />
+        <Route path="/financeiro/fornecedores" element={<Suppliers />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
