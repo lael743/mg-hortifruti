@@ -4,11 +4,10 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Download, Search, FileText, Filter } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, subMonths, parseISO, isWithinInterval } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const STATUS_COLORS = {
@@ -18,15 +17,13 @@ const STATUS_COLORS = {
   Cancelado: 'bg-red-100 text-red-800',
 };
 
-const MONTHS = Array.from({ length: 12 }, (_, i) => {
-  const d = subMonths(new Date(), i);
-  return { label: format(d, 'MMMM yyyy', { locale: ptBR }), value: format(d, 'yyyy-MM') };
-});
-
 export default function AdminReports() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [monthFilter, setMonthFilter] = useState(format(new Date(), 'yyyy-MM'));
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const firstOfMonth = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd');
+  const [dateStart, setDateStart] = useState(firstOfMonth);
+  const [dateEnd, setDateEnd] = useState(today);
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['orders-reports'],
@@ -45,21 +42,21 @@ export default function AdminReports() {
   }, [allUsers]);
 
   const filtered = useMemo(() => {
-    const [year, month] = monthFilter.split('-').map(Number);
-    const start = startOfMonth(new Date(year, month - 1));
-    const end = endOfMonth(new Date(year, month - 1));
+    const start = dateStart ? startOfDay(parseISO(dateStart)) : null;
+    const end = dateEnd ? endOfDay(parseISO(dateEnd)) : null;
 
     return orders.filter(o => {
-      const inMonth = isWithinInterval(new Date(o.created_date), { start, end });
+      const date = new Date(o.created_date);
+      const inRange = (!start || date >= start) && (!end || date <= end);
       const inStatus = statusFilter === 'all' || o.status === statusFilter;
       const u = userByEmail[o.customer_email] || {};
-      const inSearch = !search || 
+      const inSearch = !search ||
         (o.customer_name || '').toLowerCase().includes(search.toLowerCase()) ||
         (u.company_name || '').toLowerCase().includes(search.toLowerCase()) ||
         (o.customer_email || '').toLowerCase().includes(search.toLowerCase());
-      return inMonth && inStatus && inSearch;
+      return inRange && inStatus && inSearch;
     });
-  }, [orders, monthFilter, statusFilter, search]);
+  }, [orders, dateStart, dateEnd, statusFilter, search]);
 
   const summary = useMemo(() => ({
     total: filtered.reduce((s, o) => s + (o.total || 0), 0),
@@ -86,7 +83,7 @@ export default function AdminReports() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `relatorio-${monthFilter}.csv`;
+    a.download = `relatorio-${dateStart || 'inicio'}-${dateEnd || 'fim'}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -94,6 +91,7 @@ export default function AdminReports() {
   const handlePrint = () => {
     const [year, month] = monthFilter.split('-').map(Number);
     const monthLabel = format(new Date(year, month - 1), 'MMMM yyyy', { locale: ptBR });
+    const periodLabel = dateStart && dateEnd ? `${dateStart} a ${dateEnd}` : 'Período selecionado';
     const rows = filtered.map(o => `
       <tr>
         <td>${format(new Date(o.created_date), 'dd/MM/yyyy HH:mm')}</td>
@@ -104,7 +102,7 @@ export default function AdminReports() {
       </tr>
     `).join('');
     const html = `
-      <html><head><title>Relatório ${monthLabel}</title>
+      <html><head><title>Relatório ${periodLabel}</title>
       <style>
         body { font-family: Arial, sans-serif; font-size: 12px; padding: 24px; }
         h2 { margin-bottom: 4px; } p { color: #666; margin-bottom: 16px; }
@@ -117,7 +115,7 @@ export default function AdminReports() {
         .stat b { display: block; font-size: 18px; }
       </style></head>
       <body>
-        <h2>Relatório Mensal — ${monthLabel}</h2>
+        <h2>Relatório — ${periodLabel}</h2>
         <p>Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}</p>
         <div class="summary">
           <div class="stat"><b>${summary.count}</b>Pedidos</div>
@@ -144,7 +142,7 @@ export default function AdminReports() {
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold">Relatórios Mensais</h1>
+        <h1 className="text-2xl font-bold">Relatórios</h1>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handlePrint} size="sm">
             <FileText className="w-4 h-4 mr-1" /> Imprimir
@@ -162,28 +160,25 @@ export default function AdminReports() {
             <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
               <Filter className="w-4 h-4" /> Filtros
             </div>
-            <Select value={monthFilter} onValueChange={setMonthFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {MONTHS.map(m => (
-                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-36">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os status</SelectItem>
-                <SelectItem value="Pendente">Pendente</SelectItem>
-                <SelectItem value="Confirmado">Confirmado</SelectItem>
-                <SelectItem value="Entregue">Entregue</SelectItem>
-                <SelectItem value="Cancelado">Cancelado</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">De</label>
+              <Input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} className="w-36" />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Até</label>
+              <Input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)} className="w-36" />
+            </div>
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="all">Todos os status</option>
+              <option value="Pendente">Pendente</option>
+              <option value="Confirmado">Confirmado</option>
+              <option value="Entregue">Entregue</option>
+              <option value="Cancelado">Cancelado</option>
+            </select>
             <div className="relative flex-1 min-w-[180px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
