@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, ArrowLeftRight, Tag, Users2, FileText,
   CheckSquare, ChevronLeft, Menu, X, TrendingUp, BarChart2, Inbox,
