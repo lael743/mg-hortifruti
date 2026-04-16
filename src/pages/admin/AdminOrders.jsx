@@ -85,30 +85,28 @@ export default function AdminOrders() {
   const updateMutation = useMutation({
     mutationFn: async ({ id, status, order }) => {
       await base44.entities.Order.update(id, { status });
-      // Ao marcar como Entregue, lança receita no financeiro (evita duplicatas por document_number)
+      // Ao marcar como Entregue, cria ContasAReceber (evita duplicatas por order_id)
       if (status === 'Entregue') {
-        const docNumber = `pedido-${order.order_number || id}`;
-        const existing = await base44.entities.Transaction.filter({ document_number: docNumber });
+        const existing = await base44.entities.ContasAReceber.filter({ order_id: id });
         if (!existing || existing.length === 0) {
-          await base44.entities.Transaction.create({
-            type: 'entrada',
-            amount: order.total || 0,
-            date: new Date().toISOString().split('T')[0],
-            description: `Venda - Pedido #${order.order_number || id} (${order.customer_name || order.customer_email})`,
-            customer_name: order.customer_name || '',
+          await base44.entities.ContasAReceber.create({
+            order_id: id,
+            order_number: order.order_number || null,
             customer_email: order.customer_email || '',
-            payment_method: 'boleto',
-            status: 'pendente',
-            document_number: docNumber,
-            category_name: 'Venda de Produtos',
-            notes: `A receber. Defina vencimento e método de pagamento no Financeiro > Lançamentos.`,
+            customer_name: order.customer_name || '',
+            total_amount: order.total || 0,
+            delivery_date: new Date().toISOString().split('T')[0],
+            status: 'pendente_definicao',
+            installments_count: 1,
+            installment_interval_days: 30,
+            installments: [],
           });
         }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['contas-a-receber'] });
       toast.success('Status atualizado');
     },
   });

@@ -3,13 +3,12 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import {
   LayoutDashboard, ArrowLeftRight, Tag, Users2, FileText,
-  CheckSquare, ChevronLeft, Menu, X, TrendingUp, BarChart2,
+  CheckSquare, ChevronLeft, Menu, X, TrendingUp, BarChart2, Inbox,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 
 const navItems = [
   { label: 'Dashboard', path: '/financeiro', icon: LayoutDashboard },
+  { label: 'Contas a Receber', path: '/financeiro/contas-a-receber', icon: Inbox },
   { label: 'Lançamentos', path: '/financeiro/lancamentos', icon: ArrowLeftRight },
   { label: 'Boletos', path: '/financeiro/boletos', icon: FileText },
   { label: 'Cheques', path: '/financeiro/cheques', icon: CheckSquare },

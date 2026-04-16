@@ -1,0 +1,115 @@
+{
+  "name": "ContasAReceber",
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "description": "ID do pedido original"
+    },
+    "order_number": {
+      "type": "number",
+      "description": "N\u00famero do pedido original"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "Email do cliente"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Nome do cliente"
+    },
+    "total_amount": {
+      "type": "number",
+      "description": "Valor total da venda"
+    },
+    "delivery_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data em que o pedido foi entregue"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pendente_definicao",
+        "aberta",
+        "parcialmente_paga",
+        "quitada",
+        "cancelada"
+      ],
+      "default": "pendente_definicao",
+      "description": "Status geral da conta a receber"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "boleto",
+        "cheque",
+        "pix",
+        "cartao_credito",
+        "cartao_debito",
+        "dinheiro",
+        "transferencia"
+      ],
+      "description": "M\u00e9todo de pagamento definido pelo admin"
+    },
+    "installments_count": {
+      "type": "number",
+      "default": 1,
+      "description": "N\u00famero de parcelas"
+    },
+    "installment_interval_days": {
+      "type": "number",
+      "default": 30,
+      "description": "Intervalo em dias entre parcelas"
+    },
+    "first_due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de vencimento da primeira parcela"
+    },
+    "installments": {
+      "type": "array",
+      "description": "Lista de parcelas",
+      "items": {
+        "type": "object",
+        "properties": {
+          "installment_number": {
+            "type": "number"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "due_date": {
+            "type": "string"
+          },
+          "paid_date": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pendente",
+              "paga",
+              "vencida"
+            ]
+          },
+          "payment_method": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es gerais"
+    }
+  },
+  "required": [
+    "order_id",
+    "customer_email",
+    "total_amount"
+  ]
+}

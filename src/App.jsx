@@ -32,6 +32,7 @@ import Checks from './pages/financial/Checks';
 import FinancialCategories from './pages/financial/FinancialCategories';
 import Suppliers from './pages/financial/Suppliers';
 import FinancialReports from './pages/financial/FinancialReports';
+import ContasAReceber from './pages/financial/ContasAReceber';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -81,6 +82,7 @@ const AuthenticatedApp = () => {
         <Route path="/financeiro/cheques" element={<Checks />} />
         <Route path="/financeiro/categorias" element={<FinancialCategories />} />
         <Route path="/financeiro/fornecedores" element={<Suppliers />} />
+        <Route path="/financeiro/contas-a-receber" element={<ContasAReceber />} />
         <Route path="/financeiro/relatorios" element={<FinancialReports />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
