@@ -1,15 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Tag, Package, Minus, Plus, Heart } from 'lucide-react';
+import { ShoppingCart, Tag, Package, Minus, Plus, Heart, CheckCircle2 } from 'lucide-react';
 import { toggleFavorite, isFavorite } from '@/lib/favoritesStore';
-import { addToCart } from '@/lib/cartStore';
+import { addToCart, getCart } from '@/lib/cartStore';
 import { toast } from 'sonner';
+
+const getCartQty = (productId) => {
+  const cart = getCart();
+  const item = cart.find(i => i.product_id === productId);
+  return item ? item.quantity : 0;
+};
 
 export default function ProductCard({ product, isLoggedIn, priceGroup }) {
   const [qty, setQty] = useState(1);
   const [fav, setFav] = useState(() => isFavorite(product.id));
+  const [cartQty, setCartQty] = useState(() => getCartQty(product.id));
+
+  useEffect(() => {
+    const update = () => setCartQty(getCartQty(product.id));
+    window.addEventListener('cart-updated', update);
+    return () => window.removeEventListener('cart-updated', update);
+  }, [product.id]);
 
   const handleToggleFav = (e) => {
     e.stopPropagation();
@@ -58,6 +71,12 @@ export default function ProductCard({ product, isLoggedIn, priceGroup }) {
           <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground font-bold shadow-lg">
             <Tag className="w-3 h-3 mr-1" />PROMO
           </Badge>
+        )}
+        {cartQty > 0 && (
+          <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full shadow-md">
+            <CheckCircle2 className="w-3 h-3" />
+            {cartQty} no carrinho
+          </div>
         )}
         <Badge variant="secondary" className="absolute bottom-3 right-3 text-xs">
           {product.category}
