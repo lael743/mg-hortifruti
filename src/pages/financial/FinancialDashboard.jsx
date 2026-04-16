@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import {
   TrendingUp, TrendingDown, Clock, AlertTriangle,
   ArrowUpRight, ArrowDownRight, ShoppingBag, Package,
-  Wrench, DollarSign, ChevronRight
+  Wrench, DollarSign
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, isBefore, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -35,9 +35,14 @@ export default function FinancialDashboard() {
       return d >= monthStart && d <= monthEnd;
     });
 
-    // Receita financeira lançada (tipo "entrada")
+    // Receita recebida (entrada paga) — base do resultado líquido
     const receitaFinanceira = thisMonth
-      .filter(t => t.type === 'entrada')
+      .filter(t => t.type === 'entrada' && t.status === 'pago')
+      .reduce((s, t) => s + t.amount, 0);
+
+    // Receita a receber (entrada pendente)
+    const receitaAReceber = thisMonth
+      .filter(t => t.type === 'entrada' && t.status === 'pendente')
       .reduce((s, t) => s + t.amount, 0);
 
     // Custo de mercadorias (pagamento_fornecedor)
@@ -75,6 +80,7 @@ export default function FinancialDashboard() {
     return {
       receitaBrutaVendas,
       receitaFinanceira,
+      receitaAReceber,
       custoMercadorias,
       custosOperacionais,
       totalCustos,
@@ -167,19 +173,35 @@ export default function FinancialDashboard() {
             <p className="text-lg font-bold text-red-500">- {fmt(stats.custosOperacionais)}</p>
           </div>
 
-          {/* Receita Financeira lançada */}
+          {/* Receita Recebida */}
           <div className="flex items-center justify-between py-3">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
                 <TrendingUp className="w-4 h-4 text-green-600" />
               </div>
               <div>
-                <p className="text-sm font-semibold">(+) Entradas Lançadas</p>
-                <p className="text-xs text-muted-foreground">Recebimentos registrados manualmente no financeiro</p>
+                <p className="text-sm font-semibold">(+) Receitas Recebidas</p>
+                <p className="text-xs text-muted-foreground">Entradas com status "pago" — efetivamente recebidas</p>
               </div>
             </div>
             <p className="text-lg font-bold text-green-600">+ {fmt(stats.receitaFinanceira)}</p>
           </div>
+
+          {/* A Receber */}
+          {stats.receitaAReceber > 0 && (
+            <div className="flex items-center justify-between py-3 opacity-70">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-yellow-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-yellow-700">Receitas a Receber (pendente)</p>
+                  <p className="text-xs text-muted-foreground">Boletos/cheques ainda não recebidos — não entra no resultado</p>
+                </div>
+              </div>
+              <p className="text-lg font-bold text-yellow-600">{fmt(stats.receitaAReceber)}</p>
+            </div>
+          )}
 
           {/* Resultado Líquido */}
           <div className={`flex items-center justify-between py-4 px-4 rounded-xl mt-2 ${stats.resultadoLiquido >= 0 ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>

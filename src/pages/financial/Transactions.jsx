@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Filter, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, CheckCircle2, Clock } from 'lucide-react';
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -63,6 +63,11 @@ export default function Transactions() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['transactions'] }); toast.success('Lançamento excluído.'); },
   });
 
+  const markReceivedMutation = useMutation({
+    mutationFn: (id) => base44.entities.Transaction.update(id, { status: 'pago' }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['transactions'] }); toast.success('Marcado como recebido!'); },
+  });
+
   const filtered = useMemo(() => {
     const start = startOfMonth(new Date(year, month - 1, 1));
     const end = endOfMonth(new Date(year, month - 1, 1));
@@ -80,10 +85,18 @@ export default function Transactions() {
   }, [transactions, typeFilter, statusFilter, search, month, year]);
 
   const totals = useMemo(() => {
+    const entRecebidas = filtered.filter(t => isIncome(t.type) && t.status === 'pago').reduce((s, t) => s + t.amount, 0);
+    const entAReceber = filtered.filter(t => isIncome(t.type) && t.status === 'pendente').reduce((s, t) => s + t.amount, 0);
     const ent = filtered.filter(t => isIncome(t.type)).reduce((s, t) => s + t.amount, 0);
     const sai = filtered.filter(t => !isIncome(t.type)).reduce((s, t) => s + t.amount, 0);
-    return { ent, sai, saldo: ent - sai };
+    return { ent, entRecebidas, entAReceber, sai, saldo: entRecebidas - sai };
   }, [filtered]);
+
+  // Vendas pendentes de recebimento (qualquer mês, para ação rápida)
+  const vendasPendentes = useMemo(() =>
+    transactions.filter(t => isIncome(t.type) && t.status === 'pendente')
+      .sort((a, b) => (a.due_date || a.date) > (b.due_date || b.date) ? 1 : -1),
+  [transactions]);
 
   const handleEdit = (t) => { setEditing(t); setShowForm(true); };
   const handleNew = () => { setEditing(null); setShowForm(true); };
@@ -102,20 +115,55 @@ export default function Transactions() {
       </div>
 
       {/* Totals */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
-          <p className="text-xs text-green-700 font-medium">Entradas</p>
-          <p className="text-lg font-extrabold text-green-700">R$ {totals.ent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+          <p className="text-xs text-green-700 font-medium">Recebido</p>
+          <p className="text-base font-extrabold text-green-700">R$ {totals.entRecebidas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+        </div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-center">
+          <p className="text-xs text-yellow-700 font-medium">A Receber</p>
+          <p className="text-base font-extrabold text-yellow-700">R$ {totals.entAReceber.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
           <p className="text-xs text-red-700 font-medium">Saídas</p>
-          <p className="text-lg font-extrabold text-red-700">R$ {totals.sai.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+          <p className="text-base font-extrabold text-red-700">R$ {totals.sai.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className={`rounded-xl p-3 text-center border ${totals.saldo >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-          <p className="text-xs font-medium text-muted-foreground">Saldo</p>
-          <p className={`text-lg font-extrabold ${totals.saldo >= 0 ? 'text-green-700' : 'text-red-600'}`}>R$ {totals.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+          <p className="text-xs font-medium text-muted-foreground">Resultado Líquido</p>
+          <p className={`text-base font-extrabold ${totals.saldo >= 0 ? 'text-green-700' : 'text-red-600'}`}>R$ {totals.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
       </div>
+
+      {/* Painel A Receber — vendas pendentes */}
+      {vendasPendentes.length > 0 && (
+        <div className="border border-yellow-200 bg-yellow-50 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Clock className="w-4 h-4 text-yellow-600" />
+            <h2 className="font-semibold text-sm text-yellow-800">Vendas a Receber ({vendasPendentes.length})</h2>
+          </div>
+          <div className="space-y-2">
+            {vendasPendentes.map(t => (
+              <div key={t.id} className="flex items-center gap-3 bg-white rounded-lg border border-yellow-100 px-3 py-2 flex-wrap">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{t.description}</p>
+                  <div className="flex gap-3 text-xs text-muted-foreground">
+                    <span>Emissão: {format(parseISO(t.date), 'dd/MM/yyyy')}</span>
+                    {t.due_date && <span className="text-orange-600 font-medium">Venc: {format(parseISO(t.due_date), 'dd/MM/yyyy')}</span>}
+                    {t.payment_method && <span>{t.payment_method.replace('_', ' ')}</span>}
+                  </div>
+                </div>
+                <span className="text-base font-bold text-yellow-700">R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                <Button size="sm" variant="outline" className="gap-1.5 border-green-300 text-green-700 hover:bg-green-50" onClick={() => handleEdit(t)}>
+                  <Pencil className="w-3.5 h-3.5" />Editar
+                </Button>
+                <Button size="sm" className="gap-1.5 bg-green-600 hover:bg-green-700 text-white" onClick={() => markReceivedMutation.mutate(t.id)}>
+                  <CheckCircle2 className="w-3.5 h-3.5" />Recebido
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2">

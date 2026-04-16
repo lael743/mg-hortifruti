@@ -94,14 +94,14 @@ export default function AdminOrders() {
             type: 'entrada',
             amount: order.total || 0,
             date: new Date().toISOString().split('T')[0],
-            description: `Venda entregue - Pedido #${order.order_number || id} (${order.customer_name || order.customer_email})`,
+            description: `Venda - Pedido #${order.order_number || id} (${order.customer_name || order.customer_email})`,
             customer_name: order.customer_name || '',
             customer_email: order.customer_email || '',
-            payment_method: 'transferencia',
-            status: 'pago',
+            payment_method: 'boleto',
+            status: 'pendente',
             document_number: docNumber,
             category_name: 'Venda de Produtos',
-            notes: `Lançamento automático ao marcar pedido como Entregue.`,
+            notes: `A receber. Defina vencimento e método de pagamento no Financeiro > Lançamentos.`,
           });
         }
       }
