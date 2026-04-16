@@ -89,8 +89,6 @@ export default function AdminReports() {
   };
 
   const handlePrint = () => {
-    const [year, month] = monthFilter.split('-').map(Number);
-    const monthLabel = format(new Date(year, month - 1), 'MMMM yyyy', { locale: ptBR });
     const periodLabel = dateStart && dateEnd ? `${dateStart} a ${dateEnd}` : 'Período selecionado';
     const rows = filtered.map(o => `
       <tr>
