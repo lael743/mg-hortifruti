@@ -180,6 +180,7 @@ export default function AdminOrders() {
         const itemsRows = (order.items || []).map(item => {
           const effPrice = item.final_unit_price ?? item.unit_price;
           const isDisc = item.final_unit_price != null && item.final_unit_price !== item.unit_price;
+          const pricePerKg = calcPricePerKg(effPrice, item.weight);
           return `
           <tr${isDisc ? ' style="background:#fffbe6;"' : ''}>
             <td>${item.product_name}</td>
@@ -187,6 +188,7 @@ export default function AdminOrders() {
             <td style="text-align:center;">${item.weight || '—'}</td>
             <td style="text-align:center;font-weight:bold;">${item.quantity}</td>
             <td style="text-align:right;">${isDisc ? `<span style="text-decoration:line-through;color:#999;font-size:10px;">R$ ${item.unit_price?.toFixed(2)}</span> <span style="color:#b45309;font-weight:bold;">R$ ${effPrice.toFixed(2)}</span>` : `R$ ${effPrice.toFixed(2)}`}</td>
+            <td style="text-align:right;color:#555;font-size:10px;">${pricePerKg != null ? `R$ ${pricePerKg.toFixed(2)}/kg` : '—'}</td>
             <td style="text-align:right;">${isDisc ? `<span style="color:#b45309;font-weight:bold;">R$ ${(effPrice * item.quantity).toFixed(2)}</span>` : `R$ ${(effPrice * item.quantity).toFixed(2)}`}</td>
           </tr>`;
         }).join('');
@@ -204,11 +206,12 @@ export default function AdminOrders() {
                 <th style="text-align:center;">Peso</th>
                 <th style="text-align:center;">Qtd</th>
                 <th style="text-align:right;">Unit.</th>
+                <th style="text-align:right;">R$/kg·un</th>
                 <th style="text-align:right;">Subtotal</th>
               </tr></thead>
               <tbody>${itemsRows}</tbody>
               <tfoot><tr>
-                <td colspan="5" style="text-align:right;font-weight:bold;">Total do pedido:</td>
+                <td colspan="6" style="text-align:right;font-weight:bold;">Total do pedido:</td>
                 <td style="text-align:right;font-weight:bold;">R$ ${order.total?.toFixed(2)}</td>
               </tr></tfoot>
             </table>
@@ -267,53 +270,108 @@ export default function AdminOrders() {
     setTimeout(() => w.print(), 400);
   };
 
+  const calcPricePerKg = (price, weight) => {
+    if (!weight) return null;
+    const match = String(weight).match(/([\d.,]+)\s*(kg|g|un|unid)?/i);
+    if (!match) return null;
+    const num = parseFloat(match[1].replace(',', '.'));
+    if (!num) return null;
+    const unit = (match[2] || 'kg').toLowerCase();
+    if (unit === 'g') return price / (num / 1000);
+    return price / num; // kg ou un
+  };
+
   const handlePrintSeparation = (order) => {
     const u = userByEmail[order.customer_email] || {};
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html><head><title>Lista de Separação - ${order.customer_name || order.customer_email}</title>
-      <style>
-        body { font-family: Arial, sans-serif; padding: 24px; color: #222; }
-        h1 { font-size: 20px; margin-bottom: 4px; }
-        .meta { font-size: 13px; color: #555; margin-bottom: 16px; }
-        .meta p { margin: 2px 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-        th, td { padding: 10px 12px; text-align: left; border: 1px solid #ddd; font-size: 13px; }
-        th { background: #f0f0f0; font-weight: 600; }
-        .total { text-align: right; margin-top: 16px; font-size: 15px; }
-        .footer { margin-top: 32px; font-size: 12px; color: #888; border-top: 1px solid #eee; padding-top: 8px; }
-      </style></head><body>
-      <h1>Lista de Separação</h1>
-      <div class="meta">
-        <p><strong>Cliente:</strong> ${order.customer_name || order.customer_email}</p>
-        ${u.company_name ? `<p><strong>Empresa:</strong> ${u.company_name}</p>` : ''}
-        ${u.cnpj_cpf ? `<p><strong>CNPJ/CPF:</strong> ${u.cnpj_cpf}</p>` : ''}
-        ${u.address ? `<p><strong>Endereço:</strong> ${u.address}</p>` : ''}
-        ${(u.city || u.state) ? `<p><strong>Cidade:</strong> ${[u.city, u.state].filter(Boolean).join(' - ')}</p>` : ''}
-        ${u.whatsapp ? `<p><strong>WhatsApp:</strong> ${u.whatsapp}</p>` : ''}
-        <p><strong>Data do pedido:</strong> ${format(new Date(order.created_date), "dd/MM/yyyy HH:mm")}</p>
-        <p><strong>Pedido #:</strong> ${order.order_number}</p>
+
+    const itemsRows = (order.items || []).map(item => {
+      const ep = item.final_unit_price ?? item.unit_price;
+      const isDisc = item.final_unit_price != null && item.final_unit_price !== item.unit_price;
+      const pricePerKg = calcPricePerKg(ep, item.weight);
+      return `
+      <tr${isDisc ? ' style="background:#fffbe6;"' : ''}>
+        <td>${item.product_name}</td>
+        <td style="text-align:center;">${item.packaging_type || '—'}</td>
+        <td style="text-align:center;">${item.weight || '—'}</td>
+        <td style="text-align:center;font-weight:bold;">${item.quantity}</td>
+        <td style="text-align:right;">${isDisc
+          ? `<span style="text-decoration:line-through;color:#999;font-size:10px;">R$ ${item.unit_price?.toFixed(2)}</span> <span style="color:#b45309;font-weight:bold;">R$ ${ep.toFixed(2)}</span>`
+          : `R$ ${ep.toFixed(2)}`}</td>
+        <td style="text-align:right;color:#555;font-size:10px;">${pricePerKg != null ? `R$ ${pricePerKg.toFixed(2)}/kg` : '—'}</td>
+        <td style="text-align:right;">${isDisc
+          ? `<span style="color:#b45309;font-weight:bold;">R$ ${(ep * item.quantity).toFixed(2)}</span>`
+          : `R$ ${(ep * item.quantity).toFixed(2)}`}</td>
+      </tr>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Lista de Separação - Pedido #${order.order_number || ''}</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: Arial, sans-serif; font-size: 12px; color: #222; }
+      .client-page { padding: 20px 24px; }
+      .company-header { border-bottom: 2px solid #2d7a3a; padding-bottom: 10px; margin-bottom: 14px; }
+      .company-header h2 { color: #2d7a3a; }
+      .client-info { background: #f5f5f5; border-left: 4px solid #2d7a3a; padding: 10px 14px; margin-bottom: 14px; border-radius: 0 6px 6px 0; }
+      .client-info h3 { font-size: 15px; margin-bottom: 4px; }
+      .client-info p { font-size: 11px; color: #444; margin: 2px 0; }
+      .order-block { margin-bottom: 16px; }
+      .order-header { display: flex; gap: 16px; align-items: center; background: #2d7a3a; color: #fff; padding: 5px 10px; border-radius: 4px 4px 0 0; font-size: 11px; font-weight: bold; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #ddd; padding: 5px 8px; font-size: 11px; }
+      thead th { background: #e8f5e9; font-weight: 600; }
+      tfoot td { background: #f9f9f9; }
+      tbody tr:nth-child(even) { background: #fafafa; }
+      .client-total { text-align: right; margin-top: 10px; font-size: 13px; border-top: 2px solid #2d7a3a; padding-top: 6px; }
+      .print-footer { text-align: center; font-size: 10px; color: #aaa; margin-top: 16px; border-top: 1px solid #eee; padding-top: 6px; }
+      @media print { @page { margin: 10mm; size: A4; } body { font-size: 11px; } }
+    </style></head>
+    <body><div class="client-page">
+      <div class="company-header">
+        ${company?.logo_url ? `<img src="${company.logo_url}" style="height:48px;object-fit:contain;margin-bottom:6px;" />` : ''}
+        <h2>${company?.company_name || 'Empresa'}</h2>
+        ${company?.address ? `<p style="font-size:11px;color:#555;">${company.address}${company.city ? `, ${company.city}` : ''}${company.state ? ` - ${company.state}` : ''}</p>` : ''}
+        ${company?.whatsapp ? `<p style="font-size:11px;color:#555;">WhatsApp: ${company.whatsapp}</p>` : ''}
+        ${company?.cnpj ? `<p style="font-size:11px;color:#555;">CNPJ: ${company.cnpj}</p>` : ''}
       </div>
-      <table>
-        <tr><th>Produto</th><th>Embalagem</th><th>Peso</th><th>Qtd</th><th>Unit.</th><th>Subtotal</th></tr>
-        ${order.items?.map(i => {
-          const ep = i.final_unit_price ?? i.unit_price;
-          const isDisc = i.final_unit_price != null && i.final_unit_price !== i.unit_price;
-          return `<tr${isDisc ? ' style="background:#fffbe6;"' : ''}>
-          <td>${i.product_name}</td>
-          <td>${i.packaging_type || ''}</td>
-          <td>${i.weight || ''}</td>
-          <td><strong>${i.quantity}</strong></td>
-          <td>${isDisc ? `<span style="text-decoration:line-through;color:#999;font-size:11px;">R$ ${i.unit_price?.toFixed(2)}</span><br><span style="color:#b45309;font-weight:bold;">R$ ${ep.toFixed(2)}</span>` : `R$ ${ep.toFixed(2)}`}</td>
-          <td>R$ ${(ep * i.quantity).toFixed(2)}</td>
-        </tr>`;}).join('')}
-      </table>
-      <div class="total"><strong>Total: R$ ${order.total?.toFixed(2)}</strong></div>
-      ${order.notes ? `<div class="footer">Obs: ${order.notes}</div>` : ''}
-      </body></html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+      <div class="client-info">
+        <h3>${u.company_name || order.customer_name || order.customer_email}</h3>
+        ${u.company_name && order.customer_name ? `<p><strong>Contato:</strong> ${order.customer_name}</p>` : ''}
+        ${u.cnpj_cpf ? `<p><strong>CNPJ/CPF:</strong> ${u.cnpj_cpf}</p>` : ''}
+        ${u.address ? `<p><strong>Endereço:</strong> ${u.address}${u.city ? `, ${u.city}` : ''}${u.state ? ` - ${u.state}` : ''}</p>` : ''}
+        ${u.whatsapp ? `<p><strong>WhatsApp:</strong> ${u.whatsapp}</p>` : ''}
+        <p><strong>Email:</strong> ${order.customer_email}</p>
+      </div>
+      <div class="order-block">
+        <div class="order-header">
+          <span>Pedido #${order.order_number || '—'}</span>
+          <span>${format(new Date(order.created_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+          <span>${order.status}</span>
+        </div>
+        <table>
+          <thead><tr>
+            <th style="text-align:left;">Produto</th>
+            <th style="text-align:center;">Embalagem</th>
+            <th style="text-align:center;">Peso</th>
+            <th style="text-align:center;">Qtd</th>
+            <th style="text-align:right;">Unit.</th>
+            <th style="text-align:right;">R$/kg·un</th>
+            <th style="text-align:right;">Subtotal</th>
+          </tr></thead>
+          <tbody>${itemsRows}</tbody>
+          <tfoot><tr>
+            <td colspan="6" style="text-align:right;font-weight:bold;">Total do pedido:</td>
+            <td style="text-align:right;font-weight:bold;">R$ ${order.total?.toFixed(2)}</td>
+          </tr></tfoot>
+        </table>
+        ${order.notes ? `<p style="margin-top:6px;font-size:11px;color:#666;"><strong>Obs:</strong> ${order.notes}</p>` : ''}
+      </div>
+      <div class="print-footer">Impresso em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} &nbsp;|&nbsp; ${company?.company_name || ''}</div>
+    </div></body></html>`;
+
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+    setTimeout(() => w.print(), 400);
   };
 
   const hasActiveFilters = period !== 'all' || groupFilter || statusFilter !== 'Todos' || search;
