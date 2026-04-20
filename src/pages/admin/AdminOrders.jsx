@@ -418,7 +418,7 @@ export default function AdminOrders() {
             <Label className="text-xs mb-1 block">Grupo / Cidade</Label>
             <div className="relative">
               <Input
-                placeholder="Ex: São Paulo, Mercadinho..."
+                placeholder="Ex: Quatigá, Mercadinho..."
                 className="h-9 pr-8"
                 value={groupFilter}
                 onChange={e => setGroupFilter(e.target.value)}
