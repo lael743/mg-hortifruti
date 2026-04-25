@@ -81,6 +81,7 @@ export default function Catalog() {
   const handlePrintCatalog = () => {
     const activeProds = products.filter(p => p.active !== false).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
     const discount = userPriceGroup?.discount_percent || 0;
+    const isCustomTable = userPriceGroup?.type === 'custom';
 
     // Build last-order qty map
     const lastQtyMap = {};
@@ -98,8 +99,11 @@ export default function Catalog() {
     const makeRow = (p) => {
       const basePrice = p.promo_active && p.promo_price ? p.promo_price : p.price || 0;
       const origPrice = p.price || 0;
-      const finalPrice = basePrice * (1 - discount / 100);
-      const origFinal = origPrice * (1 - discount / 100);
+      // Custom table: use specific price if available, otherwise base price (no discount)
+      const finalPrice = isCustomTable
+        ? (customPriceMap[p.id] !== undefined ? customPriceMap[p.id] : p.price || 0)
+        : basePrice * (1 - discount / 100);
+      const origFinal = isCustomTable ? origPrice : origPrice * (1 - discount / 100);
       const lastQty = lastQtyMap[p.id];
       const isPromo = p.promo_active && p.promo_price;
       const rowStyle = isPromo ? 'background:#fffbe6;' : '';
