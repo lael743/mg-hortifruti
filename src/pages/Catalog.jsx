@@ -53,6 +53,17 @@ export default function Catalog() {
     ? priceGroups.find(g => g.id === user.price_group_id)
     : null;
 
+  const { data: customPrices = [] } = useQuery({
+    queryKey: ['custom-prices-catalog', userPriceGroup?.id],
+    queryFn: () => base44.entities.CustomPrice.filter({ price_group_id: userPriceGroup.id }),
+    enabled: !!userPriceGroup && userPriceGroup.type === 'custom',
+  });
+
+  // Build a map: product_id -> custom_price for fast lookup
+  const customPriceMap = userPriceGroup?.type === 'custom'
+    ? Object.fromEntries(customPrices.map(cp => [cp.product_id, cp.custom_price]))
+    : {};
+
   const { data: myOrders = [] } = useQuery({
     queryKey: ['my-orders-catalog', user?.email],
     queryFn: () => base44.entities.Order.filter({ customer_email: user.email }, '-created_date'),
@@ -301,6 +312,7 @@ export default function Catalog() {
           allOrders={allOrders}
           isLoggedIn={!!user}
           priceGroup={userPriceGroup}
+          customPriceMap={customPriceMap}
         />
       )}
 
@@ -324,7 +336,7 @@ export default function Catalog() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {promoProducts.map(p => (
-                  <ProductCard key={p.id} product={p} isLoggedIn={!!user} priceGroup={userPriceGroup} />
+                  <ProductCard key={p.id} product={p} isLoggedIn={!!user} priceGroup={userPriceGroup} customPrice={customPriceMap[p.id]} />
                 ))}
               </div>
             </section>
@@ -340,7 +352,7 @@ export default function Catalog() {
               <>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {visibleRegular.map(p => (
-                  <ProductCard key={p.id} product={p} isLoggedIn={!!user} priceGroup={userPriceGroup} />
+                  <ProductCard key={p.id} product={p} isLoggedIn={!!user} priceGroup={userPriceGroup} customPrice={customPriceMap[p.id]} />
                 ))}
               </div>
               {hasMore && (

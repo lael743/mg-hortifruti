@@ -10,13 +10,15 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Pencil, Trash2, Tag, Percent } from 'lucide-react';
+import { Plus, Pencil, Trash2, Tag, Percent, ListOrdered } from 'lucide-react';
 import { toast } from 'sonner';
+import CustomPriceModal from '../../components/admin/CustomPriceModal';
 
 function PriceGroupForm({ group, onClose, onSaved }) {
   const [form, setForm] = useState({
     name: group?.name || '',
     description: group?.description || '',
+    type: group?.type || 'percentage',
     discount_percent: group?.discount_percent ?? 0,
     active: group?.active !== false,
   });
@@ -56,17 +58,52 @@ function PriceGroupForm({ group, onClose, onSaved }) {
             <Label>Descrição</Label>
             <Textarea value={form.description} onChange={e => set('description', e.target.value)} placeholder="Descrição opcional" rows={2} />
           </div>
+
+          {/* Type selector */}
           <div>
-            <Label>Desconto sobre preço base (%)</Label>
-            <p className="text-xs text-muted-foreground mb-1">Use valor negativo para acréscimo. Ex: -10 = 10% mais caro</p>
-            <Input type="number" step="0.1" value={form.discount_percent} onChange={e => set('discount_percent', e.target.value)} placeholder="0" />
-            <p className="text-xs mt-1">
-              Exemplo: produto R$ 100,00 →{' '}
-              <strong className="text-primary">R$ {previewPrice.toFixed(2)}</strong>
-              {discountVal > 0 && <span className="text-green-600"> ({discountVal}% desconto)</span>}
-              {discountVal < 0 && <span className="text-red-500"> ({Math.abs(discountVal)}% acréscimo)</span>}
-            </p>
+            <Label>Tipo de Precificação</Label>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              <button
+                type="button"
+                onClick={() => set('type', 'percentage')}
+                className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-colors ${form.type === 'percentage' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}
+              >
+                <Percent className="w-5 h-5 text-primary" />
+                <span className="text-xs font-semibold">Porcentagem</span>
+                <span className="text-[10px] text-muted-foreground text-center">Desconto % sobre o preço base</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => set('type', 'custom')}
+                className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-colors ${form.type === 'custom' ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/30'}`}
+              >
+                <ListOrdered className="w-5 h-5 text-primary" />
+                <span className="text-xs font-semibold">Preço por Produto</span>
+                <span className="text-[10px] text-muted-foreground text-center">Valor específico por produto</span>
+              </button>
+            </div>
           </div>
+
+          {form.type === 'percentage' && (
+            <div>
+              <Label>Desconto sobre preço base (%)</Label>
+              <p className="text-xs text-muted-foreground mb-1">Use valor negativo para acréscimo. Ex: -10 = 10% mais caro</p>
+              <Input type="number" step="0.1" value={form.discount_percent} onChange={e => set('discount_percent', e.target.value)} placeholder="0" />
+              <p className="text-xs mt-1">
+                Exemplo: produto R$ 100,00 →{' '}
+                <strong className="text-primary">R$ {previewPrice.toFixed(2)}</strong>
+                {discountVal > 0 && <span className="text-green-600"> ({discountVal}% desconto)</span>}
+                {discountVal < 0 && <span className="text-red-500"> ({Math.abs(discountVal)}% acréscimo)</span>}
+              </p>
+            </div>
+          )}
+
+          {form.type === 'custom' && (
+            <div className="p-3 bg-muted rounded-lg text-xs text-muted-foreground">
+              Após criar a tabela, clique em <strong>"Definir Preços"</strong> para configurar o valor de cada produto individualmente.
+            </div>
+          )}
+
           <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
             <Label>Tabela ativa</Label>
             <Switch checked={form.active} onCheckedChange={v => set('active', v)} />
@@ -87,6 +124,7 @@ export default function AdminPriceGroups() {
   const queryClient = useQueryClient();
   const [editGroup, setEditGroup] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [customPriceGroup, setCustomPriceGroup] = useState(null);
 
   const { data: groups = [], isLoading } = useQuery({
     queryKey: ['price-groups'],
@@ -129,24 +167,35 @@ export default function AdminPriceGroups() {
             <Card key={g.id} className="p-4">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Percent className="w-5 h-5 text-primary" />
+                  {g.type === 'custom' ? <ListOrdered className="w-5 h-5 text-primary" /> : <Percent className="w-5 h-5 text-primary" />}
                 </div>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="font-semibold">{g.name}</h3>
+                    <Badge variant="outline" className="text-[10px]">
+                      {g.type === 'custom' ? 'Preço por produto' : 'Porcentagem'}
+                    </Badge>
                     {!g.active && <Badge variant="secondary" className="text-[10px]">Inativa</Badge>}
                   </div>
                   {g.description && <p className="text-xs text-muted-foreground">{g.description}</p>}
                   <p className="text-sm mt-1">
-                    {g.discount_percent > 0
-                      ? <span className="text-green-600 font-semibold">{g.discount_percent}% de desconto sobre preço base</span>
-                      : g.discount_percent < 0
-                      ? <span className="text-red-500 font-semibold">{Math.abs(g.discount_percent)}% de acréscimo sobre preço base</span>
-                      : <span className="text-muted-foreground">Preço base (sem ajuste)</span>
-                    }
+                    {g.type === 'custom' ? (
+                      <span className="text-muted-foreground">Preços individuais por produto</span>
+                    ) : g.discount_percent > 0 ? (
+                      <span className="text-green-600 font-semibold">{g.discount_percent}% de desconto sobre preço base</span>
+                    ) : g.discount_percent < 0 ? (
+                      <span className="text-red-500 font-semibold">{Math.abs(g.discount_percent)}% de acréscimo sobre preço base</span>
+                    ) : (
+                      <span className="text-muted-foreground">Preço base (sem ajuste)</span>
+                    )}
                   </p>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 flex-shrink-0">
+                  {g.type === 'custom' && (
+                    <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCustomPriceGroup(g)}>
+                      <ListOrdered className="w-3.5 h-3.5 mr-1" />Definir Preços
+                    </Button>
+                  )}
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditGroup(g); setShowForm(true); }}>
                     <Pencil className="w-4 h-4" />
                   </Button>
@@ -162,6 +211,10 @@ export default function AdminPriceGroups() {
 
       {showForm && (
         <PriceGroupForm group={editGroup} onClose={() => { setShowForm(false); setEditGroup(null); }} onSaved={handleSaved} />
+      )}
+
+      {customPriceGroup && (
+        <CustomPriceModal priceGroup={customPriceGroup} onClose={() => setCustomPriceGroup(null)} />
       )}
     </div>
   );

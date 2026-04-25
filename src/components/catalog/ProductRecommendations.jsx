@@ -4,7 +4,7 @@ import { Sparkles, History, Heart, Users } from 'lucide-react';
 import ProductCard from './ProductCard';
 import { getFavorites } from '@/lib/favoritesStore';
 
-function Section({ icon: Icon, title, color, products, isLoggedIn, priceGroup }) {
+function Section({ icon: Icon, title, color, products, isLoggedIn, priceGroup, customPriceMap }) {
   if (!products.length) return null;
   return (
     <div className="space-y-3">
@@ -14,14 +14,14 @@ function Section({ icon: Icon, title, color, products, isLoggedIn, priceGroup })
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {products.map(p => (
-          <ProductCard key={p.id} product={p} isLoggedIn={isLoggedIn} priceGroup={priceGroup} />
+          <ProductCard key={p.id} product={p} isLoggedIn={isLoggedIn} priceGroup={priceGroup} customPrice={customPriceMap?.[p.id]} />
         ))}
       </div>
     </div>
   );
 }
 
-export default function ProductRecommendations({ allProducts, myOrders, allOrders, isLoggedIn, priceGroup, maxPerSection = 4 }) {
+export default function ProductRecommendations({ allProducts, myOrders, allOrders, isLoggedIn, priceGroup, customPriceMap, maxPerSection = 4 }) {
   const favorites = getFavorites();
 
   const { fromHistory, fromFavorites, fromSimilar } = useMemo(() => {
@@ -92,6 +92,7 @@ export default function ProductRecommendations({ allProducts, myOrders, allOrder
         products={fromHistory}
         isLoggedIn={isLoggedIn}
         priceGroup={priceGroup}
+        customPriceMap={customPriceMap}
       />
 
       <Section
@@ -101,6 +102,7 @@ export default function ProductRecommendations({ allProducts, myOrders, allOrder
         products={fromFavorites}
         isLoggedIn={isLoggedIn}
         priceGroup={priceGroup}
+        customPriceMap={customPriceMap}
       />
 
       <Section
@@ -110,6 +112,7 @@ export default function ProductRecommendations({ allProducts, myOrders, allOrder
         products={fromSimilar}
         isLoggedIn={isLoggedIn}
         priceGroup={priceGroup}
+        customPriceMap={customPriceMap}
       />
     </div>
   );

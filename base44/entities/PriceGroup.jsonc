@@ -10,6 +10,15 @@
       "type": "string",
       "description": "Descri\u00e7\u00e3o da tabela"
     },
+    "type": {
+      "type": "string",
+      "enum": [
+        "percentage",
+        "custom"
+      ],
+      "default": "percentage",
+      "description": "Tipo de precifica\u00e7\u00e3o: porcentagem ou pre\u00e7os customizados por produto"
+    },
     "discount_percent": {
       "type": "number",
       "description": "Desconto percentual aplicado sobre o pre\u00e7o base (negativo = acr\u00e9scimo)",

@@ -13,7 +13,7 @@ const getCartQty = (productId) => {
   return item ? item.quantity : 0;
 };
 
-export default function ProductCard({ product, isLoggedIn, priceGroup }) {
+export default function ProductCard({ product, isLoggedIn, priceGroup, customPrice }) {
   const [qty, setQty] = useState(1);
   const [fav, setFav] = useState(() => isFavorite(product.id));
   const [cartQty, setCartQty] = useState(() => getCartQty(product.id));
@@ -32,10 +32,15 @@ export default function ProductCard({ product, isLoggedIn, priceGroup }) {
   const hasPromo = product.promo_active && product.promo_price;
   const basePrice = hasPromo ? product.promo_price : product.price;
 
-  // Apply price group discount/surcharge
+  // Custom price table: use specific price if set, otherwise fall back to base price
+  // Percentage table: apply discount/surcharge
+  const isCustomTable = priceGroup?.type === 'custom';
   const discount = priceGroup?.discount_percent || 0;
-  const displayPrice = basePrice * (1 - discount / 100);
-  const hasGroupDiscount = discount !== 0 && isLoggedIn;
+  const displayPrice = isCustomTable
+    ? (customPrice !== undefined ? customPrice : product.price)
+    : basePrice * (1 - discount / 100);
+  const hasGroupDiscount = !isCustomTable && discount !== 0 && isLoggedIn;
+  const hasCustomPrice = isCustomTable && customPrice !== undefined && isLoggedIn;
 
   const handleAdd = () => {
     for (let i = 0; i < qty; i++) {
@@ -99,7 +104,7 @@ export default function ProductCard({ product, isLoggedIn, priceGroup }) {
         {isLoggedIn ? (
           <div className="pt-1 space-y-2">
             <div>
-              {(hasPromo || hasGroupDiscount) && (
+              {(hasPromo || hasGroupDiscount || hasCustomPrice) && (
                 <span className="text-xs text-muted-foreground line-through block">
                   R$ {product.price.toFixed(2)}
                 </span>
@@ -110,6 +115,11 @@ export default function ProductCard({ product, isLoggedIn, priceGroup }) {
               {hasGroupDiscount && (
                 <span className="text-[10px] text-green-600 font-semibold block">
                   {discount > 0 ? `-${discount}%` : `+${Math.abs(discount)}%`} {priceGroup.name}
+                </span>
+              )}
+              {hasCustomPrice && (
+                <span className="text-[10px] text-primary font-semibold block">
+                  Tabela: {priceGroup.name}
                 </span>
               )}
             </div>

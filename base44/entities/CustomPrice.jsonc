@@ -1,0 +1,41 @@
+{
+  "name": "CustomPrice",
+  "type": "object",
+  "properties": {
+    "price_group_id": {
+      "type": "string",
+      "description": "ID da tabela de pre\u00e7os"
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID do produto"
+    },
+    "custom_price": {
+      "type": "number",
+      "description": "Pre\u00e7o customizado do produto nesta tabela"
+    }
+  },
+  "required": [
+    "price_group_id",
+    "product_id",
+    "custom_price"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
