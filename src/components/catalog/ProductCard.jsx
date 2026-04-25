@@ -104,7 +104,7 @@ export default function ProductCard({ product, isLoggedIn, priceGroup, customPri
         {isLoggedIn ? (
           <div className="pt-1 space-y-2">
             <div>
-              {(hasPromo || hasGroupDiscount || hasCustomPrice) && (
+              {(hasPromo || (hasGroupDiscount && displayPrice < product.price) || (hasCustomPrice && displayPrice < product.price)) && (
                 <span className="text-xs text-muted-foreground line-through block">
                   R$ {product.price.toFixed(2)}
                 </span>
