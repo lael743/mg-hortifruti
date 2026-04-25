@@ -37,23 +37,73 @@ export default function Orders() {
     enabled: !!user,
   });
 
+  const { data: products = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => base44.entities.Product.list(),
+  });
+
+  const { data: priceGroups = [] } = useQuery({
+    queryKey: ['price-groups'],
+    queryFn: () => base44.entities.PriceGroup.list(),
+    enabled: !!user,
+  });
+
+  const { data: customPrices = [] } = useQuery({
+    queryKey: ['custom-prices'],
+    queryFn: () => base44.entities.CustomPrice.list(),
+    enabled: !!user,
+  });
+
   const [dateFilter, setDateFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
 
   const handleRepeatOrder = (order) => {
+    // Build a map of current products for quick lookup
+    const productMap = Object.fromEntries(products.map(p => [p.id, p]));
+
+    // Find user's price group
+    const userPriceGroup = priceGroups.find(pg => pg.id === user?.price_group_id);
+    const isCustomTable = userPriceGroup?.type === 'custom';
+    const discount = userPriceGroup?.discount_percent || 0;
+
+    // Build custom price map if applicable
+    const customPriceMap = {};
+    if (isCustomTable && userPriceGroup) {
+      customPrices
+        .filter(cp => cp.price_group_id === userPriceGroup.id)
+        .forEach(cp => { customPriceMap[cp.product_id] = cp.custom_price; });
+    }
+
     clearCart();
     order.items.forEach(item => {
+      const currentProduct = productMap[item.product_id];
+      let currentPrice = item.unit_price; // fallback to old price if product not found
+
+      if (currentProduct) {
+        const basePrice = currentProduct.promo_active && currentProduct.promo_price
+          ? currentProduct.promo_price
+          : currentProduct.price || 0;
+
+        if (isCustomTable) {
+          currentPrice = customPriceMap[item.product_id] !== undefined
+            ? customPriceMap[item.product_id]
+            : currentProduct.price || 0;
+        } else {
+          currentPrice = basePrice * (1 - discount / 100);
+        }
+      }
+
       addToCart({
         id: item.product_id,
         name: item.product_name,
-        price: item.unit_price,
+        price: currentPrice,
         packaging_type: item.packaging_type,
         weight: item.weight,
         image_url: item.image_url,
       }, item.quantity);
     });
-    toast.success('Itens adicionados ao carrinho!');
+    toast.success('Itens adicionados ao carrinho com preços atualizados!');
     navigate('/cart');
   };
 
