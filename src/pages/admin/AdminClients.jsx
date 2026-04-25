@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Search, UserPlus, Check, X, Clock, TrendingUp, Star } from 'lucide-react';
+import { Search, UserPlus, Check, X, Clock, Star, Shield } from 'lucide-react';
 import InviteClientDialog from '../../components/admin/InviteClientDialog';
 import ClientFormDialog from '../../components/admin/ClientFormDialog';
 import ClientCard from '../../components/admin/ClientCard';
+import UserRoleCard from '../../components/admin/UserRoleCard';
 import { toast } from 'sonner';
 
 export default function AdminClients() {
@@ -17,6 +18,11 @@ export default function AdminClients() {
   const [showInvite, setShowInvite] = useState(false);
   const [editClient, setEditClient] = useState(null);
   const [expandedClient, setExpandedClient] = useState(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState('');
+
+  useEffect(() => {
+    base44.auth.me().then(u => setCurrentUserEmail(u?.email || '')).catch(() => {});
+  }, []);
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['admin-clients'],
@@ -57,7 +63,9 @@ export default function AdminClients() {
     toast.error(`${client.full_name || client.email} rejeitado.`);
   };
 
-  const clients = users.filter(u => u.role !== 'admin');
+  // Todos os usuários exceto o proprietário (usuário logado atual)
+  const allUsersExceptOwner = users.filter(u => u.email !== currentUserEmail);
+  const clients = allUsersExceptOwner.filter(u => u.role !== 'admin');
   const pending  = clients.filter(u => (u.status || 'pending') === 'pending');
   const approved = clients.filter(u => u.status === 'approved');
   const rejected = clients.filter(u => u.status === 'rejected');
@@ -73,6 +81,8 @@ export default function AdminClients() {
       u.cnpj_cpf?.toLowerCase().includes(q)
     );
   });
+
+  const admins = allUsersExceptOwner.filter(u => u.role === 'admin');
 
   const topClients = [...clients]
     .filter(c => statsByEmail[c.email])
@@ -106,7 +116,7 @@ export default function AdminClients() {
         <div className="space-y-3">{Array(4).fill(0).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
       ) : (
         <Tabs defaultValue="pending">
-          <TabsList className="w-full">
+          <TabsList className="w-full flex-wrap h-auto gap-1">
             <TabsTrigger value="top" className="flex-1 gap-1.5">
               <Star className="w-3.5 h-3.5" />Melhores
             </TabsTrigger>
@@ -123,6 +133,10 @@ export default function AdminClients() {
             <TabsTrigger value="rejected" className="flex-1 gap-1.5">
               <X className="w-3.5 h-3.5" />Rejeitados
               <span className="bg-muted text-muted-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">{rejected.length}</span>
+            </TabsTrigger>
+            <TabsTrigger value="roles" className="flex-1 gap-1.5">
+              <Shield className="w-3.5 h-3.5" />Acessos
+              <span className="bg-muted text-muted-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">{allUsersExceptOwner.length}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -174,6 +188,24 @@ export default function AdminClients() {
             {filterList(rejected).length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">Nenhum cadastro rejeitado.</div>
             ) : filterList(rejected).map(c => <ClientCard key={c.id} {...cardProps(c, false)} />)}
+          </TabsContent>
+
+          <TabsContent value="roles" className="mt-4 space-y-3">
+            <p className="text-xs text-muted-foreground pb-1">
+              Gerencie o nível de acesso dos usuários. O proprietário da conta não aparece nesta lista.
+            </p>
+            {allUsersExceptOwner.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">Nenhum usuário encontrado.</div>
+            ) : allUsersExceptOwner
+                .filter(u => {
+                  if (!search) return true;
+                  const q = search.toLowerCase();
+                  return u.full_name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) || u.company_name?.toLowerCase().includes(q);
+                })
+                .sort((a, b) => (a.role === 'admin' ? -1 : 1) - (b.role === 'admin' ? -1 : 1))
+                .map(u => (
+                  <UserRoleCard key={u.id} user={u} currentUserEmail={currentUserEmail} />
+                ))}
           </TabsContent>
         </Tabs>
       )}
