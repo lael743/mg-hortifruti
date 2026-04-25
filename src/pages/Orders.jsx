@@ -100,7 +100,7 @@ export default function Orders() {
         price: currentPrice,
         packaging_type: item.packaging_type,
         weight: item.weight,
-        image_url: item.image_url,
+        image_url: currentProduct?.image_url || item.image_url,
       }, item.quantity);
     });
     toast.success('Itens adicionados ao carrinho com preços atualizados!');
