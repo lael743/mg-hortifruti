@@ -192,7 +192,7 @@ export default function AdminClients() {
 
           <TabsContent value="roles" className="mt-4 space-y-3">
             <p className="text-xs text-muted-foreground pb-1">
-              Gerencie o nível de acesso dos usuários. O proprietário da conta não aparece nesta lista.
+              Gerencie o nível de acesso dos usuários.
             </p>
             {allUsersExceptOwner.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">Nenhum usuário encontrado.</div>
