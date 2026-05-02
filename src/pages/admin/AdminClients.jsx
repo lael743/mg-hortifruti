@@ -197,11 +197,12 @@ export default function AdminClients() {
             <p className="text-xs text-muted-foreground pb-1">
               Gerencie o nível de acesso dos usuários.
             </p>
-            {allUsersExceptOwner.filter(u => u.role === 'admin' || u.role === 'user').length === 0 ? (
+            {allUsersExceptOwner.filter(u => (u.role === 'admin' || u.role === 'user') && !u.collaborator_role).length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">Nenhum usuário encontrado.</div>
             ) : allUsersExceptOwner
                 .filter(u => {
                   if (u.role !== 'admin' && u.role !== 'user') return false;
+                  if (u.collaborator_role) return false;
                   if (!search) return true;
                   const q = search.toLowerCase();
                   return u.full_name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) || u.company_name?.toLowerCase().includes(q);
