@@ -218,7 +218,8 @@ export default function AdminOrders() {
       const orderBlocks = clientOrders.map(order => {
         const itemsRows = (order.items || []).map(item => {
           const effPrice = item.final_unit_price ?? item.unit_price;
-          const isDisc = item.final_unit_price != null && item.final_unit_price !== item.unit_price;
+          // Somente destaca como desconto se o preço final for MENOR que o original
+          const isDisc = item.final_unit_price != null && item.final_unit_price < item.unit_price;
           const pricePerKg = calcPricePerKg(effPrice, item.weight);
           return `
           <tr${isDisc ? ' style="background:#fffbe6;"' : ''}>
@@ -324,7 +325,8 @@ export default function AdminOrders() {
 
     const itemsRows = (order.items || []).map(item => {
       const ep = item.final_unit_price ?? item.unit_price;
-      const isDisc = item.final_unit_price != null && item.final_unit_price !== item.unit_price;
+      // Somente destaca como desconto se o preço final for MENOR que o original
+      const isDisc = item.final_unit_price != null && item.final_unit_price < item.unit_price;
       const pricePerKg = calcPricePerKg(ep, item.weight);
       return `
       <tr${isDisc ? ' style="background:#fffbe6;"' : ''}>
@@ -603,7 +605,8 @@ export default function AdminOrders() {
                     )}
                     {order.items?.map((item, idx) => {
                       const effectivePrice = item.final_unit_price ?? item.unit_price;
-                      const isModified = item.final_unit_price != null && item.final_unit_price !== item.unit_price;
+                      // Somente destaca se for desconto (preço final menor que original)
+                      const isModified = item.final_unit_price != null && item.final_unit_price < item.unit_price;
                       return (
                         <div key={idx} className="flex justify-between text-sm">
                           <span>
