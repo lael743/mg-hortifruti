@@ -14,7 +14,7 @@ export default function Navbar({ user }) {
   const [cartTotal, setCartTotal] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner';
 
   useEffect(() => {
     const update = () => {
