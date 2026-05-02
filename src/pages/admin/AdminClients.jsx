@@ -63,8 +63,8 @@ export default function AdminClients() {
     toast.error(`${client.full_name || client.email} rejeitado.`);
   };
 
-  // Todos os usuários exceto o proprietário (usuário logado atual)
-  const allUsersExceptOwner = users.filter(u => u.email !== currentUserEmail);
+  // Todos os usuários exceto o proprietário (usuário logado ou role owner)
+  const allUsersExceptOwner = users.filter(u => u.email !== currentUserEmail && u.role !== 'owner');
   const clients = allUsersExceptOwner.filter(u => u.role !== 'admin');
   const pending  = clients.filter(u => (u.status || 'pending') === 'pending');
   const approved = clients.filter(u => u.status === 'approved');
