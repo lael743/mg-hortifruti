@@ -50,7 +50,7 @@ export default function AdminClients() {
   }, {});
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.User.update(id, data),
+    mutationFn: ({ id, data }) => base44.functions.invoke('updateUser', { userId: id, data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-clients'] });
     },

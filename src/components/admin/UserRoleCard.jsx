@@ -11,7 +11,7 @@ export default function UserRoleCard({ user, currentUserEmail }) {
   const queryClient = useQueryClient();
 
   const roleMutation = useMutation({
-    mutationFn: ({ id, role }) => base44.entities.User.update(id, { role }),
+    mutationFn: ({ id, role }) => base44.functions.invoke('updateUser', { userId: id, data: { role } }),
     onSuccess: (_, { role }) => {
       queryClient.invalidateQueries({ queryKey: ['admin-clients'] });
       toast.success(`Cargo atualizado para "${role === 'admin' ? 'Administrador' : 'Cliente'}"`);

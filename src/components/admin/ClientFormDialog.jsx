@@ -48,7 +48,7 @@ export default function ClientFormDialog({ client, onClose, onSaved }) {
 
   const handleSave = async () => {
     setSaving(true);
-    await base44.entities.User.update(client.id, form);
+    await base44.functions.invoke('updateUser', { userId: client.id, data: form });
     toast.success('Cliente atualizado');
     setSaving(false);
     onSaved();
