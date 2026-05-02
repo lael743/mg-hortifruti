@@ -76,7 +76,7 @@ export default function OrderPurchaseListDialog({ orders, userByEmail, periodLab
     const orderNumbers = orders.map(o => o.order_number).join(', ');
     const clientNames = [...new Set(orders.map(o => {
       const u = userByEmail[o.customer_email];
-      return u?.company_name || o.customer_name || o.customer_email;
+      return u?.company_name || u?.full_name || o.customer_name || o.customer_email;
     }))].join(', ');
 
     const printWindow = window.open('', '_blank');

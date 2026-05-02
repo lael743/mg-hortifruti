@@ -141,7 +141,7 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
         items: orderItems,
         total,
         notes,
-        client_data: selectedClient ? null : clientData,
+        client_data: clientData, // sempre envia para salvar/atualizar dados do cliente
       });
       toast.success('Pedido avulso criado com sucesso!');
       onSaved();

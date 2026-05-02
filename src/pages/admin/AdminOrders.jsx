@@ -81,6 +81,20 @@ export default function AdminOrders() {
 
   const userByEmail = Object.fromEntries(users.map(u => [u.email, u]));
 
+  // Retorna dados do cliente mesclando User cadastrado com dados do pedido como fallback
+  const getClientInfo = (order) => {
+    const u = userByEmail[order.customer_email] || {};
+    return {
+      company_name: u.company_name || '',
+      cnpj_cpf: u.cnpj_cpf || '',
+      address: u.address || '',
+      city: u.city || '',
+      state: u.state || '',
+      whatsapp: u.whatsapp || u.phone || '',
+      full_name: u.full_name || order.customer_name || order.customer_email,
+    };
+  };
+
   // Unique cities for quick group filter
   const cities = [...new Set(users.map(u => u.city).filter(Boolean))].sort();
 
@@ -125,7 +139,7 @@ export default function AdminOrders() {
   const [periodStart, periodEnd] = getPeriodRange(period, customStart, customEnd);
 
   const filtered = orders.filter(o => {
-    const u = userByEmail[o.customer_email] || {};
+    const u = getClientInfo(o);
 
     const matchSearch = !search ||
       o.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -177,7 +191,7 @@ export default function AdminOrders() {
       </div>`;
 
     const clientPages = Object.entries(grouped).map(([email, clientOrders], index) => {
-      const u = userByEmail[email] || {};
+      const u = getClientInfo(clientOrders[0]);
       const orderBlocks = clientOrders.map(order => {
         const itemsRows = (order.items || []).map(item => {
           const effPrice = item.final_unit_price ?? item.unit_price;
@@ -227,13 +241,12 @@ export default function AdminOrders() {
         <div class="client-page${index > 0 ? ' page-break' : ''}">
           ${companyHeader}
           <div class="client-info">
-            <h3>${u.company_name || clientOrders[0]?.customer_name || email}</h3>
-            ${u.company_name && clientOrders[0]?.customer_name ? `<p><strong>Contato:</strong> ${clientOrders[0].customer_name}</p>` : ''}
+            <h3>${u.company_name || u.full_name || email}</h3>
+            ${u.company_name ? `<p><strong>Contato:</strong> ${u.full_name}</p>` : ''}
             ${u.cnpj_cpf ? `<p><strong>CNPJ/CPF:</strong> ${u.cnpj_cpf}</p>` : ''}
             ${u.address ? `<p><strong>Endereço:</strong> ${u.address}${u.city ? `, ${u.city}` : ''}${u.state ? ` - ${u.state}` : ''}</p>` : ''}
             ${u.whatsapp ? `<p><strong>WhatsApp:</strong> ${u.whatsapp}</p>` : ''}
             <p><strong>Email:</strong> ${email}</p>
-            ${!u.company_name && clientOrders[0]?.customer_name ? `<p><strong>Nome:</strong> ${clientOrders[0].customer_name}</p>` : ''}
           </div>
           ${orderBlocks}
           <div class="client-total">Total geral do cliente: <strong>R$ ${clientTotal.toFixed(2)}</strong> (${clientOrders.length} pedido${clientOrders.length > 1 ? 's' : ''})</div>
@@ -284,7 +297,7 @@ export default function AdminOrders() {
   };
 
   const handlePrintSeparation = (order) => {
-    const u = userByEmail[order.customer_email] || {};
+    const u = getClientInfo(order);
 
     const itemsRows = (order.items || []).map(item => {
       const ep = item.final_unit_price ?? item.unit_price;
@@ -336,8 +349,8 @@ export default function AdminOrders() {
         ${company?.cnpj ? `<p style="font-size:11px;color:#555;">CNPJ: ${company.cnpj}</p>` : ''}
       </div>
       <div class="client-info">
-        <h3>${u.company_name || order.customer_name || order.customer_email}</h3>
-        ${u.company_name && order.customer_name ? `<p><strong>Contato:</strong> ${order.customer_name}</p>` : ''}
+        <h3>${u.company_name || u.full_name || order.customer_email}</h3>
+        ${u.company_name ? `<p><strong>Contato:</strong> ${u.full_name}</p>` : ''}
         ${u.cnpj_cpf ? `<p><strong>CNPJ/CPF:</strong> ${u.cnpj_cpf}</p>` : ''}
         ${u.address ? `<p><strong>Endereço:</strong> ${u.address}${u.city ? `, ${u.city}` : ''}${u.state ? ` - ${u.state}` : ''}</p>` : ''}
         ${u.whatsapp ? `<p><strong>WhatsApp:</strong> ${u.whatsapp}</p>` : ''}
@@ -482,7 +495,7 @@ export default function AdminOrders() {
       ) : (
         <div className="space-y-3">
           {filtered.map(order => {
-            const u = userByEmail[order.customer_email] || {};
+            const u = getClientInfo(order);
             return (
               <Card key={order.id} className="p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -529,9 +542,9 @@ export default function AdminOrders() {
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
-                    {(u.whatsapp || u.phone) && (
+                    {u.whatsapp && (
                       <a
-                        href={`https://wa.me/55${(u.whatsapp || u.phone).replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${order.customer_name || ''}! Passando para confirmar seu pedido de R$ ${order.total?.toFixed(2)}.`)}`}
+                        href={`https://wa.me/55${u.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${order.customer_name || ''}! Passando para confirmar seu pedido de R$ ${order.total?.toFixed(2)}.`)}`}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -557,7 +570,7 @@ export default function AdminOrders() {
 
                 {expandedOrder === order.id && (
                   <div className="mt-4 pt-4 border-t space-y-2">
-                    {(u.address || u.whatsapp) && (
+                    {(u.address || u.whatsapp || u.cnpj_cpf) && (
                       <div className="text-xs text-muted-foreground bg-muted rounded-lg p-3 space-y-0.5 mb-3">
                         {u.address && <p>📍 {u.address}{u.city && `, ${u.city}`}{u.state && ` - ${u.state}`}</p>}
                         {u.whatsapp && <p>📱 {u.whatsapp}</p>}

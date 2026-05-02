@@ -14,26 +14,29 @@ Deno.serve(async (req) => {
         let clientEmail = customer_email;
         let clientName = customer_name;
 
-        // Se client_data foi passado, é um cliente novo (não cadastrado ainda)
-        if (client_data && !customer_id) {
+        // Sempre salva/atualiza dados do cliente para histórico e futuras impressões
+        if (client_data && client_data.email) {
             const existingUsers = await base44.asServiceRole.entities.User.filter({ email: client_data.email });
 
             if (existingUsers && existingUsers.length > 0) {
                 const existing = existingUsers[0];
-                await base44.asServiceRole.entities.User.update(existing.id, {
-                    company_name: client_data.company_name || existing.company_name,
-                    cnpj_cpf: client_data.cnpj_cpf || existing.cnpj_cpf,
-                    whatsapp: client_data.whatsapp || existing.whatsapp,
-                    address: client_data.address || existing.address,
-                    city: client_data.city || existing.city,
-                    state: client_data.state || existing.state,
-                    price_group_id: client_data.price_group_id || existing.price_group_id,
-                    price_group_name: client_data.price_group_name || existing.price_group_name,
-                });
+                // Atualiza dados do cliente (sobrescreve com os dados fornecidos se preenchidos)
+                const updateData = {};
+                if (client_data.company_name) updateData.company_name = client_data.company_name;
+                if (client_data.cnpj_cpf) updateData.cnpj_cpf = client_data.cnpj_cpf;
+                if (client_data.whatsapp) updateData.whatsapp = client_data.whatsapp;
+                if (client_data.address) updateData.address = client_data.address;
+                if (client_data.city) updateData.city = client_data.city;
+                if (client_data.state) updateData.state = client_data.state;
+                if (client_data.price_group_id) updateData.price_group_id = client_data.price_group_id;
+                if (client_data.price_group_name) updateData.price_group_name = client_data.price_group_name;
+                if (Object.keys(updateData).length > 0) {
+                    await base44.asServiceRole.entities.User.update(existing.id, updateData);
+                }
                 clientEmail = existing.email;
                 clientName = client_data.full_name || existing.full_name;
             } else {
-                // Criar novo usuário ad-hoc (sem senha, só dados)
+                // Criar novo usuário ad-hoc (sem senha, só dados para histórico)
                 const newUser = await base44.asServiceRole.entities.User.create({
                     full_name: client_data.full_name,
                     email: client_data.email,
