@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Printer, Eye, ChevronDown, Building2, MapPin, FileText, ShoppingBasket, X, MessageCircle, Users, Pencil } from 'lucide-react';
+import { Search, Printer, Eye, ChevronDown, Building2, MapPin, FileText, ShoppingBasket, X, MessageCircle, Users, Pencil, Plus } from 'lucide-react';
 import OrderEditDialog from '../../components/admin/OrderEditDialog';
+import AdHocOrderModal from '../../components/admin/AdHocOrderModal';
 import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -60,6 +61,7 @@ export default function AdminOrders() {
   const [groupFilter, setGroupFilter] = useState(''); // city or company_name filter
   const [showPurchaseList, setShowPurchaseList] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
+  const [showAdHocModal, setShowAdHocModal] = useState(false);
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['admin-orders'],
@@ -380,6 +382,9 @@ export default function AdminOrders() {
     <div className="space-y-4">
       {/* Filters row */}
       <div className="flex gap-3 flex-wrap">
+        <Button onClick={() => setShowAdHocModal(true)} className="shrink-0">
+          <Plus className="w-4 h-4 mr-1.5" />Novo Pedido Avulso
+        </Button>
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Buscar por cliente, empresa, CNPJ, cidade..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
@@ -590,6 +595,16 @@ export default function AdminOrders() {
           userByEmail={userByEmail}
           periodLabel={periodLabel}
           onClose={() => setShowPurchaseList(false)}
+        />
+      )}
+
+      {showAdHocModal && (
+        <AdHocOrderModal
+          onClose={() => setShowAdHocModal(false)}
+          onSaved={() => {
+            setShowAdHocModal(false);
+            queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+          }}
         />
       )}
 
