@@ -36,7 +36,8 @@ export default function AppLayout() {
   }
 
   // Non-admin logged-in users must be approved
-  if (user && user.role !== 'admin' && user.role !== 'owner') {
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+  if (user && !isAdmin) {
     const status = user.status || 'pending';
     if (status !== 'approved') {
       return <PendingApproval status={status} />;

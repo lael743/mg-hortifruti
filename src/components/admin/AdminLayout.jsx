@@ -66,7 +66,8 @@ export default function AdminLayout() {
     setToggling(false);
   };
 
-  if (!user || (user.role !== 'admin' && user.role !== 'owner')) {
+  const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+  if (!isAdmin) {
     return <Navigate to="/" replace />;
   }
 
