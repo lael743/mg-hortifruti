@@ -6,31 +6,32 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
-import { X, Trash2, ShoppingCart } from 'lucide-react';
+import { X, Trash2, ShoppingCart, UserPlus } from 'lucide-react';
 
 const STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
+const EMPTY_CLIENT = {
+  full_name: '', company_name: '', cnpj_cpf: '',
+  whatsapp: '', address: '', city: '', state: '',
+  price_group_id: '', price_group_name: '', notes: '',
+};
+
 export default function AdHocOrderModal({ onClose, onSaved }) {
-  const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedClient, setSelectedClient] = useState(null); // WalkInClient record
   const [clientSearch, setClientSearch] = useState('');
   const [productSearch, setProductSearch] = useState('');
   const [orderItems, setOrderItems] = useState([]);
-  const [notes, setNotes] = useState('');
+  const [orderNotes, setOrderNotes] = useState('');
   const [saving, setSaving] = useState(false);
-  const [clientData, setClientData] = useState({
-    full_name: '', email: '', company_name: '', cnpj_cpf: '',
-    whatsapp: '', address: '', city: '', state: '',
-    price_group_id: '', price_group_name: '',
-  });
+  const [clientData, setClientData] = useState({ ...EMPTY_CLIENT });
+  const [isNewClient, setIsNewClient] = useState(false);
 
-  const { data: usersRes } = useQuery({
-    queryKey: ['all-users-adhoc'],
-    queryFn: () => base44.functions.invoke('listAllUsers', {}),
+  const { data: walkInClients = [] } = useQuery({
+    queryKey: ['walk-in-clients'],
+    queryFn: () => base44.entities.WalkInClient.list('-created_date'),
   });
-  const allUsers = usersRes?.data?.users || [];
 
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
@@ -50,11 +51,12 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
 
   const activeProducts = products.filter(p => p.active);
 
-  const filteredUsers = clientSearch.length > 1
-    ? allUsers.filter(u =>
-        u.full_name?.toLowerCase().includes(clientSearch.toLowerCase()) ||
-        u.email?.toLowerCase().includes(clientSearch.toLowerCase()) ||
-        u.company_name?.toLowerCase().includes(clientSearch.toLowerCase())
+  const filteredClients = clientSearch.length > 1
+    ? walkInClients.filter(c =>
+        c.full_name?.toLowerCase().includes(clientSearch.toLowerCase()) ||
+        c.company_name?.toLowerCase().includes(clientSearch.toLowerCase()) ||
+        c.cnpj_cpf?.toLowerCase().includes(clientSearch.toLowerCase()) ||
+        c.whatsapp?.includes(clientSearch)
       )
     : [];
 
@@ -62,22 +64,29 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
     ? activeProducts.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
     : [];
 
-  useEffect(() => {
-    if (selectedClient) {
-      setClientData({
-        full_name: selectedClient.full_name || '',
-        email: selectedClient.email || '',
-        company_name: selectedClient.company_name || '',
-        cnpj_cpf: selectedClient.cnpj_cpf || '',
-        whatsapp: selectedClient.whatsapp || '',
-        address: selectedClient.address || '',
-        city: selectedClient.city || '',
-        state: selectedClient.state || '',
-        price_group_id: selectedClient.price_group_id || '',
-        price_group_name: selectedClient.price_group_name || '',
-      });
-    }
-  }, [selectedClient]);
+  const selectClient = (c) => {
+    setSelectedClient(c);
+    setClientData({
+      full_name: c.full_name || '',
+      company_name: c.company_name || '',
+      cnpj_cpf: c.cnpj_cpf || '',
+      whatsapp: c.whatsapp || '',
+      address: c.address || '',
+      city: c.city || '',
+      state: c.state || '',
+      price_group_id: c.price_group_id || '',
+      price_group_name: c.price_group_name || '',
+      notes: c.notes || '',
+    });
+    setClientSearch('');
+    setIsNewClient(false);
+  };
+
+  const clearClient = () => {
+    setSelectedClient(null);
+    setClientData({ ...EMPTY_CLIENT });
+    setIsNewClient(false);
+  };
 
   const getEffectivePrice = (product) => {
     const basePrice = product.promo_active && product.promo_price ? product.promo_price : product.price;
@@ -124,8 +133,8 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
   const total = orderItems.reduce((sum, item) => sum + item.final_unit_price * item.quantity, 0);
 
   const handleSave = async () => {
-    if (!clientData.email || !clientData.full_name) {
-      toast.error('Informe o nome e email do cliente.');
+    if (!clientData.full_name.trim()) {
+      toast.error('Informe o nome do cliente.');
       return;
     }
     if (orderItems.length === 0) {
@@ -135,13 +144,11 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
     setSaving(true);
     try {
       await base44.functions.invoke('createAdHocOrder', {
-        customer_id: selectedClient?.id || null,
-        customer_email: clientData.email,
-        customer_name: clientData.full_name,
+        walk_in_client_id: selectedClient?.id || null,
+        client_data: clientData,
         items: orderItems,
         total,
-        notes,
-        client_data: clientData, // sempre envia para salvar/atualizar dados do cliente
+        notes: orderNotes,
       });
       toast.success('Pedido avulso criado com sucesso!');
       onSaved();
@@ -158,76 +165,91 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
         <DialogHeader>
           <DialogTitle>Novo Pedido Avulso</DialogTitle>
           <DialogDescription>
-            Selecione um cliente existente ou preencha os dados manualmente. Novos clientes são salvos para pedidos futuros.
+            Selecione um cliente avulso cadastrado ou cadastre um novo. O histórico de pedidos fica vinculado ao cadastro.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 pt-2">
           {/* CLIENTE */}
           <div className="border rounded-xl p-4 space-y-3 bg-muted/20">
-            <h3 className="font-semibold text-sm">Cliente</h3>
+            <h3 className="font-semibold text-sm">Cliente Avulso</h3>
 
             {selectedClient ? (
               <div className="flex items-center justify-between bg-secondary/60 rounded-lg px-3 py-2">
                 <div>
-                  <p className="font-medium text-sm">{selectedClient.full_name}</p>
-                  <p className="text-xs text-muted-foreground">{selectedClient.email}</p>
-                  {selectedClient.company_name && <p className="text-xs text-muted-foreground">{selectedClient.company_name}</p>}
+                  <p className="font-medium text-sm">{selectedClient.company_name || selectedClient.full_name}</p>
+                  {selectedClient.company_name && <p className="text-xs text-muted-foreground">{selectedClient.full_name}</p>}
+                  {selectedClient.whatsapp && <p className="text-xs text-muted-foreground">📱 {selectedClient.whatsapp}</p>}
+                  {selectedClient.city && <p className="text-xs text-muted-foreground">📍 {selectedClient.city}{selectedClient.state && ` - ${selectedClient.state}`}</p>}
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => { setSelectedClient(null); setClientData({ full_name:'',email:'',company_name:'',cnpj_cpf:'',whatsapp:'',address:'',city:'',state:'',price_group_id:'',price_group_name:'' }); }}>
+                <Button variant="ghost" size="sm" onClick={clearClient}>
                   <X className="w-4 h-4 mr-1" />Trocar
                 </Button>
               </div>
             ) : (
               <>
+                {/* Busca de clientes cadastrados */}
                 <div className="relative">
                   <Input
-                    placeholder="Buscar cliente existente (nome, email, empresa)..."
+                    placeholder="Buscar cliente avulso cadastrado (nome, empresa, CNPJ, WhatsApp)..."
                     value={clientSearch}
-                    onChange={e => setClientSearch(e.target.value)}
+                    onChange={e => { setClientSearch(e.target.value); setIsNewClient(false); }}
                   />
-                  {filteredUsers.length > 0 && (
+                  {filteredClients.length > 0 && (
                     <div className="absolute z-50 top-full left-0 right-0 border rounded-md mt-1 max-h-44 overflow-y-auto bg-background shadow-lg">
-                      {filteredUsers.map(u => (
-                        <div key={u.id} className="px-3 py-2 hover:bg-muted cursor-pointer border-b last:border-b-0"
-                          onClick={() => { setSelectedClient(u); setClientSearch(''); }}>
-                          <p className="text-sm font-medium">{u.full_name} <span className="text-muted-foreground font-normal">({u.email})</span></p>
-                          {u.company_name && <p className="text-xs text-muted-foreground">{u.company_name}</p>}
+                      {filteredClients.map(c => (
+                        <div key={c.id} className="px-3 py-2 hover:bg-muted cursor-pointer border-b last:border-b-0"
+                          onClick={() => selectClient(c)}>
+                          <p className="text-sm font-medium">{c.company_name || c.full_name}</p>
+                          {c.company_name && <p className="text-xs text-muted-foreground">{c.full_name}</p>}
+                          <div className="flex gap-2 text-xs text-muted-foreground">
+                            {c.city && <span>📍 {c.city}{c.state && ` - ${c.state}`}</span>}
+                            {c.whatsapp && <span>📱 {c.whatsapp}</span>}
+                            {c.cnpj_cpf && <span>📄 {c.cnpj_cpf}</span>}
+                          </div>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">— ou preencha os dados de um novo cliente abaixo —</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div><Label className="text-xs">Nome Completo *</Label><Input value={clientData.full_name} onChange={e => setClientData(p=>({...p,full_name:e.target.value}))} /></div>
-                  <div><Label className="text-xs">Email *</Label><Input type="email" value={clientData.email} onChange={e => setClientData(p=>({...p,email:e.target.value}))} /></div>
-                  <div><Label className="text-xs">Empresa</Label><Input value={clientData.company_name} onChange={e => setClientData(p=>({...p,company_name:e.target.value}))} /></div>
-                  <div><Label className="text-xs">CNPJ / CPF</Label><Input value={clientData.cnpj_cpf} onChange={e => setClientData(p=>({...p,cnpj_cpf:e.target.value}))} /></div>
-                  <div><Label className="text-xs">WhatsApp</Label><Input value={clientData.whatsapp} onChange={e => setClientData(p=>({...p,whatsapp:e.target.value}))} /></div>
-                  <div><Label className="text-xs">Endereço</Label><Input value={clientData.address} onChange={e => setClientData(p=>({...p,address:e.target.value}))} /></div>
-                  <div><Label className="text-xs">Cidade</Label><Input value={clientData.city} onChange={e => setClientData(p=>({...p,city:e.target.value}))} /></div>
-                  <div>
-                    <Label className="text-xs">Estado</Label>
-                    <Select value={clientData.state} onValueChange={v => setClientData(p=>({...p,state:v}))}>
-                      <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
-                      <SelectContent>{STATES.map(s=><SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                    </Select>
+
+                {!isNewClient ? (
+                  <Button variant="outline" size="sm" className="w-full border-dashed" onClick={() => { setIsNewClient(true); setClientSearch(''); }}>
+                    <UserPlus className="w-4 h-4 mr-1.5" />Cadastrar Novo Cliente Avulso
+                  </Button>
+                ) : (
+                  <div className="space-y-3 border rounded-lg p-3 bg-background">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Novo cliente avulso</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div><Label className="text-xs">Nome Completo *</Label><Input value={clientData.full_name} onChange={e => setClientData(p=>({...p,full_name:e.target.value}))} /></div>
+                      <div><Label className="text-xs">Empresa / Estabelecimento</Label><Input value={clientData.company_name} onChange={e => setClientData(p=>({...p,company_name:e.target.value}))} /></div>
+                      <div><Label className="text-xs">CNPJ / CPF</Label><Input value={clientData.cnpj_cpf} onChange={e => setClientData(p=>({...p,cnpj_cpf:e.target.value}))} /></div>
+                      <div><Label className="text-xs">WhatsApp / Telefone</Label><Input value={clientData.whatsapp} onChange={e => setClientData(p=>({...p,whatsapp:e.target.value}))} /></div>
+                      <div><Label className="text-xs">Endereço</Label><Input value={clientData.address} onChange={e => setClientData(p=>({...p,address:e.target.value}))} /></div>
+                      <div><Label className="text-xs">Cidade</Label><Input value={clientData.city} onChange={e => setClientData(p=>({...p,city:e.target.value}))} /></div>
+                      <div>
+                        <Label className="text-xs">Estado</Label>
+                        <Select value={clientData.state} onValueChange={v => setClientData(p=>({...p,state:v}))}>
+                          <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
+                          <SelectContent>{STATES.map(s=><SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Tabela de Preços</Label>
+                        <Select value={clientData.price_group_id || '__none__'} onValueChange={v => {
+                          const g = priceGroups.find(g=>g.id===v);
+                          setClientData(p=>({...p, price_group_id: v==='__none__'?'':v, price_group_name: g?.name||'' }));
+                        }}>
+                          <SelectTrigger><SelectValue placeholder="Preço padrão" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">— Preço padrão (sem tabela)</SelectItem>
+                            {priceGroups.map(g=><SelectItem key={g.id} value={g.id}>{g.name}{g.discount_percent?` (${g.discount_percent}%)`:''}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </div>
-                  <div className="sm:col-span-2">
-                    <Label className="text-xs">Tabela de Preços</Label>
-                    <Select value={clientData.price_group_id || '__none__'} onValueChange={v => {
-                      const g = priceGroups.find(g=>g.id===v);
-                      setClientData(p=>({...p, price_group_id: v==='__none__'?'':v, price_group_name: g?.name||'' }));
-                    }}>
-                      <SelectTrigger><SelectValue placeholder="Preço padrão" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">— Preço padrão (sem tabela)</SelectItem>
-                        {priceGroups.map(g=><SelectItem key={g.id} value={g.id}>{g.name}{g.discount_percent?` (${g.discount_percent}%)`  :''}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                )}
               </>
             )}
           </div>
@@ -288,8 +310,8 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
 
           {/* OBSERVAÇÕES */}
           <div>
-            <Label className="text-xs mb-1 block">Observações</Label>
-            <Textarea placeholder="Observações internas do pedido..." value={notes} onChange={e => setNotes(e.target.value)} rows={2} />
+            <Label className="text-xs mb-1 block">Observações do Pedido</Label>
+            <Textarea placeholder="Observações internas do pedido..." value={orderNotes} onChange={e => setOrderNotes(e.target.value)} rows={2} />
           </div>
         </div>
 

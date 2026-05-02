@@ -79,10 +79,29 @@ export default function AdminOrders() {
     queryFn: () => base44.entities.User.list(),
   });
 
-  const userByEmail = Object.fromEntries(users.map(u => [u.email, u]));
+  const { data: walkInClients = [] } = useQuery({
+    queryKey: ['walk-in-clients'],
+    queryFn: () => base44.entities.WalkInClient.list(),
+  });
 
-  // Retorna dados do cliente mesclando User cadastrado com dados do pedido como fallback
+  const userByEmail = Object.fromEntries(users.map(u => [u.email, u]));
+  const walkInById = Object.fromEntries(walkInClients.map(c => [c.id, c]));
+
+  // Retorna dados do cliente: Walk-in > User cadastrado > fallback do pedido
   const getClientInfo = (order) => {
+    if (order.walk_in_client_id) {
+      const w = walkInById[order.walk_in_client_id] || {};
+      return {
+        company_name: w.company_name || '',
+        cnpj_cpf: w.cnpj_cpf || '',
+        address: w.address || '',
+        city: w.city || '',
+        state: w.state || '',
+        whatsapp: w.whatsapp || '',
+        full_name: w.full_name || order.customer_name || '',
+        is_walk_in: true,
+      };
+    }
     const u = userByEmail[order.customer_email] || {};
     return {
       company_name: u.company_name || '',
@@ -92,11 +111,15 @@ export default function AdminOrders() {
       state: u.state || '',
       whatsapp: u.whatsapp || u.phone || '',
       full_name: u.full_name || order.customer_name || order.customer_email,
+      is_walk_in: false,
     };
   };
 
   // Unique cities for quick group filter
-  const cities = [...new Set(users.map(u => u.city).filter(Boolean))].sort();
+  const cities = [...new Set([
+    ...users.map(u => u.city),
+    ...walkInClients.map(c => c.city),
+  ].filter(Boolean))].sort();
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, status, order }) => {
@@ -501,8 +524,9 @@ export default function AdminOrders() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-sm">{u.company_name || order.customer_name || order.customer_email}</span>
+                      <span className="font-semibold text-sm">{u.company_name || u.full_name || order.customer_name}</span>
                       <Badge className={`${statusColors[order.status]} border text-xs`}>{order.status}</Badge>
+                      {u.is_walk_in && <Badge variant="outline" className="text-xs border-amber-400 text-amber-700">Avulso</Badge>}
                     </div>
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
                       {u.company_name && (

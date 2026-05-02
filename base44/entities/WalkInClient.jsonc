@@ -1,0 +1,67 @@
+{
+  "name": "WalkInClient",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string",
+      "description": "Nome completo ou raz\u00e3o social"
+    },
+    "company_name": {
+      "type": "string",
+      "description": "Nome da empresa / estabelecimento"
+    },
+    "cnpj_cpf": {
+      "type": "string",
+      "description": "CNPJ ou CPF"
+    },
+    "whatsapp": {
+      "type": "string",
+      "description": "WhatsApp / telefone"
+    },
+    "address": {
+      "type": "string"
+    },
+    "city": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string"
+    },
+    "price_group_id": {
+      "type": "string",
+      "description": "ID da tabela de pre\u00e7os vinculada"
+    },
+    "price_group_name": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es internas"
+    }
+  },
+  "required": [
+    "full_name"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
