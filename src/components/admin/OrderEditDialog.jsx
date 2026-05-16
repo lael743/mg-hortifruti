@@ -1,24 +1,43 @@
 import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Pencil, Check, X } from 'lucide-react';
+import { Pencil, Check, X, Trash2, ArrowLeftRight } from 'lucide-react';
 
 export default function OrderEditDialog({ order, onSave, onClose }) {
   const [items, setItems] = useState(
     (order.items || []).map(item => ({
       ...item,
-      // final_unit_price: preço final efetivo (editado pelo admin); fallback para unit_price
       final_unit_price: item.final_unit_price ?? item.unit_price,
     }))
   );
   const [editingIndex, setEditingIndex] = useState(null);
   const [editValue, setEditValue] = useState('');
+  const [replacingIndex, setReplacingIndex] = useState(null);
+  const [replaceSearch, setReplaceSearch] = useState('');
 
+  const { data: products = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => base44.entities.Product.list(),
+  });
+
+  const activeProducts = products.filter(p => p.active);
+
+  const filteredReplace = replaceSearch.length > 1
+    ? activeProducts.filter(p =>
+        p.name.toLowerCase().includes(replaceSearch.toLowerCase()) &&
+        !items.some((it, idx) => it.product_id === p.id && idx !== replacingIndex)
+      )
+    : [];
+
+  // --- Price editing ---
   const startEdit = (idx) => {
     setEditingIndex(idx);
     setEditValue(String(items[idx].final_unit_price));
+    setReplacingIndex(null);
+    setReplaceSearch('');
   };
 
   const confirmEdit = (idx) => {
@@ -31,15 +50,57 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
 
   const cancelEdit = () => setEditingIndex(null);
 
+  // --- Remove item ---
+  const removeItem = (idx) => {
+    setItems(prev => prev.filter((_, i) => i !== idx));
+    if (editingIndex === idx) setEditingIndex(null);
+    if (replacingIndex === idx) { setReplacingIndex(null); setReplaceSearch(''); }
+  };
+
+  // --- Replace product ---
+  const startReplace = (idx) => {
+    setReplacingIndex(idx);
+    setReplaceSearch('');
+    setEditingIndex(null);
+  };
+
+  const cancelReplace = () => {
+    setReplacingIndex(null);
+    setReplaceSearch('');
+  };
+
+  const confirmReplace = (product) => {
+    setItems(prev => prev.map((item, i) => {
+      if (i !== replacingIndex) return item;
+      return {
+        ...item,
+        product_id: product.id,
+        product_name: product.name,
+        packaging_type: product.packaging_type,
+        weight: product.weight,
+        unit_price: product.price,
+        final_unit_price: product.promo_active && product.promo_price ? product.promo_price : product.price,
+      };
+    }));
+    setReplacingIndex(null);
+    setReplaceSearch('');
+  };
+
+  // --- Totals ---
   const newTotal = items.reduce((sum, item) => sum + (item.final_unit_price * item.quantity), 0);
-  const originalTotal = items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
-  const hasChanges = items.some(item => item.final_unit_price !== item.unit_price);
+  const originalItems = order.items || [];
+  const originalTotal = originalItems.reduce((sum, item) => sum + ((item.unit_price ?? 0) * item.quantity), 0);
+
+  const hasChanges = (() => {
+    if (items.length !== originalItems.length) return true;
+    return items.some((item, i) => {
+      const orig = originalItems[i];
+      return !orig || item.final_unit_price !== (orig.final_unit_price ?? orig.unit_price) || item.product_id !== orig.product_id;
+    });
+  })();
 
   const handleSave = () => {
-    onSave({
-      items: items,
-      total: newTotal,
-    });
+    onSave({ items, total: newTotal });
   };
 
   return (
@@ -55,66 +116,119 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
             <span className="text-right w-10">Qtd</span>
             <span className="text-right w-24">Preço orig.</span>
             <span className="text-right w-24">Preço final</span>
-            <span className="w-16"></span>
+            <span className="w-20"></span>
           </div>
+
+          {items.length === 0 && (
+            <p className="text-center text-muted-foreground py-6 text-sm">Nenhum item no pedido.</p>
+          )}
 
           {items.map((item, idx) => {
             const isEditing = editingIndex === idx;
-            const isModified = item.final_unit_price !== item.unit_price;
+            const isReplacing = replacingIndex === idx;
+            const isModified = item.final_unit_price !== (originalItems[idx]?.unit_price ?? item.unit_price);
+            const isProductChanged = item.product_id !== (originalItems[idx]?.product_id);
             const subtotal = item.final_unit_price * item.quantity;
 
             return (
-              <div key={idx} className={`grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-3 gap-y-0 items-center px-2 py-2 rounded-lg ${isModified ? 'bg-amber-50 border border-amber-200' : 'hover:bg-muted/50'}`}>
-                <div>
-                  <p className="text-sm font-medium leading-tight">{item.product_name}</p>
-                  <p className="text-xs text-muted-foreground">{item.packaging_type}{item.weight ? ` • ${item.weight}` : ''}</p>
-                </div>
-
-                <span className="text-sm text-right w-10 font-medium">{item.quantity}</span>
-
-                <span className="text-sm text-right w-24 text-muted-foreground">
-                  R$ {item.unit_price?.toFixed(2)}
-                </span>
-
-                <div className="w-24 text-right">
-                  {isEditing ? (
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={editValue}
-                      onChange={e => setEditValue(e.target.value)}
-                      className="h-7 text-sm text-right w-24 px-2"
-                      autoFocus
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') confirmEdit(idx);
-                        if (e.key === 'Escape') cancelEdit();
-                      }}
-                    />
-                  ) : (
-                    <span className={`text-sm font-semibold ${isModified ? 'text-amber-700' : ''}`}>
-                      R$ {item.final_unit_price?.toFixed(2)}
-                    </span>
-                  )}
-                  <p className="text-[11px] text-muted-foreground">= R$ {subtotal.toFixed(2)}</p>
-                </div>
-
-                <div className="flex gap-1 w-16 justify-end">
-                  {isEditing ? (
-                    <>
-                      <Button size="icon" variant="ghost" className="h-6 w-6 text-green-600" onClick={() => confirmEdit(idx)}>
-                        <Check className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-6 w-6 text-red-500" onClick={cancelEdit}>
+              <div key={idx} className={`rounded-lg px-2 py-2 ${isReplacing ? 'bg-blue-50 border border-blue-200' : isProductChanged ? 'bg-violet-50 border border-violet-200' : isModified ? 'bg-amber-50 border border-amber-200' : 'hover:bg-muted/50'}`}>
+                {/* Replace search row */}
+                {isReplacing ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-blue-700 font-medium">Substituindo: {item.product_name}</span>
+                      <Button size="icon" variant="ghost" className="h-6 w-6 ml-auto text-muted-foreground" onClick={cancelReplace}>
                         <X className="w-3.5 h-3.5" />
                       </Button>
-                    </>
-                  ) : (
-                    <Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => startEdit(idx)}>
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                  )}
-                </div>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        autoFocus
+                        placeholder="Buscar produto substituto..."
+                        value={replaceSearch}
+                        onChange={e => setReplaceSearch(e.target.value)}
+                        className="h-8 text-sm"
+                      />
+                      {filteredReplace.length > 0 && (
+                        <div className="absolute z-50 top-full left-0 right-0 border rounded-md mt-1 max-h-44 overflow-y-auto bg-background shadow-lg">
+                          {filteredReplace.map(p => (
+                            <div key={p.id}
+                              className="px-3 py-2 hover:bg-muted cursor-pointer border-b last:border-b-0 flex justify-between items-center"
+                              onClick={() => confirmReplace(p)}>
+                              <div>
+                                <p className="text-sm font-medium">{p.name}</p>
+                                <p className="text-xs text-muted-foreground">{p.packaging_type}{p.weight ? ` • ${p.weight}` : ''}</p>
+                              </div>
+                              <span className="text-sm font-semibold">R$ {(p.promo_active && p.promo_price ? p.promo_price : p.price).toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-3 items-center">
+                    <div>
+                      <p className="text-sm font-medium leading-tight">
+                        {item.product_name}
+                        {isProductChanged && <span className="ml-1.5 text-[10px] bg-violet-100 text-violet-700 rounded px-1 py-0.5">Substituído</span>}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{item.packaging_type}{item.weight ? ` • ${item.weight}` : ''}</p>
+                    </div>
+
+                    <span className="text-sm text-right w-10 font-medium">{item.quantity}</span>
+
+                    <span className="text-sm text-right w-24 text-muted-foreground">
+                      R$ {item.unit_price?.toFixed(2)}
+                    </span>
+
+                    <div className="w-24 text-right">
+                      {isEditing ? (
+                        <Input
+                          type="number" min="0" step="0.01"
+                          value={editValue}
+                          onChange={e => setEditValue(e.target.value)}
+                          className="h-7 text-sm text-right w-24 px-2"
+                          autoFocus
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') confirmEdit(idx);
+                            if (e.key === 'Escape') cancelEdit();
+                          }}
+                        />
+                      ) : (
+                        <span className={`text-sm font-semibold ${isModified ? 'text-amber-700' : ''}`}>
+                          R$ {item.final_unit_price?.toFixed(2)}
+                        </span>
+                      )}
+                      <p className="text-[11px] text-muted-foreground">= R$ {subtotal.toFixed(2)}</p>
+                    </div>
+
+                    <div className="flex gap-0.5 w-20 justify-end">
+                      {isEditing ? (
+                        <>
+                          <Button size="icon" variant="ghost" className="h-6 w-6 text-green-600" onClick={() => confirmEdit(idx)}>
+                            <Check className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-6 w-6 text-red-500" onClick={cancelEdit}>
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-foreground" title="Editar preço" onClick={() => startEdit(idx)}>
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-6 w-6 text-blue-500 hover:text-blue-700" title="Substituir produto" onClick={() => startReplace(idx)}>
+                            <ArrowLeftRight className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive hover:text-destructive" title="Remover item" onClick={() => removeItem(idx)}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
