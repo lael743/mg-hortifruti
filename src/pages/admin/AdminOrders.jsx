@@ -217,21 +217,21 @@ export default function AdminOrders() {
       const u = getClientInfo(clientOrders[0]);
       const orderBlocks = clientOrders.map(order => {
         const itemsRows = (order.items || []).map(item => {
-          const effPrice = item.final_unit_price ?? item.unit_price;
-          // Somente destaca como desconto se o preço final for MENOR que o original
-          const isDisc = item.final_unit_price != null && item.final_unit_price < item.unit_price;
-          const pricePerKg = calcPricePerKg(effPrice, item.weight);
-          return `
-          <tr${isDisc ? ' style="background:#fffbe6;"' : ''}>
-            <td>${item.product_name}</td>
-            <td style="text-align:center;">${item.packaging_type || '—'}</td>
-            <td style="text-align:center;">${item.weight || '—'}</td>
-            <td style="text-align:center;font-weight:bold;">${item.quantity}</td>
-            <td style="text-align:right;">${isDisc ? `<span style="text-decoration:line-through;color:#999;font-size:10px;">R$ ${item.unit_price?.toFixed(2)}</span> <span style="color:#b45309;font-weight:bold;">R$ ${effPrice.toFixed(2)}</span>` : `R$ ${effPrice.toFixed(2)}`}</td>
-            <td style="text-align:right;color:#555;font-size:10px;">${pricePerKg != null ? `R$ ${pricePerKg.toFixed(2)}/kg` : '—'}</td>
-            <td style="text-align:right;">${isDisc ? `<span style="color:#b45309;font-weight:bold;">R$ ${(effPrice * item.quantity).toFixed(2)}</span>` : `R$ ${(effPrice * item.quantity).toFixed(2)}`}</td>
-          </tr>`;
-        }).join('');
+           const effPrice = item.final_unit_price ?? item.unit_price;
+           // Somente destaca como desconto se o preço final for MENOR que o original
+           const isDisc = item.final_unit_price != null && item.final_unit_price < item.unit_price;
+           const pricePerKg = calcPricePerKg(effPrice, item.weight);
+           return `
+           <tr${isDisc ? ' style="background:#fffbe6;"' : ''}>
+             <td style="text-align:center;font-weight:bold;">${item.quantity}</td>
+             <td>${item.product_name}</td>
+             <td style="text-align:center;">${item.packaging_type || '—'}</td>
+             <td style="text-align:center;">${item.weight || '—'}</td>
+             <td style="text-align:right;">${isDisc ? `<span style="text-decoration:line-through;color:#999;font-size:10px;">R$ ${item.unit_price?.toFixed(2)}</span> <span style="color:#b45309;font-weight:bold;">R$ ${effPrice.toFixed(2)}</span>` : `R$ ${effPrice.toFixed(2)}`}</td>
+             <td style="text-align:right;color:#555;font-size:10px;">${pricePerKg != null ? `R$ ${pricePerKg.toFixed(2)}/kg` : '—'}</td>
+             <td style="text-align:right;">${isDisc ? `<span style="color:#b45309;font-weight:bold;">R$ ${(effPrice * item.quantity).toFixed(2)}</span>` : `R$ ${(effPrice * item.quantity).toFixed(2)}`}</td>
+           </tr>`;
+         }).join('');
         return `
           <div class="order-block">
             <div class="order-header">
@@ -241,10 +241,10 @@ export default function AdminOrders() {
             </div>
             <table>
               <thead><tr>
+                <th style="text-align:center;">Qtd</th>
                 <th style="text-align:left;">Produto</th>
                 <th style="text-align:center;">Embalagem</th>
                 <th style="text-align:center;">Peso</th>
-                <th style="text-align:center;">Qtd</th>
                 <th style="text-align:right;">Unit.</th>
                 <th style="text-align:right;">R$/kg·un</th>
                 <th style="text-align:right;">Subtotal</th>
