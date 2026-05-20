@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Search, UserPlus, Check, X, Clock, Star, Shield } from 'lucide-react';
+import { Search, UserPlus, Check, X, Clock, Star, Shield, Users } from 'lucide-react';
 import InviteClientDialog from '../../components/admin/InviteClientDialog';
 import ClientFormDialog from '../../components/admin/ClientFormDialog';
 import ClientCard from '../../components/admin/ClientCard';
 import UserRoleCard from '../../components/admin/UserRoleCard';
+import WalkInClientCard from '../../components/admin/WalkInClientCard';
+import WalkInClientFormDialog from '../../components/admin/WalkInClientFormDialog';
 import { toast } from 'sonner';
 
 export default function AdminClients() {
@@ -19,6 +21,8 @@ export default function AdminClients() {
   const [editClient, setEditClient] = useState(null);
   const [expandedClient, setExpandedClient] = useState(null);
   const [currentUserEmail, setCurrentUserEmail] = useState('');
+  const [editWalkIn, setEditWalkIn] = useState(null);
+  const [showNewWalkIn, setShowNewWalkIn] = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(u => setCurrentUserEmail(u?.email || '')).catch(() => {});
@@ -35,6 +39,30 @@ export default function AdminClients() {
   const { data: orders = [] } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: () => base44.entities.Order.list('-created_date'),
+  });
+
+  const { data: walkInClients = [], isLoading: isLoadingWalkIn } = useQuery({
+    queryKey: ['walk-in-clients'],
+    queryFn: () => base44.entities.WalkInClient.list('-created_date'),
+  });
+
+  const handleDeleteWalkIn = async (client) => {
+    if (!window.confirm(`Excluir o cliente "${client.company_name || client.full_name}"? Esta ação não pode ser desfeita.`)) return;
+    await base44.entities.WalkInClient.delete(client.id);
+    queryClient.invalidateQueries({ queryKey: ['walk-in-clients'] });
+    toast.success('Cliente avulso excluído.');
+  };
+
+  const filterWalkIn = (list) => list.filter(c => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      c.full_name?.toLowerCase().includes(q) ||
+      c.company_name?.toLowerCase().includes(q) ||
+      c.cnpj_cpf?.toLowerCase().includes(q) ||
+      c.whatsapp?.includes(q) ||
+      c.city?.toLowerCase().includes(q)
+    );
   });
 
   // Build stats per client email (for top clients ranking)
@@ -137,6 +165,10 @@ export default function AdminClients() {
               <X className="w-3.5 h-3.5" />Rejeitados
               <span className="bg-muted text-muted-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">{rejected.length}</span>
             </TabsTrigger>
+            <TabsTrigger value="walk-in" className="flex-1 gap-1.5">
+              <Users className="w-3.5 h-3.5" />Avulsos
+              <span className="bg-muted text-muted-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">{walkInClients.length}</span>
+            </TabsTrigger>
             <TabsTrigger value="roles" className="flex-1 gap-1.5">
               <Shield className="w-3.5 h-3.5" />Acessos
               <span className="bg-muted text-muted-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">{allUsersExceptOwner.length}</span>
@@ -193,6 +225,32 @@ export default function AdminClients() {
             ) : filterList(rejected).map(c => <ClientCard key={c.id} {...cardProps(c, false)} />)}
           </TabsContent>
 
+          <TabsContent value="walk-in" className="mt-4 space-y-3">
+            <div className="flex justify-end">
+              <Button size="sm" onClick={() => setShowNewWalkIn(true)}>
+                <UserPlus className="w-4 h-4 mr-1" />Novo Cliente Avulso
+              </Button>
+            </div>
+            {isLoadingWalkIn ? (
+              <div className="space-y-3">{Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
+            ) : filterWalkIn(walkInClients).length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Users className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                <p>Nenhum cliente avulso encontrado.</p>
+              </div>
+            ) : filterWalkIn(walkInClients).map(c => (
+              <WalkInClientCard
+                key={c.id}
+                client={c}
+                orders={orders}
+                expandedClient={expandedClient}
+                setExpandedClient={setExpandedClient}
+                onEdit={setEditWalkIn}
+                onDelete={handleDeleteWalkIn}
+              />
+            ))}
+          </TabsContent>
+
           <TabsContent value="roles" className="mt-4 space-y-3">
             <p className="text-xs text-muted-foreground pb-1">
               Gerencie o nível de acesso dos usuários.
@@ -227,6 +285,14 @@ export default function AdminClients() {
           client={editClient}
           onClose={() => setEditClient(null)}
           onSaved={() => { setEditClient(null); queryClient.invalidateQueries({ queryKey: ['admin-clients'] }); }}
+        />
+      )}
+
+      {(editWalkIn || showNewWalkIn) && (
+        <WalkInClientFormDialog
+          client={editWalkIn || null}
+          onClose={() => { setEditWalkIn(null); setShowNewWalkIn(false); }}
+          onSaved={() => { setEditWalkIn(null); setShowNewWalkIn(false); queryClient.invalidateQueries({ queryKey: ['walk-in-clients'] }); }}
         />
       )}
     </div>
