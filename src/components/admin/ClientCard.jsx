@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useQuery } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Phone, MapPin, Building2, Pencil, Check, X, FileText,
   TrendingUp, ShoppingBag, Star, ChevronDown, ChevronUp,
-  Package, Calendar,
+  Package, Calendar, Printer,
 } from 'lucide-react';
+import { printPriceTable } from '@/lib/printPriceTable';
 
 const orderStatusColors = {
   Pendente: 'bg-yellow-100 text-yellow-800',
@@ -62,6 +65,33 @@ function OrderHistoryItem({ order }) {
 }
 
 export default function ClientCard({ client, showActions, orders, expandedClient, setExpandedClient, onApprove, onReject, onEdit }) {
+  const { data: products = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => base44.entities.Product.list(),
+  });
+
+  const { data: priceGroups = [] } = useQuery({
+    queryKey: ['price-groups'],
+    queryFn: () => base44.entities.PriceGroup.list(),
+  });
+
+  const { data: settings = [] } = useQuery({
+    queryKey: ['company-settings'],
+    queryFn: () => base44.entities.CompanySettings.list(),
+  });
+
+  const clientPriceGroup = client.price_group_id
+    ? priceGroups.find(g => g.id === client.price_group_id)
+    : null;
+
+  const { data: customPrices = [] } = useQuery({
+    queryKey: ['custom-prices-client', clientPriceGroup?.id],
+    queryFn: () => base44.entities.CustomPrice.filter({ price_group_id: clientPriceGroup.id }),
+    enabled: !!clientPriceGroup && clientPriceGroup.type === 'custom',
+  });
+
+  const company = settings[0];
+
   const stats = orders.reduce((acc, o) => {
     if (o.customer_email !== client.email) return acc;
     acc.total += o.total || 0;
@@ -161,6 +191,20 @@ export default function ClientCard({ client, showActions, orders, expandedClient
             </Button>
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(client)}>
               <Pencil className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              title="Imprimir tabela de preços do cliente"
+              onClick={() => printPriceTable({
+                products,
+                priceGroup: clientPriceGroup,
+                customPrices,
+                clientOrders: clientOrders,
+                company,
+                clientName: client.company_name || client.full_name || client.email,
+              })}
+            >
+              <Printer className="w-4 h-4" />
             </Button>
             {showActions && (
               <>
