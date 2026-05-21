@@ -71,6 +71,7 @@ export default function CustomPriceModal({ priceGroup, onClose }) {
       }
 
       queryClient.invalidateQueries({ queryKey: ['custom-prices', priceGroup.id] });
+      queryClient.invalidateQueries({ queryKey: ['custom-prices'] });
       queryClient.invalidateQueries({ queryKey: ['custom-prices-catalog'] });
       toast.success(`Preços salvos! (${res.data.created} criados, ${res.data.updated} atualizados, ${res.data.deleted} removidos)`);
       onClose();
