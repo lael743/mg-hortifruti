@@ -1,0 +1,17 @@
+{
+  "name": "Salesperson",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do vendedor/respons\u00e1vel"
+    },
+    "whatsapp": {
+      "type": "string",
+      "description": "WhatsApp do vendedor"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

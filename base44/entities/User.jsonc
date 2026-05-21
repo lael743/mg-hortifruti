@@ -53,6 +53,10 @@
       "type": "string",
       "description": "ID da tabela de pre\u00e7os vinculada ao cliente"
     },
+    "salesperson_id": {
+      "type": "string",
+      "description": "ID do vendedor/respons\u00e1vel pelo cliente"
+    },
     "notes": {
       "type": "string",
       "description": "Observa\u00e7\u00f5es internas sobre o cliente"
