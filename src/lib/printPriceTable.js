@@ -43,15 +43,36 @@ export function printPriceTable({ products, priceGroup, customPrices, clientOrde
       ? `<span style="background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:3px;padding:0 3px;font-size:6.5px;font-weight:bold;">${String(lastQty).padStart(2, '0')}</span>`
       : `<span style="color:#ccc;font-size:6.5px;">--</span>`;
     const ultCol = hasClientData ? `<td style="padding:2px 4px;border:1px solid #ddd;text-align:center;">${lastQtyHtml}</td>` : '';
+
+    // Calculate price per kg or unit
+    const weightStr = p.weight || '';
+    const kgMatch = weightStr.match(/([\d.,]+)\s*kg/i);
+    const unMatch = weightStr.match(/([\d.,]+)\s*un/i);
+    let pricePerUnitHtml = '<span style="color:#ccc;font-size:6.5px;">--</span>';
+    if (kgMatch) {
+      const kg = parseFloat(kgMatch[1].replace(',', '.'));
+      if (kg > 0) {
+        const perKg = finalPrice / kg;
+        pricePerUnitHtml = `<span style="font-size:7px;color:#555;">R$ ${perKg.toFixed(2)}/kg</span>`;
+      }
+    } else if (unMatch) {
+      const un = parseFloat(unMatch[1].replace(',', '.'));
+      if (un > 0) {
+        const perUn = finalPrice / un;
+        pricePerUnitHtml = `<span style="font-size:7px;color:#555;">R$ ${perUn.toFixed(2)}/un</span>`;
+      }
+    }
+
     return `<tr style="${rowStyle}">
-      <td style="padding:1px 4px;border:1px solid #ddd;">
-        <div style="font-weight:bold;font-size:11px;line-height:1.2;">${p.name}</div>
-        <div style="color:#666;font-size:7.5px;">${p.packaging_type}${p.weight ? ' · ' + p.weight : ''}</div>
-      </td>
-      <td style="padding:1px 4px;border:1px solid #ddd;text-align:center;white-space:nowrap;">${priceHtml}</td>
-      ${ultCol}
-      <td style="padding:1px 4px;border:1px solid #ddd;width:36px;"><div style="border-bottom:1px solid #aaa;height:12px;"></div></td>
-    </tr>`;
+       <td style="padding:1px 4px;border:1px solid #ddd;">
+         <div style="font-weight:bold;font-size:11px;line-height:1.2;">${p.name}</div>
+         <div style="color:#666;font-size:7.5px;">${p.packaging_type}${p.weight ? ' · ' + p.weight : ''}</div>
+       </td>
+       <td style="padding:1px 4px;border:1px solid #ddd;text-align:center;white-space:nowrap;">${priceHtml}</td>
+       <td style="padding:1px 4px;border:1px solid #ddd;text-align:center;white-space:nowrap;">${pricePerUnitHtml}</td>
+       ${ultCol}
+       <td style="padding:1px 4px;border:1px solid #ddd;width:36px;"><div style="border-bottom:1px solid #aaa;height:12px;"></div></td>
+     </tr>`;
   };
 
   const half = Math.ceil(activeProds.length / 2);
@@ -68,17 +89,18 @@ export function printPriceTable({ products, priceGroup, customPrices, clientOrde
     : '';
 
   const theadRow = `<tr style="background:#2d7a3a;color:#fff;">
-    <th style="padding:3px 4px;text-align:left;font-size:7px;">PRODUTO</th>
-    <th style="padding:3px 4px;font-size:7px;">PREÇO</th>
-    ${hasClientData ? `<th style="padding:3px 4px;font-size:7px;" title="Qtd última compra">ÚLT.</th>` : ''}
-    <th style="padding:3px 4px;font-size:7px;">QTD</th>
+  <th style="padding:3px 4px;text-align:left;font-size:7px;">PRODUTO</th>
+  <th style="padding:3px 4px;font-size:7px;">PREÇO</th>
+  <th style="padding:3px 4px;font-size:7px;">R$/KG·UN</th>
+  ${hasClientData ? `<th style="padding:3px 4px;font-size:7px;" title="Qtd última compra">ÚLT.</th>` : ''}
+  <th style="padding:3px 4px;font-size:7px;">QTD</th>
   </tr>`;
 
   let tableRows = '';
   for (let i = 0; i < maxRows; i++) {
     const lp = left[i];
     const rp = right[i];
-    const colSpan = hasClientData ? 4 : 3;
+    const colSpan = hasClientData ? 5 : 4;
     const leftCells = lp ? makeRow(lp).replace(/^<tr[^>]*>/, '').replace(/<\/tr>$/, '') : `<td colspan="${colSpan}" style="border:1px solid #ddd;"></td>`;
     const rightCells = rp ? makeRow(rp).replace(/^<tr[^>]*>/, '').replace(/<\/tr>$/, '') : `<td colspan="${colSpan}" style="border:1px solid #ddd;"></td>`;
     const bg = (lp?.promo_active || rp?.promo_active) ? '' : (i % 2 === 0 ? 'background:#f9fafb;' : '');
