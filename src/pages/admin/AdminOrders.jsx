@@ -356,10 +356,10 @@ export default function AdminOrders() {
       const pricePerKg = calcPricePerKg(ep, item.weight);
       return `
       <tr${isDisc ? ' style="background:#fffbe6;"' : ''}>
+        <td style="text-align:center;font-weight:bold;">${item.quantity}</td>
         <td>${item.product_name}</td>
         <td style="text-align:center;">${item.packaging_type || '—'}</td>
         <td style="text-align:center;">${item.weight || '—'}</td>
-        <td style="text-align:center;font-weight:bold;">${item.quantity}</td>
         <td style="text-align:right;">${isDisc
           ? `<span style="text-decoration:line-through;color:#999;font-size:10px;">R$ ${item.unit_price?.toFixed(2)}</span> <span style="color:#b45309;font-weight:bold;">R$ ${ep.toFixed(2)}</span>`
           : `R$ ${ep.toFixed(2)}`}</td>
@@ -409,10 +409,10 @@ export default function AdminOrders() {
         </div>
         <table>
           <thead><tr>
+            <th style="text-align:center;">Qtd</th>
             <th style="text-align:left;">Produto</th>
             <th style="text-align:center;">Embalagem</th>
             <th style="text-align:center;">Peso</th>
-            <th style="text-align:center;">Qtd</th>
             <th style="text-align:right;">Unit.</th>
             <th style="text-align:right;">R$/kg·un</th>
             <th style="text-align:right;">Subtotal</th>
