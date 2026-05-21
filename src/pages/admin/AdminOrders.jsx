@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Printer, Eye, ChevronDown, Building2, MapPin, FileText, ShoppingBasket, X, MessageCircle, Users, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Search, Printer, Eye, ChevronDown, Building2, MapPin, FileText, ShoppingBasket, X, MessageCircle, Users, Pencil, Plus, Trash2, ArrowDownAZ, ArrowDownUp } from 'lucide-react';
 import OrderEditDialog from '../../components/admin/OrderEditDialog';
 import AdHocOrderModal from '../../components/admin/AdHocOrderModal';
 import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
@@ -63,6 +63,7 @@ export default function AdminOrders() {
   const [editingOrder, setEditingOrder] = useState(null);
   const [showAdHocModal, setShowAdHocModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [sortBy, setSortBy] = useState('date'); // 'date' | 'alpha'
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['admin-orders'],
@@ -207,6 +208,14 @@ export default function AdminOrders() {
     return matchSearch && matchStatus && matchPeriod && matchGroup;
   });
 
+  const sorted = sortBy === 'alpha'
+    ? [...filtered].sort((a, b) => {
+        const nameA = (getClientInfo(a).company_name || getClientInfo(a).full_name || '').toLowerCase();
+        const nameB = (getClientInfo(b).company_name || getClientInfo(b).full_name || '').toLowerCase();
+        return nameA.localeCompare(nameB, 'pt-BR');
+      })
+    : filtered;
+
   // Label for the purchase list dialog
   const periodLabel = (() => {
     const base = PERIOD_OPTIONS.find(p => p.value === period)?.label || 'Todos';
@@ -219,6 +228,15 @@ export default function AdminOrders() {
     if (search) parts.push(`Busca: "${search}"`);
     return parts.join(' • ');
   })();
+
+  const calcTotalVolume = (items) => {
+    return (items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
+  };
+
+  const buildCityBadge = (city, state) => {
+    if (!city) return '';
+    return `<span style="display:inline-block;background:#2d7a3a;color:#fff;font-size:13px;font-weight:bold;padding:4px 14px;border-radius:20px;letter-spacing:0.5px;">${city}${state ? ` - ${state}` : ''}</span>`;
+  };
 
   const buildCompanyHeader = (salespersonName, salespersonWa) => `
       <div class="company-header">
@@ -276,10 +294,13 @@ export default function AdminOrders() {
                 <th style="text-align:right;">Subtotal</th>
               </tr></thead>
               <tbody>${itemsRows}</tbody>
-              <tfoot><tr>
-                <td colspan="6" style="text-align:right;font-weight:bold;">Total do pedido:</td>
-                <td style="text-align:right;font-weight:bold;">R$ ${order.total?.toFixed(2)}</td>
-              </tr></tfoot>
+              <tfoot>
+                <tr>
+                  <td style="text-align:center;font-size:10px;color:#555;">${calcTotalVolume(order.items)} vol.</td>
+                  <td colspan="5" style="text-align:right;font-weight:bold;">Total do pedido:</td>
+                  <td style="text-align:right;font-weight:bold;">R$ ${order.total?.toFixed(2)}</td>
+                </tr>
+              </tfoot>
             </table>
             ${order.notes ? `<p style="margin-top:6px;font-size:11px;color:#666;"><strong>Obs:</strong> ${order.notes}</p>` : ''}
           </div>`;
@@ -291,7 +312,10 @@ export default function AdminOrders() {
         <div class="client-page${index > 0 ? ' page-break' : ''}">
           ${companyHeader}
           <div class="client-info">
-            <h3>${u.company_name || u.full_name || email}</h3>
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
+              <h3 style="margin:0;">${u.company_name || u.full_name || email}</h3>
+              ${buildCityBadge(u.city, u.state)}
+            </div>
             ${u.company_name ? `<p><strong>Contato:</strong> ${u.full_name}</p>` : ''}
             ${u.cnpj_cpf ? `<p><strong>CNPJ/CPF:</strong> ${u.cnpj_cpf}</p>` : ''}
             ${u.address ? `<p><strong>Endereço:</strong> ${u.address}${u.city ? `, ${u.city}` : ''}${u.state ? ` - ${u.state}` : ''}</p>` : ''}
@@ -394,7 +418,10 @@ export default function AdminOrders() {
     <body><div class="client-page">
       ${buildCompanyHeader(u.salesperson_name, u.salesperson_whatsapp)}
       <div class="client-info">
-        <h3>${u.company_name || u.full_name || order.customer_email}</h3>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px;">
+          <h3 style="margin:0;">${u.company_name || u.full_name || order.customer_email}</h3>
+          ${buildCityBadge(u.city, u.state)}
+        </div>
         ${u.company_name ? `<p><strong>Contato:</strong> ${u.full_name}</p>` : ''}
         ${u.cnpj_cpf ? `<p><strong>CNPJ/CPF:</strong> ${u.cnpj_cpf}</p>` : ''}
         ${u.address ? `<p><strong>Endereço:</strong> ${u.address}${u.city ? `, ${u.city}` : ''}${u.state ? ` - ${u.state}` : ''}</p>` : ''}
@@ -418,10 +445,13 @@ export default function AdminOrders() {
             <th style="text-align:right;">Subtotal</th>
           </tr></thead>
           <tbody>${itemsRows}</tbody>
-          <tfoot><tr>
-            <td colspan="6" style="text-align:right;font-weight:bold;">Total do pedido:</td>
-            <td style="text-align:right;font-weight:bold;">R$ ${order.total?.toFixed(2)}</td>
-          </tr></tfoot>
+          <tfoot>
+            <tr>
+              <td style="text-align:center;font-size:10px;color:#555;">${calcTotalVolume(order.items)} vol.</td>
+              <td colspan="5" style="text-align:right;font-weight:bold;">Total do pedido:</td>
+              <td style="text-align:right;font-weight:bold;">R$ ${order.total?.toFixed(2)}</td>
+            </tr>
+          </tfoot>
         </table>
         ${order.notes ? `<p style="margin-top:6px;font-size:11px;color:#666;"><strong>Obs:</strong> ${order.notes}</p>` : ''}
       </div>
@@ -523,6 +553,15 @@ export default function AdminOrders() {
             <Users className="w-4 h-4 mr-1.5" />
             Espelho por Cliente
           </Button>
+          <Button
+            variant={sortBy === 'alpha' ? 'default' : 'outline'}
+            className="h-9 shrink-0"
+            onClick={() => setSortBy(s => s === 'alpha' ? 'date' : 'alpha')}
+            title="Alternar ordenação"
+          >
+            {sortBy === 'alpha' ? <ArrowDownAZ className="w-4 h-4 mr-1.5" /> : <ArrowDownUp className="w-4 h-4 mr-1.5" />}
+            {sortBy === 'alpha' ? 'A→Z Empresa' : 'Mais recente'}
+          </Button>
         </div>
 
         {hasActiveFilters && (
@@ -539,7 +578,7 @@ export default function AdminOrders() {
         <div className="text-center py-16 text-muted-foreground">Nenhum pedido encontrado.</div>
       ) : (
         <div className="space-y-3">
-          {filtered.map(order => {
+          {sorted.map(order => {
             const u = getClientInfo(order);
             return (
               <Card key={order.id} className="p-4">
