@@ -63,15 +63,16 @@ export function printPriceTable({ products, priceGroup, customPrices, clientOrde
       }
     }
 
+    const cellStyle = "height:22px;max-height:22px;overflow:hidden;border:1px solid #ddd;padding:0 3px;";
     return `<tr style="${rowStyle}">
-       <td style="padding:1px 4px;border:1px solid #ddd;">
-         <div style="font-weight:bold;font-size:11px;line-height:1.2;">${p.name}</div>
-         <div style="color:#666;font-size:7.5px;">${p.packaging_type}${p.weight ? ' · ' + p.weight : ''}</div>
+       <td style="${cellStyle}">
+         <div style="font-weight:bold;font-size:10px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">${p.name}</div>
+         <div style="color:#666;font-size:7px;white-space:nowrap;">${p.packaging_type}${p.weight ? ' · ' + p.weight : ''}</div>
        </td>
-       <td style="padding:1px 4px;border:1px solid #ddd;text-align:center;white-space:nowrap;">${priceHtml}</td>
-       <td style="padding:1px 4px;border:1px solid #ddd;text-align:center;white-space:nowrap;">${pricePerUnitHtml}</td>
+       <td style="${cellStyle}text-align:center;white-space:nowrap;">${priceHtml}</td>
+       <td style="${cellStyle}text-align:center;white-space:nowrap;">${pricePerUnitHtml}</td>
        ${ultCol}
-       <td style="padding:1px 4px;border:1px solid #ddd;width:36px;"><div style="border-bottom:1px solid #aaa;height:12px;"></div></td>
+       <td style="${cellStyle}width:32px;"><div style="border-bottom:1px solid #aaa;height:10px;margin-top:6px;"></div></td>
      </tr>`;
   };
 
@@ -113,7 +114,8 @@ export function printPriceTable({ products, priceGroup, customPrices, clientOrde
     body { font-family: Arial, sans-serif; font-size: 7.5px; padding: 6px 8px; }
     h2 { font-size: 11px; margin-bottom: 2px; }
     table { width: 100%; border-collapse: collapse; }
-    @media print { @page { margin: 6mm; size: A4; } body { padding: 0; } }
+    @media print { @page { margin: 3mm; size: A4; } body { padding: 0; } }
+    tr { page-break-inside: avoid; }
   </style></head>
   <body>
     <h2>${company?.company_name || 'Tabela de Preços'} &nbsp;·&nbsp; <span style="font-size:9px;font-weight:normal">${new Date().toLocaleDateString('pt-BR')} &nbsp;·&nbsp; ${activeProds.length} produtos</span></h2>
