@@ -24,6 +24,8 @@ export function printPriceTable({ products, priceGroup, customPrices, clientOrde
     });
   }
 
+  const hasClientData = clientOrders && clientOrders.length > 0;
+
   const makeRow = (p) => {
     const basePrice = p.promo_active && p.promo_price ? p.promo_price : p.price || 0;
     const origPrice = p.price || 0;
@@ -40,13 +42,14 @@ export function printPriceTable({ products, priceGroup, customPrices, clientOrde
     const lastQtyHtml = lastQty
       ? `<span style="background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:3px;padding:0 3px;font-size:6.5px;font-weight:bold;">${String(lastQty).padStart(2, '0')}</span>`
       : `<span style="color:#ccc;font-size:6.5px;">--</span>`;
+    const ultCol = hasClientData ? `<td style="padding:2px 4px;border:1px solid #ddd;text-align:center;">${lastQtyHtml}</td>` : '';
     return `<tr style="${rowStyle}">
       <td style="padding:2px 4px;border:1px solid #ddd;">
-        <div style="font-weight:bold;font-size:7.5px;line-height:1.2;">${p.name}</div>
-        <div style="color:#666;font-size:6.5px;">${p.packaging_type}${p.weight ? ' · ' + p.weight : ''}</div>
+        <div style="font-weight:bold;font-size:9.5px;line-height:1.3;">${p.name}</div>
+        <div style="color:#666;font-size:7.5px;">${p.packaging_type}${p.weight ? ' · ' + p.weight : ''}</div>
       </td>
       <td style="padding:2px 4px;border:1px solid #ddd;text-align:center;white-space:nowrap;">${priceHtml}</td>
-      <td style="padding:2px 4px;border:1px solid #ddd;text-align:center;">${lastQtyHtml}</td>
+      ${ultCol}
       <td style="padding:2px 4px;border:1px solid #ddd;width:36px;"><div style="border-bottom:1px solid #aaa;height:12px;"></div></td>
     </tr>`;
   };
@@ -67,7 +70,7 @@ export function printPriceTable({ products, priceGroup, customPrices, clientOrde
   const theadRow = `<tr style="background:#2d7a3a;color:#fff;">
     <th style="padding:3px 4px;text-align:left;font-size:7px;">PRODUTO</th>
     <th style="padding:3px 4px;font-size:7px;">PREÇO</th>
-    <th style="padding:3px 4px;font-size:7px;" title="Qtd última compra">ÚLT.</th>
+    ${hasClientData ? `<th style="padding:3px 4px;font-size:7px;" title="Qtd última compra">ÚLT.</th>` : ''}
     <th style="padding:3px 4px;font-size:7px;">QTD</th>
   </tr>`;
 
@@ -75,8 +78,9 @@ export function printPriceTable({ products, priceGroup, customPrices, clientOrde
   for (let i = 0; i < maxRows; i++) {
     const lp = left[i];
     const rp = right[i];
-    const leftCells = lp ? makeRow(lp).replace(/^<tr[^>]*>/, '').replace(/<\/tr>$/, '') : '<td colspan="4" style="border:1px solid #ddd;"></td>';
-    const rightCells = rp ? makeRow(rp).replace(/^<tr[^>]*>/, '').replace(/<\/tr>$/, '') : '<td colspan="4" style="border:1px solid #ddd;"></td>';
+    const colSpan = hasClientData ? 4 : 3;
+    const leftCells = lp ? makeRow(lp).replace(/^<tr[^>]*>/, '').replace(/<\/tr>$/, '') : `<td colspan="${colSpan}" style="border:1px solid #ddd;"></td>`;
+    const rightCells = rp ? makeRow(rp).replace(/^<tr[^>]*>/, '').replace(/<\/tr>$/, '') : `<td colspan="${colSpan}" style="border:1px solid #ddd;"></td>`;
     const bg = (lp?.promo_active || rp?.promo_active) ? '' : (i % 2 === 0 ? 'background:#f9fafb;' : '');
     tableRows += `<tr style="${bg}">${leftCells}<td style="width:4px;background:#e5e7eb;"></td>${rightCells}</tr>`;
   }
@@ -93,7 +97,7 @@ export function printPriceTable({ products, priceGroup, customPrices, clientOrde
     <h2>${company?.company_name || 'Tabela de Preços'} &nbsp;·&nbsp; <span style="font-size:9px;font-weight:normal">${new Date().toLocaleDateString('pt-BR')} &nbsp;·&nbsp; ${activeProds.length} produtos</span></h2>
     ${tableGroup}
     ${clientLine}
-    <p style="font-size:6.5px;color:#888;margin-bottom:4px;">★ ÚLT. = quantidade da última compra &nbsp;|&nbsp; QTD = quantidade do novo pedido</p>
+    ${hasClientData ? `<p style="font-size:6.5px;color:#888;margin-bottom:4px;">★ ÚLT. = quantidade da última compra &nbsp;|&nbsp; QTD = quantidade do novo pedido</p>` : `<p style="font-size:6.5px;color:#888;margin-bottom:4px;">QTD = quantidade do pedido</p>`}
     <table>
       <thead>${theadRow}<tr><td colspan="9" style="height:2px;"></td></tr></thead>
       <tbody>${tableRows}</tbody>

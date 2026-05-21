@@ -10,9 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Pencil, Trash2, Tag, Percent, ListOrdered } from 'lucide-react';
+import { Plus, Pencil, Trash2, Tag, Percent, ListOrdered, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import CustomPriceModal from '../../components/admin/CustomPriceModal';
+import { printPriceTable } from '../../lib/printPriceTable';
 
 function PriceGroupForm({ group, onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -131,6 +132,33 @@ export default function AdminPriceGroups() {
     queryFn: () => base44.entities.PriceGroup.list(),
   });
 
+  const { data: products = [] } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => base44.entities.Product.list(),
+  });
+
+  const { data: settings = [] } = useQuery({
+    queryKey: ['company-settings'],
+    queryFn: () => base44.entities.CompanySettings.list(),
+  });
+
+  const { data: allCustomPrices = [] } = useQuery({
+    queryKey: ['custom-prices'],
+    queryFn: () => base44.entities.CustomPrice.filter({}),
+  });
+
+  const handlePrint = (group) => {
+    const customPrices = allCustomPrices.filter(cp => cp.price_group_id === group.id);
+    printPriceTable({
+      products,
+      priceGroup: group,
+      customPrices,
+      clientOrders: [],
+      company: settings[0],
+      clientName: null,
+    });
+  };
+
   const deleteMutation = useMutation({
     mutationFn: id => base44.entities.PriceGroup.delete(id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['price-groups'] }); toast.success('Tabela excluída'); },
@@ -196,6 +224,9 @@ export default function AdminPriceGroups() {
                       <ListOrdered className="w-3.5 h-3.5 mr-1" />Definir Preços
                     </Button>
                   )}
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Imprimir tabela de preços" onClick={() => handlePrint(g)}>
+                    <Printer className="w-4 h-4" />
+                  </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditGroup(g); setShowForm(true); }}>
                     <Pencil className="w-4 h-4" />
                   </Button>
