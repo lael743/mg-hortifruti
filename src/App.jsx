@@ -22,6 +22,7 @@ import AdminReports from './pages/admin/AdminReports';
 import AdminChat from './pages/admin/AdminChat';
 import AdminBackup from './pages/admin/AdminBackup';
 import AdminCampaign from './pages/admin/AdminCampaign';
+import AdminSalespersons from './pages/admin/AdminSalespersons';
 import ClientFinancial from './pages/ClientFinancial';
 import Profile from './pages/Profile';
 import FinancialLayout from './components/financial/FinancialLayout.jsx';
@@ -73,6 +74,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/chat" element={<AdminChat />} />
           <Route path="/admin/backup" element={<AdminBackup />} />
           <Route path="/admin/campaign" element={<AdminCampaign />} />
+          <Route path="/admin/salespersons" element={<AdminSalespersons />} />
         </Route>
       </Route>
       <Route element={<FinancialLayout />}>

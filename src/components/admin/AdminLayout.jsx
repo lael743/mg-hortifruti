@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useOutletContext, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings, BarChart2, FileText, MessageCircle, ShieldOff, ShieldCheck, Database, ChevronDown, Megaphone, TrendingUp } from 'lucide-react';
+import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings, BarChart2, FileText, MessageCircle, ShieldOff, ShieldCheck, Database, ChevronDown, Megaphone, TrendingUp, UserCheck } from 'lucide-react';
 import AdminNotifications from './AdminNotifications';
 import { useQuery, useQueryClient as _useQueryClient } from '@tanstack/react-query';
 import CompanySettingsDialog from './CompanySettingsDialog';
@@ -109,6 +109,12 @@ export default function AdminLayout() {
                 <DropdownMenuItem className="gap-2 cursor-pointer">
                   <TrendingUp className="w-4 h-4" />
                   Financeiro
+                </DropdownMenuItem>
+              </RouterLink>
+              <RouterLink to="/admin/salespersons">
+                <DropdownMenuItem className="gap-2 cursor-pointer">
+                  <UserCheck className="w-4 h-4" />
+                  Vendedores
                 </DropdownMenuItem>
               </RouterLink>
             </DropdownMenuContent>
