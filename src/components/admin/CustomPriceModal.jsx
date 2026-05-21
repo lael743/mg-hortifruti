@@ -50,7 +50,6 @@ export default function CustomPriceModal({ priceGroup, onClose }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Build payload: all active products, null custom_price means "delete/skip"
       const activeProductsList = products.filter(p => p.active !== false);
       const pricesPayload = activeProductsList.map(product => {
         const entry = prices[product.id];
@@ -66,12 +65,18 @@ export default function CustomPriceModal({ priceGroup, onClose }) {
         prices: pricesPayload,
       });
 
-      if (res.data?.error) throw new Error(res.data.error);
+      if (res.data?.error) {
+        toast.error('Erro ao salvar: ' + res.data.error);
+        return;
+      }
 
       queryClient.invalidateQueries({ queryKey: ['custom-prices', priceGroup.id] });
       queryClient.invalidateQueries({ queryKey: ['custom-prices-catalog'] });
-      toast.success('Preços salvos!');
+      toast.success(`Preços salvos! (${res.data.created} criados, ${res.data.updated} atualizados, ${res.data.deleted} removidos)`);
       onClose();
+    } catch (err) {
+      toast.error('Erro ao salvar preços. Tente novamente.');
+      console.error(err);
     } finally {
       setSaving(false);
     }
