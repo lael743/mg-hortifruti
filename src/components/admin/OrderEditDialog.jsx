@@ -4,8 +4,9 @@ import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Pencil, Check, X, Trash2, ArrowLeftRight, PackagePlus, Minus, Plus } from 'lucide-react';
+import { Pencil, Check, X, Trash2, ArrowLeftRight, PackagePlus, Minus, Plus, Gift } from 'lucide-react';
 import AddOrderItemModal from './AddOrderItemModal';
+import BonusItemModal from './BonusItemModal';
 
 export default function OrderEditDialog({ order, onSave, onClose }) {
   const [items, setItems] = useState(
@@ -19,6 +20,7 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
   const [replacingIndex, setReplacingIndex] = useState(null);
   const [replaceSearch, setReplaceSearch] = useState('');
   const [showAddItems, setShowAddItems] = useState(false);
+  const [showBonusModal, setShowBonusModal] = useState(false);
 
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
@@ -88,8 +90,8 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
     setReplaceSearch('');
   };
 
-  // --- Totals ---
-  const newTotal = items.reduce((sum, item) => sum + (item.final_unit_price * item.quantity), 0);
+  // --- Totals --- (bonus items are excluded from total)
+  const newTotal = items.reduce((sum, item) => item.is_bonus ? sum : sum + (item.final_unit_price * item.quantity), 0);
   const originalItems = order.items || [];
   const originalTotal = originalItems.reduce((sum, item) => sum + ((item.unit_price ?? 0) * item.quantity), 0);
 
@@ -122,16 +124,26 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
     setItems(prev => [...prev, ...newItems]);
   };
 
+  const handleAddBonus = (bonusItems) => {
+    setItems(prev => [...prev, ...bonusItems.map(it => ({ ...it, is_bonus: true, final_unit_price: 0, unit_price: 0 }))]);
+  };
+
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between pr-8">
             <DialogTitle>Editar Pedido #{order.order_number} — {order.customer_name || order.customer_email}</DialogTitle>
-            <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => setShowAddItems(true)}>
-              <PackagePlus className="w-3.5 h-3.5" />
-              Adicionar Itens
-            </Button>
+            <div className="flex gap-1.5">
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => setShowAddItems(true)}>
+                <PackagePlus className="w-3.5 h-3.5" />
+                Adicionar Itens
+              </Button>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1 text-green-700 border-green-300 hover:bg-green-50" onClick={() => setShowBonusModal(true)}>
+                <Gift className="w-3.5 h-3.5" />
+                Bonificação
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
@@ -151,12 +163,13 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
           {items.map((item, idx) => {
             const isEditing = editingIndex === idx;
             const isReplacing = replacingIndex === idx;
-            const isModified = item.final_unit_price !== (originalItems[idx]?.unit_price ?? item.unit_price);
+            const isBonus = !!item.is_bonus;
+            const isModified = !isBonus && item.final_unit_price !== (originalItems[idx]?.unit_price ?? item.unit_price);
             const isProductChanged = item.product_id !== (originalItems[idx]?.product_id);
-            const subtotal = item.final_unit_price * item.quantity;
+            const subtotal = isBonus ? 0 : item.final_unit_price * item.quantity;
 
             return (
-              <div key={idx} className={`rounded-lg px-2 py-2 ${isReplacing ? 'bg-blue-50 border border-blue-200' : isProductChanged ? 'bg-violet-50 border border-violet-200' : isModified ? 'bg-amber-50 border border-amber-200' : 'hover:bg-muted/50'}`}>
+              <div key={idx} className={`rounded-lg px-2 py-2 ${isBonus ? 'bg-green-50 border border-green-200' : isReplacing ? 'bg-blue-50 border border-blue-200' : isProductChanged ? 'bg-violet-50 border border-violet-200' : isModified ? 'bg-amber-50 border border-amber-200' : 'hover:bg-muted/50'}`}>
                 {/* Replace search row */}
                 {isReplacing ? (
                   <div className="space-y-2">
@@ -196,6 +209,7 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
                     <div>
                       <p className="text-sm font-medium leading-tight">
                         {item.product_name}
+                        {isBonus && <span className="ml-1.5 text-[10px] bg-green-100 text-green-700 rounded px-1 py-0.5 font-bold">🎁 Bonificação</span>}
                         {isProductChanged && <span className="ml-1.5 text-[10px] bg-violet-100 text-violet-700 rounded px-1 py-0.5">Substituído</span>}
                       </p>
                       <p className="text-xs text-muted-foreground">{item.packaging_type}{item.weight ? ` • ${item.weight}` : ''}</p>
@@ -221,7 +235,9 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
                     </span>
 
                     <div className="w-24 text-right">
-                      {isEditing ? (
+                      {isBonus ? (
+                        <span className="text-sm font-semibold text-green-700">GRÁTIS</span>
+                      ) : isEditing ? (
                         <Input
                           type="number" min="0" step="0.01"
                           value={editValue}
@@ -242,7 +258,11 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
                     </div>
 
                     <div className="flex gap-0.5 w-20 justify-end">
-                      {isEditing ? (
+                      {isBonus ? (
+                        <Button size="icon" variant="ghost" className="h-6 w-6 text-destructive hover:text-destructive" title="Remover bonificação" onClick={() => removeItem(idx)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      ) : isEditing ? (
                         <>
                           <Button size="icon" variant="ghost" className="h-6 w-6 text-green-600" onClick={() => confirmEdit(idx)}>
                             <Check className="w-3.5 h-3.5" />
@@ -306,6 +326,13 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
           existingItems={items}
           onAdd={handleAddItems}
           onClose={() => setShowAddItems(false)}
+        />
+      )}
+
+      {showBonusModal && (
+        <BonusItemModal
+          onAdd={handleAddBonus}
+          onClose={() => setShowBonusModal(false)}
         />
       )}
     </Dialog>
