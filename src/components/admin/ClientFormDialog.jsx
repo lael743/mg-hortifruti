@@ -25,12 +25,18 @@ export default function ClientFormDialog({ client, onClose, onSaved }) {
     status: client?.status || 'approved',
     price_group_id: client?.price_group_id || '',
     price_group_name: client?.price_group_name || '',
+    salesperson_id: client?.salesperson_id || '',
   });
   const [saving, setSaving] = useState(false);
 
   const { data: priceGroups = [] } = useQuery({
     queryKey: ['price-groups'],
     queryFn: () => base44.entities.PriceGroup.filter({ active: true }),
+  });
+
+  const { data: salespersons = [] } = useQuery({
+    queryKey: ['salespersons'],
+    queryFn: () => base44.entities.Salesperson.list(),
   });
 
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
@@ -143,6 +149,19 @@ export default function ClientFormDialog({ client, onClose, onSaved }) {
               </Select>
             </div>
           </div>
+          <div>
+            <Label>Vendedor / Responsável</Label>
+            <Select value={form.salesperson_id || '__none__'} onValueChange={(v) => set('salesperson_id', v === '__none__' ? '' : v)}>
+              <SelectTrigger><SelectValue placeholder="Selecionar vendedor..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— Sem vendedor</SelectItem>
+                {salespersons.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div>
             <Label>Observações internas</Label>
             <Textarea value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Notas internas sobre o cliente..." rows={3} />
