@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Pencil, Check, X, Trash2, ArrowLeftRight, PackagePlus } from 'lucide-react';
+import { Pencil, Check, X, Trash2, ArrowLeftRight, PackagePlus, Minus, Plus } from 'lucide-react';
 import AddOrderItemModal from './AddOrderItemModal';
 
 export default function OrderEditDialog({ order, onSave, onClose }) {
@@ -93,11 +93,24 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
   const originalItems = order.items || [];
   const originalTotal = originalItems.reduce((sum, item) => sum + ((item.unit_price ?? 0) * item.quantity), 0);
 
+  const changeQty = (idx, delta) => {
+    setItems(prev => prev.map((item, i) => {
+      if (i !== idx) return item;
+      const newQty = Math.max(1, item.quantity + delta);
+      return { ...item, quantity: newQty };
+    }));
+  };
+
+  const setQtyDirect = (idx, value) => {
+    const n = Math.max(1, parseInt(value) || 1);
+    setItems(prev => prev.map((item, i) => i === idx ? { ...item, quantity: n } : item));
+  };
+
   const hasChanges = (() => {
     if (items.length !== originalItems.length) return true;
     return items.some((item, i) => {
       const orig = originalItems[i];
-      return !orig || item.final_unit_price !== (orig.final_unit_price ?? orig.unit_price) || item.product_id !== orig.product_id;
+      return !orig || item.quantity !== orig.quantity || item.final_unit_price !== (orig.final_unit_price ?? orig.unit_price) || item.product_id !== orig.product_id;
     });
   })();
 
@@ -125,7 +138,7 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
         <div className="space-y-1">
           <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-3 gap-y-1 items-center text-xs font-semibold text-muted-foreground px-2 pb-1 border-b">
             <span>Produto</span>
-            <span className="text-right w-10">Qtd</span>
+            <span className="text-center">Qtd</span>
             <span className="text-right w-24">Preço orig.</span>
             <span className="text-right w-24">Preço final</span>
             <span className="w-20"></span>
@@ -188,7 +201,20 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
                       <p className="text-xs text-muted-foreground">{item.packaging_type}{item.weight ? ` • ${item.weight}` : ''}</p>
                     </div>
 
-                    <span className="text-sm text-right w-10 font-medium">{item.quantity}</span>
+                    <div className="flex items-center gap-0.5 w-auto">
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => changeQty(idx, -1)} disabled={item.quantity <= 1}>
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <Input
+                        type="number" min="1"
+                        value={item.quantity}
+                        onChange={e => setQtyDirect(idx, e.target.value)}
+                        className="h-6 w-10 text-center text-xs px-1"
+                      />
+                      <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => changeQty(idx, 1)}>
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    </div>
 
                     <span className="text-sm text-right w-24 text-muted-foreground">
                       R$ {item.unit_price?.toFixed(2)}
