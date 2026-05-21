@@ -35,6 +35,15 @@ export default function OrderDetail() {
 
   const order = orders[0];
 
+  const { data: salespersons = [] } = useQuery({
+    queryKey: ['salespersons'],
+    queryFn: () => base44.entities.Salesperson.list(),
+  });
+
+  // Busca o salesperson_id do usuário atual para encontrar o vendedor
+  const salespersonId = user?.salesperson_id;
+  const salesperson = salespersonId ? salespersons.find(s => s.id === salespersonId) : null;
+
   const handlePrint = () => {
     const content = printRef.current;
     const printWindow = window.open('', '_blank');
@@ -49,6 +58,7 @@ export default function OrderDetail() {
         .header { margin-bottom: 24px; }
       </style></head><body>
       ${content.innerHTML}
+      <style>a { color: inherit; text-decoration: none; }</style>
       </body></html>
     `);
     printWindow.document.close();
@@ -116,6 +126,21 @@ export default function OrderDetail() {
               </p>
               {order.customer_name && (
                 <p className="text-sm mt-2">Cliente: <strong>{order.customer_name}</strong></p>
+              )}
+              {salesperson && (
+                <p className="text-sm mt-1 text-muted-foreground">
+                  Vendedor: <strong className="text-foreground">{salesperson.name}</strong>
+                  {salesperson.whatsapp && (
+                    <a
+                      href={`https://wa.me/55${salesperson.whatsapp.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-2 text-green-600 hover:underline text-xs"
+                    >
+                      📱 {salesperson.whatsapp}
+                    </a>
+                  )}
+                </p>
               )}
             </div>
             <Badge className={`${statusColors[order.status]} border`}>

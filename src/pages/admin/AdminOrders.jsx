@@ -85,13 +85,20 @@ export default function AdminOrders() {
     queryFn: () => base44.entities.WalkInClient.list(),
   });
 
+  const { data: salespersons = [] } = useQuery({
+    queryKey: ['salespersons'],
+    queryFn: () => base44.entities.Salesperson.list(),
+  });
+
   const userByEmail = Object.fromEntries(users.map(u => [u.email, u]));
   const walkInById = Object.fromEntries(walkInClients.map(c => [c.id, c]));
+  const salespersonById = Object.fromEntries(salespersons.map(s => [s.id, s]));
 
   // Retorna dados do cliente: Walk-in > User cadastrado > fallback do pedido
   const getClientInfo = (order) => {
     if (order.walk_in_client_id) {
       const w = walkInById[order.walk_in_client_id] || {};
+      const sp = w.salesperson_id ? salespersonById[w.salesperson_id] : null;
       return {
         company_name: w.company_name || '',
         cnpj_cpf: w.cnpj_cpf || '',
@@ -101,9 +108,12 @@ export default function AdminOrders() {
         whatsapp: w.whatsapp || '',
         full_name: w.full_name || order.customer_name || '',
         is_walk_in: true,
+        salesperson_name: sp?.name || '',
+        salesperson_whatsapp: sp?.whatsapp || '',
       };
     }
     const u = userByEmail[order.customer_email] || {};
+    const sp = u.salesperson_id ? salespersonById[u.salesperson_id] : null;
     return {
       company_name: u.company_name || '',
       cnpj_cpf: u.cnpj_cpf || '',
@@ -113,6 +123,8 @@ export default function AdminOrders() {
       whatsapp: u.whatsapp || u.phone || '',
       full_name: u.full_name || order.customer_name || order.customer_email,
       is_walk_in: false,
+      salesperson_name: sp?.name || '',
+      salesperson_whatsapp: sp?.whatsapp || '',
     };
   };
 
@@ -227,6 +239,7 @@ export default function AdminOrders() {
 
     const clientPages = Object.entries(grouped).map(([email, clientOrders], index) => {
       const u = getClientInfo(clientOrders[0]);
+      const spLine = u.salesperson_name ? `<p><strong>Vendedor:</strong> ${u.salesperson_name}${u.salesperson_whatsapp ? ` &nbsp;|&nbsp; WhatsApp: ${u.salesperson_whatsapp}` : ''}</p>` : '';
       const orderBlocks = clientOrders.map(order => {
         const itemsRows = (order.items || []).map(item => {
            const effPrice = item.final_unit_price ?? item.unit_price;
@@ -283,6 +296,7 @@ export default function AdminOrders() {
             ${u.address ? `<p><strong>Endereço:</strong> ${u.address}${u.city ? `, ${u.city}` : ''}${u.state ? ` - ${u.state}` : ''}</p>` : ''}
             ${u.whatsapp ? `<p><strong>WhatsApp:</strong> ${u.whatsapp}</p>` : ''}
             <p><strong>Email:</strong> ${email}</p>
+            ${spLine}
           </div>
           ${orderBlocks}
           <div class="client-total">Total geral do cliente: <strong>R$ ${clientTotal.toFixed(2)}</strong> (${clientOrders.length} pedido${clientOrders.length > 1 ? 's' : ''})</div>
@@ -334,6 +348,7 @@ export default function AdminOrders() {
 
   const handlePrintSeparation = (order) => {
     const u = getClientInfo(order);
+    const spLineSep = u.salesperson_name ? `<p><strong>Vendedor:</strong> ${u.salesperson_name}${u.salesperson_whatsapp ? ` &nbsp;|&nbsp; WhatsApp: ${u.salesperson_whatsapp}` : ''}</p>` : '';
 
     const itemsRows = (order.items || []).map(item => {
       const ep = item.final_unit_price ?? item.unit_price;
@@ -392,6 +407,7 @@ export default function AdminOrders() {
         ${u.address ? `<p><strong>Endereço:</strong> ${u.address}${u.city ? `, ${u.city}` : ''}${u.state ? ` - ${u.state}` : ''}</p>` : ''}
         ${u.whatsapp ? `<p><strong>WhatsApp:</strong> ${u.whatsapp}</p>` : ''}
         <p><strong>Email:</strong> ${order.customer_email}</p>
+        ${spLineSep}
       </div>
       <div class="order-block">
         <div class="order-header">
@@ -635,11 +651,12 @@ export default function AdminOrders() {
 
                 {expandedOrder === order.id && (
                   <div className="mt-4 pt-4 border-t space-y-2">
-                    {(u.address || u.whatsapp || u.cnpj_cpf) && (
+                    {(u.address || u.whatsapp || u.cnpj_cpf || u.salesperson_name) && (
                       <div className="text-xs text-muted-foreground bg-muted rounded-lg p-3 space-y-0.5 mb-3">
                         {u.address && <p>📍 {u.address}{u.city && `, ${u.city}`}{u.state && ` - ${u.state}`}</p>}
                         {u.whatsapp && <p>📱 {u.whatsapp}</p>}
                         {u.cnpj_cpf && <p>📄 CNPJ/CPF: {u.cnpj_cpf}</p>}
+                        {u.salesperson_name && <p>👤 Vendedor: <strong>{u.salesperson_name}</strong>{u.salesperson_whatsapp && ` • ${u.salesperson_whatsapp}`}</p>}
                       </div>
                     )}
                     {order.items?.map((item, idx) => {
