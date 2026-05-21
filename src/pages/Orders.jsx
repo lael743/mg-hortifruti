@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Package, RefreshCw, Calendar, Eye, Search, X, Filter } from 'lucide-react';
+import { Package, RefreshCw, Calendar, Eye, Search, X, Filter, Trash2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { addToCart, clearCart } from '@/lib/cartStore';
@@ -30,6 +30,20 @@ const statusDot = {
 export default function Orders() {
   const { user } = useOutletContext();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  const deleteMutation = useMutation({
+    mutationFn: (orderId) => base44.entities.Order.delete(orderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['contas-a-receber'] });
+      setConfirmDelete(null);
+      toast.success('Pedido excluído com sucesso.');
+    },
+  });
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['my-orders', user?.email],
@@ -311,6 +325,31 @@ export default function Orders() {
                   >
                     <RefreshCw className="w-4 h-4" />Repetir pedido
                   </Button>
+                  {confirmDelete === order.id ? (
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="gap-1"
+                        disabled={deleteMutation.isPending}
+                        onClick={() => deleteMutation.mutate(order.id)}
+                      >
+                        Confirmar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setConfirmDelete(null)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive px-2"
+                      onClick={() => setConfirmDelete(order.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>
