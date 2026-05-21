@@ -71,9 +71,11 @@ export default function CustomPriceModal({ priceGroup, onClose }) {
         }
       }
 
-      // Process sequentially to avoid rate limit
+      // Process sequentially with delay to avoid rate limit
+      const delay = ms => new Promise(res => setTimeout(res, ms));
       for (const fn of ops) {
         await fn();
+        await delay(300);
       }
 
       queryClient.invalidateQueries({ queryKey: ['custom-prices', priceGroup.id] });
