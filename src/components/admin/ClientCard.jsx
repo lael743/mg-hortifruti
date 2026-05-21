@@ -51,9 +51,10 @@ function OrderHistoryItem({ order }) {
           {order.items?.map((item, idx) => {
             const ep = item.final_unit_price ?? item.unit_price;
             return (
-              <div key={idx} className="flex justify-between text-xs">
-                <span className="text-foreground">{item.quantity}x <strong>{item.product_name}</strong> <span className="text-muted-foreground">({item.packaging_type}{item.weight && ` • ${item.weight}`})</span></span>
-                <span className="font-medium">R$ {(ep * item.quantity).toFixed(2)}</span>
+              <div key={idx} className="flex justify-between text-xs gap-2">
+                <span className="font-bold text-foreground min-w-fit">{item.quantity}x</span>
+                <span className="text-foreground flex-1"><strong>{item.product_name}</strong> <span className="text-muted-foreground">({item.packaging_type}{item.weight && ` • ${item.weight}`})</span></span>
+                <span className="font-medium min-w-fit">R$ {(ep * item.quantity).toFixed(2)}</span>
               </div>
             );
           })}
