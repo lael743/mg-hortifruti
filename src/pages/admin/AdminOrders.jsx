@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Printer, Eye, ChevronDown, Building2, MapPin, FileText, ShoppingBasket, X, MessageCircle, Users, Pencil, Plus } from 'lucide-react';
+import { Search, Printer, Eye, ChevronDown, Building2, MapPin, FileText, ShoppingBasket, X, MessageCircle, Users, Pencil, Plus, Trash2 } from 'lucide-react';
 import OrderEditDialog from '../../components/admin/OrderEditDialog';
 import AdHocOrderModal from '../../components/admin/AdHocOrderModal';
 import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
@@ -62,6 +62,7 @@ export default function AdminOrders() {
   const [showPurchaseList, setShowPurchaseList] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [showAdHocModal, setShowAdHocModal] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['admin-orders'],
@@ -156,6 +157,17 @@ export default function AdminOrders() {
       await queryClient.refetchQueries({ queryKey: ['admin-orders'] });
       toast.success('Pedido atualizado com sucesso');
       setEditingOrder(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (orderId) => base44.entities.Order.delete(orderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['contas-a-receber'] });
+      setConfirmDelete(null);
+      toast.success('Pedido excluído com sucesso.');
     },
   });
 
@@ -554,43 +566,70 @@ export default function AdminOrders() {
                   </div>
 
                   <div className="flex gap-1 flex-shrink-0">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          Status <ChevronDown className="w-3 h-3 ml-1" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        {['Pendente', 'Confirmado', 'Entregue', 'Cancelado'].map(s => (
-                          <DropdownMenuItem key={s} onClick={() => updateMutation.mutate({ id: order.id, status: s, order })}>
-                            {s}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    {u.whatsapp && (
-                      <a
-                        href={`https://wa.me/55${u.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${order.customer_name || ''}! Passando para confirmar seu pedido de R$ ${order.total?.toFixed(2)}.`)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:bg-green-50" title="Abrir WhatsApp">
-                          <MessageCircle className="w-4 h-4" />
-                        </Button>
-                      </a>
-                    )}
-                    <Button variant="ghost" size="icon" className="h-8 w-8" title="Editar preços dos itens" onClick={() => setEditingOrder(order)}>
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
-                      const freshOrder = orders.find(o => o.id === order.id) || order;
-                      handlePrintSeparation(freshOrder);
-                    }}>
-                      <Printer className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}>
-                      <Eye className="w-4 h-4" />
-                    </Button>
+                   <DropdownMenu>
+                     <DropdownMenuTrigger asChild>
+                       <Button variant="outline" size="sm">
+                         Status <ChevronDown className="w-3 h-3 ml-1" />
+                       </Button>
+                     </DropdownMenuTrigger>
+                     <DropdownMenuContent>
+                       {['Pendente', 'Confirmado', 'Entregue', 'Cancelado'].map(s => (
+                         <DropdownMenuItem key={s} onClick={() => updateMutation.mutate({ id: order.id, status: s, order })}>
+                           {s}
+                         </DropdownMenuItem>
+                       ))}
+                     </DropdownMenuContent>
+                   </DropdownMenu>
+                   {u.whatsapp && (
+                     <a
+                       href={`https://wa.me/55${u.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${order.customer_name || ''}! Passando para confirmar seu pedido de R$ ${order.total?.toFixed(2)}.`)}`}
+                       target="_blank"
+                       rel="noopener noreferrer"
+                     >
+                       <Button variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:bg-green-50" title="Abrir WhatsApp">
+                         <MessageCircle className="w-4 h-4" />
+                       </Button>
+                     </a>
+                   )}
+                   <Button variant="ghost" size="icon" className="h-8 w-8" title="Editar preços dos itens" onClick={() => setEditingOrder(order)}>
+                     <Pencil className="w-4 h-4" />
+                   </Button>
+                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                     const freshOrder = orders.find(o => o.id === order.id) || order;
+                     handlePrintSeparation(freshOrder);
+                   }}>
+                     <Printer className="w-4 h-4" />
+                   </Button>
+                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}>
+                     <Eye className="w-4 h-4" />
+                   </Button>
+                   {confirmDelete === order.id ? (
+                     <div className="flex gap-1">
+                       <Button
+                         size="icon"
+                         className="h-8 w-8"
+                         variant="destructive"
+                         disabled={deleteMutation.isPending}
+                         onClick={() => deleteMutation.mutate(order.id)}
+                         title="Confirmar exclusão"
+                       >
+                         ✓
+                       </Button>
+                       <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setConfirmDelete(null)}>
+                         ✕
+                       </Button>
+                     </div>
+                   ) : (
+                     <Button
+                       variant="ghost"
+                       size="icon"
+                       className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                       onClick={() => setConfirmDelete(order.id)}
+                       title="Excluir pedido"
+                     >
+                       <Trash2 className="w-4 h-4" />
+                     </Button>
+                   )}
                   </div>
                 </div>
 
