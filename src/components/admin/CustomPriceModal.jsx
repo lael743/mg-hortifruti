@@ -24,14 +24,13 @@ export default function CustomPriceModal({ priceGroup, onClose }) {
     queryFn: () => base44.entities.CustomPrice.filter({ price_group_id: priceGroup.id }),
   });
 
-  // initialize prices from existing when loaded
+  // initialize prices from existing when loaded (runs even when array is empty to reset state)
   useEffect(() => {
-    if (existingPrices.length > 0) {
-      const map = {};
-      existingPrices.forEach(cp => { map[cp.product_id] = { id: cp.id, value: String(cp.custom_price) }; });
-      setPrices(map);
-    }
-  }, [existingPrices]);
+    if (isLoading) return;
+    const map = {};
+    existingPrices.forEach(cp => { map[cp.product_id] = { id: cp.id, value: String(cp.custom_price) }; });
+    setPrices(map);
+  }, [existingPrices, isLoading]);
 
   const activeProducts = useMemo(() =>
     products
@@ -50,33 +49,36 @@ export default function CustomPriceModal({ priceGroup, onClose }) {
 
   const handleSave = async () => {
     setSaving(true);
-    const ops = [];
-    for (const product of products.filter(p => p.active !== false)) {
-      const entry = prices[product.id];
-      const val = entry?.value !== undefined ? Number(entry.value) : NaN;
-      const existing = existingPrices.find(cp => cp.product_id === product.id);
+    try {
+      const ops = [];
+      for (const product of products.filter(p => p.active !== false)) {
+        const entry = prices[product.id];
+        const val = entry?.value !== undefined ? Number(entry.value) : NaN;
+        const existing = existingPrices.find(cp => cp.product_id === product.id);
 
-      if (!isNaN(val) && entry?.value !== '') {
-        if (existing) {
-          ops.push(base44.entities.CustomPrice.update(existing.id, { custom_price: val }));
-        } else {
-          ops.push(base44.entities.CustomPrice.create({
-            price_group_id: priceGroup.id,
-            product_id: product.id,
-            custom_price: val,
-          }));
+        if (!isNaN(val) && entry?.value !== '') {
+          if (existing) {
+            ops.push(base44.entities.CustomPrice.update(existing.id, { custom_price: val }));
+          } else {
+            ops.push(base44.entities.CustomPrice.create({
+              price_group_id: priceGroup.id,
+              product_id: product.id,
+              custom_price: val,
+            }));
+          }
+        } else if (existing) {
+          // field cleared → delete existing
+          ops.push(base44.entities.CustomPrice.delete(existing.id));
         }
-      } else if (existing) {
-        // field cleared → delete existing
-        ops.push(base44.entities.CustomPrice.delete(existing.id));
       }
+      await Promise.all(ops);
+      queryClient.invalidateQueries({ queryKey: ['custom-prices', priceGroup.id] });
+      queryClient.invalidateQueries({ queryKey: ['custom-prices-catalog'] });
+      toast.success('Preços salvos!');
+      onClose();
+    } finally {
+      setSaving(false);
     }
-    await Promise.all(ops);
-    queryClient.invalidateQueries({ queryKey: ['custom-prices', priceGroup.id] });
-    queryClient.invalidateQueries({ queryKey: ['custom-prices-catalog'] });
-    toast.success('Preços salvos!');
-    setSaving(false);
-    onClose();
   };
 
   const customCount = Object.values(prices).filter(p => p?.value !== '' && p?.value !== undefined).length;

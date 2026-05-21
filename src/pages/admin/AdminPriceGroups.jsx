@@ -29,16 +29,19 @@ function PriceGroupForm({ group, onClose, onSaved }) {
   const handleSave = async () => {
     if (!form.name) { toast.error('Informe o nome da tabela'); return; }
     setSaving(true);
-    const data = { ...form, discount_percent: Number(form.discount_percent) };
-    if (group) {
-      await base44.entities.PriceGroup.update(group.id, data);
-      toast.success('Tabela atualizada');
-    } else {
-      await base44.entities.PriceGroup.create(data);
-      toast.success('Tabela criada');
+    try {
+      const data = { ...form, discount_percent: Number(form.discount_percent) };
+      if (group) {
+        await base44.entities.PriceGroup.update(group.id, data);
+        toast.success('Tabela atualizada');
+      } else {
+        await base44.entities.PriceGroup.create(data);
+        toast.success('Tabela criada');
+      }
+      onSaved();
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    onSaved();
   };
 
   const discountVal = Number(form.discount_percent);
