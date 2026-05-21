@@ -71,11 +71,9 @@ export default function CustomPriceModal({ priceGroup, onClose }) {
         }
       }
 
-      // Process in batches of 5 to avoid rate limit
-      const BATCH_SIZE = 5;
-      for (let i = 0; i < ops.length; i += BATCH_SIZE) {
-        const batch = ops.slice(i, i + BATCH_SIZE);
-        await Promise.all(batch.map(fn => fn()));
+      // Process sequentially to avoid rate limit
+      for (const fn of ops) {
+        await fn();
       }
 
       queryClient.invalidateQueries({ queryKey: ['custom-prices', priceGroup.id] });
