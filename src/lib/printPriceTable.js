@@ -44,13 +44,13 @@ export function printPriceTable({ products, priceGroup, customPrices, clientOrde
       : `<span style="color:#ccc;font-size:6.5px;">--</span>`;
     const ultCol = hasClientData ? `<td style="padding:2px 4px;border:1px solid #ddd;text-align:center;">${lastQtyHtml}</td>` : '';
     return `<tr style="${rowStyle}">
-      <td style="padding:2px 4px;border:1px solid #ddd;">
-        <div style="font-weight:bold;font-size:9.5px;line-height:1.3;">${p.name}</div>
+      <td style="padding:1px 4px;border:1px solid #ddd;">
+        <div style="font-weight:bold;font-size:11px;line-height:1.2;">${p.name}</div>
         <div style="color:#666;font-size:7.5px;">${p.packaging_type}${p.weight ? ' · ' + p.weight : ''}</div>
       </td>
-      <td style="padding:2px 4px;border:1px solid #ddd;text-align:center;white-space:nowrap;">${priceHtml}</td>
+      <td style="padding:1px 4px;border:1px solid #ddd;text-align:center;white-space:nowrap;">${priceHtml}</td>
       ${ultCol}
-      <td style="padding:2px 4px;border:1px solid #ddd;width:36px;"><div style="border-bottom:1px solid #aaa;height:12px;"></div></td>
+      <td style="padding:1px 4px;border:1px solid #ddd;width:36px;"><div style="border-bottom:1px solid #aaa;height:12px;"></div></td>
     </tr>`;
   };
 
