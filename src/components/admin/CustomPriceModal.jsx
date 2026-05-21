@@ -58,20 +58,26 @@ export default function CustomPriceModal({ priceGroup, onClose }) {
 
         if (!isNaN(val) && entry?.value !== '') {
           if (existing) {
-            ops.push(base44.entities.CustomPrice.update(existing.id, { custom_price: val }));
+            ops.push(() => base44.entities.CustomPrice.update(existing.id, { custom_price: val }));
           } else {
-            ops.push(base44.entities.CustomPrice.create({
+            ops.push(() => base44.entities.CustomPrice.create({
               price_group_id: priceGroup.id,
               product_id: product.id,
               custom_price: val,
             }));
           }
         } else if (existing) {
-          // field cleared → delete existing
-          ops.push(base44.entities.CustomPrice.delete(existing.id));
+          ops.push(() => base44.entities.CustomPrice.delete(existing.id));
         }
       }
-      await Promise.all(ops);
+
+      // Process in batches of 5 to avoid rate limit
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < ops.length; i += BATCH_SIZE) {
+        const batch = ops.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.map(fn => fn()));
+      }
+
       queryClient.invalidateQueries({ queryKey: ['custom-prices', priceGroup.id] });
       queryClient.invalidateQueries({ queryKey: ['custom-prices-catalog'] });
       toast.success('Preços salvos!');
