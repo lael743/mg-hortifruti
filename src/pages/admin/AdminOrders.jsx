@@ -220,6 +220,16 @@ export default function AdminOrders() {
     return parts.join(' • ');
   })();
 
+  const buildCompanyHeader = (salespersonName, salespersonWa) => `
+      <div class="company-header">
+        ${company?.logo_url ? `<img src="${company.logo_url}" style="height:48px;object-fit:contain;margin-bottom:6px;" />` : ''}
+        <h2 style="margin:0;font-size:16px;">${company?.company_name || 'Empresa'}</h2>
+        ${company?.address ? `<p style="margin:2px 0;font-size:11px;color:#555;">${company.address}${company.city ? `, ${company.city}` : ''}${company.state ? ` - ${company.state}` : ''}</p>` : ''}
+        ${company?.whatsapp ? `<p style="margin:2px 0;font-size:11px;color:#555;">WhatsApp: ${company.whatsapp}</p>` : ''}
+        ${company?.cnpj ? `<p style="margin:2px 0;font-size:11px;color:#555;">CNPJ: ${company.cnpj}</p>` : ''}
+        ${salespersonName ? `<p style="margin:2px 0;font-size:11px;color:#2d7a3a;font-weight:bold;">Vendedor: ${salespersonName}${salespersonWa ? ` &nbsp;|&nbsp; WhatsApp: ${salespersonWa}` : ''}</p>` : ''}
+      </div>`;
+
   const handlePrintAllClients = () => {
     // Group filtered orders by customer_email
     const grouped = {};
@@ -228,18 +238,9 @@ export default function AdminOrders() {
       grouped[order.customer_email].push(order);
     });
 
-    const companyHeader = `
-      <div class="company-header">
-        ${company?.logo_url ? `<img src="${company.logo_url}" style="height:48px;object-fit:contain;margin-bottom:6px;" />` : ''}
-        <h2 style="margin:0;font-size:16px;">${company?.company_name || 'Empresa'}</h2>
-        ${company?.address ? `<p style="margin:2px 0;font-size:11px;color:#555;">${company.address}${company.city ? `, ${company.city}` : ''}${company.state ? ` - ${company.state}` : ''}</p>` : ''}
-        ${company?.whatsapp ? `<p style="margin:2px 0;font-size:11px;color:#555;">WhatsApp: ${company.whatsapp}</p>` : ''}
-        ${company?.cnpj ? `<p style="margin:2px 0;font-size:11px;color:#555;">CNPJ: ${company.cnpj}</p>` : ''}
-      </div>`;
-
     const clientPages = Object.entries(grouped).map(([email, clientOrders], index) => {
       const u = getClientInfo(clientOrders[0]);
-      const spLine = u.salesperson_name ? `<p><strong>Vendedor:</strong> ${u.salesperson_name}${u.salesperson_whatsapp ? ` &nbsp;|&nbsp; WhatsApp: ${u.salesperson_whatsapp}` : ''}</p>` : '';
+      const companyHeader = buildCompanyHeader(u.salesperson_name, u.salesperson_whatsapp);
       const orderBlocks = clientOrders.map(order => {
         const itemsRows = (order.items || []).map(item => {
            const effPrice = item.final_unit_price ?? item.unit_price;
@@ -296,7 +297,6 @@ export default function AdminOrders() {
             ${u.address ? `<p><strong>Endereço:</strong> ${u.address}${u.city ? `, ${u.city}` : ''}${u.state ? ` - ${u.state}` : ''}</p>` : ''}
             ${u.whatsapp ? `<p><strong>WhatsApp:</strong> ${u.whatsapp}</p>` : ''}
             <p><strong>Email:</strong> ${email}</p>
-            ${spLine}
           </div>
           ${orderBlocks}
           <div class="client-total">Total geral do cliente: <strong>R$ ${clientTotal.toFixed(2)}</strong> (${clientOrders.length} pedido${clientOrders.length > 1 ? 's' : ''})</div>
@@ -348,7 +348,6 @@ export default function AdminOrders() {
 
   const handlePrintSeparation = (order) => {
     const u = getClientInfo(order);
-    const spLineSep = u.salesperson_name ? `<p><strong>Vendedor:</strong> ${u.salesperson_name}${u.salesperson_whatsapp ? ` &nbsp;|&nbsp; WhatsApp: ${u.salesperson_whatsapp}` : ''}</p>` : '';
 
     const itemsRows = (order.items || []).map(item => {
       const ep = item.final_unit_price ?? item.unit_price;
@@ -393,13 +392,7 @@ export default function AdminOrders() {
       @media print { @page { margin: 10mm; size: A4; } body { font-size: 11px; } }
     </style></head>
     <body><div class="client-page">
-      <div class="company-header">
-        ${company?.logo_url ? `<img src="${company.logo_url}" style="height:48px;object-fit:contain;margin-bottom:6px;" />` : ''}
-        <h2>${company?.company_name || 'Empresa'}</h2>
-        ${company?.address ? `<p style="font-size:11px;color:#555;">${company.address}${company.city ? `, ${company.city}` : ''}${company.state ? ` - ${company.state}` : ''}</p>` : ''}
-        ${company?.whatsapp ? `<p style="font-size:11px;color:#555;">WhatsApp: ${company.whatsapp}</p>` : ''}
-        ${company?.cnpj ? `<p style="font-size:11px;color:#555;">CNPJ: ${company.cnpj}</p>` : ''}
-      </div>
+      ${buildCompanyHeader(u.salesperson_name, u.salesperson_whatsapp)}
       <div class="client-info">
         <h3>${u.company_name || u.full_name || order.customer_email}</h3>
         ${u.company_name ? `<p><strong>Contato:</strong> ${u.full_name}</p>` : ''}
@@ -407,7 +400,6 @@ export default function AdminOrders() {
         ${u.address ? `<p><strong>Endereço:</strong> ${u.address}${u.city ? `, ${u.city}` : ''}${u.state ? ` - ${u.state}` : ''}</p>` : ''}
         ${u.whatsapp ? `<p><strong>WhatsApp:</strong> ${u.whatsapp}</p>` : ''}
         <p><strong>Email:</strong> ${order.customer_email}</p>
-        ${spLineSep}
       </div>
       <div class="order-block">
         <div class="order-header">

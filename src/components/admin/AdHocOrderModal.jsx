@@ -15,7 +15,7 @@ const STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG'
 const EMPTY_CLIENT = {
   full_name: '', company_name: '', cnpj_cpf: '',
   whatsapp: '', address: '', city: '', state: '',
-  price_group_id: '', price_group_name: '', notes: '',
+  price_group_id: '', price_group_name: '', salesperson_id: '', notes: '',
 };
 
 export default function AdHocOrderModal({ onClose, onSaved }) {
@@ -41,6 +41,11 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
   const { data: priceGroups = [] } = useQuery({
     queryKey: ['price-groups'],
     queryFn: () => base44.entities.PriceGroup.filter({ active: true }),
+  });
+
+  const { data: salespersons = [] } = useQuery({
+    queryKey: ['salespersons'],
+    queryFn: () => base44.entities.Salesperson.list(),
   });
 
   const { data: customPrices = [] } = useQuery({
@@ -76,6 +81,7 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
       state: c.state || '',
       price_group_id: c.price_group_id || '',
       price_group_name: c.price_group_name || '',
+      salesperson_id: c.salesperson_id || '',
       notes: c.notes || '',
     });
     setClientSearch('');
@@ -244,6 +250,16 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
                           <SelectContent>
                             <SelectItem value="__none__">— Preço padrão (sem tabela)</SelectItem>
                             {priceGroups.map(g=><SelectItem key={g.id} value={g.id}>{g.name}{g.discount_percent?` (${g.discount_percent}%)`:''}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Vendedor / Responsável</Label>
+                        <Select value={clientData.salesperson_id || '__none__'} onValueChange={v => setClientData(p=>({...p, salesperson_id: v==='__none__'?'':v}))}>
+                          <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">— Nenhum</SelectItem>
+                            {salespersons.map(s=><SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
