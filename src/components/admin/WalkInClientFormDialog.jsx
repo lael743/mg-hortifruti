@@ -23,6 +23,7 @@ export default function WalkInClientFormDialog({ client, onClose, onSaved }) {
     state: client?.state || '',
     price_group_id: client?.price_group_id || '',
     price_group_name: client?.price_group_name || '',
+    salesperson_id: client?.salesperson_id || '',
     notes: client?.notes || '',
   });
   const [saving, setSaving] = useState(false);
@@ -30,6 +31,11 @@ export default function WalkInClientFormDialog({ client, onClose, onSaved }) {
   const { data: priceGroups = [] } = useQuery({
     queryKey: ['price-groups'],
     queryFn: () => base44.entities.PriceGroup.filter({ active: true }),
+  });
+
+  const { data: salespersons = [] } = useQuery({
+    queryKey: ['salespersons'],
+    queryFn: () => base44.entities.Salesperson.list(),
   });
 
   const set = (field, value) => setForm(p => ({ ...p, [field]: value }));
@@ -86,6 +92,18 @@ export default function WalkInClientFormDialog({ client, onClose, onSaved }) {
                   <SelectItem value="__none__">— Preço padrão (sem tabela)</SelectItem>
                   {priceGroups.map(g => (
                     <SelectItem key={g.id} value={g.id}>{g.name}{g.discount_percent ? ` (${g.discount_percent}%)` : ''}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Vendedor / Responsável</Label>
+              <Select value={form.salesperson_id || '__none__'} onValueChange={v => set('salesperson_id', v === '__none__' ? '' : v)}>
+                <SelectTrigger><SelectValue placeholder="Sem vendedor" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Sem vendedor</SelectItem>
+                  {salespersons.map(s => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}{s.whatsapp ? ` (${s.whatsapp})` : ''}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
