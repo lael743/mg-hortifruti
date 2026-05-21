@@ -47,17 +47,24 @@ function OrderHistoryItem({ order }) {
         </div>
       </button>
       {open && (
-        <div className="px-3 pb-3 pt-1 bg-muted/20 space-y-1 border-t">
-          {order.items?.map((item, idx) => {
-            const ep = item.final_unit_price ?? item.unit_price;
-            return (
-              <div key={idx} className="flex justify-between text-xs gap-2">
-                <span className="font-bold text-foreground min-w-fit">{item.quantity}x</span>
-                <span className="text-foreground flex-1"><strong>{item.product_name}</strong> <span className="text-muted-foreground">({item.packaging_type}{item.weight && ` • ${item.weight}`})</span></span>
-                <span className="font-medium min-w-fit">R$ {(ep * item.quantity).toFixed(2)}</span>
-              </div>
-            );
-          })}
+        <div className="px-3 pb-3 pt-1 bg-muted/20 border-t">
+           <div className="grid grid-cols-12 gap-2 text-xs mb-1 font-semibold text-muted-foreground pb-1 border-b border-muted">
+             <div className="col-span-1 text-center">Qtd</div>
+             <div className="col-span-7">Produto</div>
+             <div className="col-span-4 text-right">Valor</div>
+           </div>
+           <div className="space-y-1">
+             {order.items?.map((item, idx) => {
+               const ep = item.final_unit_price ?? item.unit_price;
+               return (
+                 <div key={idx} className="grid grid-cols-12 gap-2 text-xs">
+                   <div className="col-span-1 text-center font-bold">{item.quantity}</div>
+                   <div className="col-span-7"><strong>{item.product_name}</strong> <span className="text-muted-foreground text-[10px]">({item.packaging_type}{item.weight && ` • ${item.weight}`})</span></div>
+                   <div className="col-span-4 text-right font-medium">R$ {(ep * item.quantity).toFixed(2)}</div>
+                 </div>
+               );
+             })}
+           </div>
           {order.notes && <p className="text-xs text-muted-foreground italic mt-1 border-t pt-1">Obs: {order.notes}</p>}
         </div>
       )}
