@@ -50,33 +50,23 @@ export default function CustomPriceModal({ priceGroup, onClose }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const ops = [];
-      for (const product of products.filter(p => p.active !== false)) {
+      // Build payload: all active products, null custom_price means "delete/skip"
+      const activeProductsList = products.filter(p => p.active !== false);
+      const pricesPayload = activeProductsList.map(product => {
         const entry = prices[product.id];
-        const val = entry?.value !== undefined ? Number(entry.value) : NaN;
-        const existing = existingPrices.find(cp => cp.product_id === product.id);
+        const val = entry?.value !== undefined && entry?.value !== '' ? Number(entry.value) : null;
+        return {
+          product_id: product.id,
+          custom_price: (!isNaN(val) && val !== null) ? val : null,
+        };
+      });
 
-        if (!isNaN(val) && entry?.value !== '') {
-          if (existing) {
-            ops.push(() => base44.entities.CustomPrice.update(existing.id, { custom_price: val }));
-          } else {
-            ops.push(() => base44.entities.CustomPrice.create({
-              price_group_id: priceGroup.id,
-              product_id: product.id,
-              custom_price: val,
-            }));
-          }
-        } else if (existing) {
-          ops.push(() => base44.entities.CustomPrice.delete(existing.id));
-        }
-      }
+      const res = await base44.functions.invoke('saveCustomPrices', {
+        price_group_id: priceGroup.id,
+        prices: pricesPayload,
+      });
 
-      // Process sequentially with delay to avoid rate limit
-      const delay = ms => new Promise(res => setTimeout(res, ms));
-      for (const fn of ops) {
-        await fn();
-        await delay(300);
-      }
+      if (res.data?.error) throw new Error(res.data.error);
 
       queryClient.invalidateQueries({ queryKey: ['custom-prices', priceGroup.id] });
       queryClient.invalidateQueries({ queryKey: ['custom-prices-catalog'] });
