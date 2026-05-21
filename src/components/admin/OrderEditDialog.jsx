@@ -4,7 +4,8 @@ import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Pencil, Check, X, Trash2, ArrowLeftRight } from 'lucide-react';
+import { Pencil, Check, X, Trash2, ArrowLeftRight, PackagePlus } from 'lucide-react';
+import AddOrderItemModal from './AddOrderItemModal';
 
 export default function OrderEditDialog({ order, onSave, onClose }) {
   const [items, setItems] = useState(
@@ -17,6 +18,7 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
   const [editValue, setEditValue] = useState('');
   const [replacingIndex, setReplacingIndex] = useState(null);
   const [replaceSearch, setReplaceSearch] = useState('');
+  const [showAddItems, setShowAddItems] = useState(false);
 
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
@@ -103,11 +105,21 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
     onSave({ items, total: newTotal });
   };
 
+  const handleAddItems = (newItems) => {
+    setItems(prev => [...prev, ...newItems]);
+  };
+
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Editar Pedido #{order.order_number} — {order.customer_name || order.customer_email}</DialogTitle>
+          <div className="flex items-center justify-between pr-8">
+            <DialogTitle>Editar Pedido #{order.order_number} — {order.customer_name || order.customer_email}</DialogTitle>
+            <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => setShowAddItems(true)}>
+              <PackagePlus className="w-3.5 h-3.5" />
+              Adicionar Itens
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="space-y-1">
@@ -261,6 +273,15 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {showAddItems && (
+        <AddOrderItemModal
+          order={order}
+          existingItems={items}
+          onAdd={handleAddItems}
+          onClose={() => setShowAddItems(false)}
+        />
+      )}
     </Dialog>
   );
 }
