@@ -313,14 +313,14 @@ export default function Orders() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 gap-1.5"
+                    className="gap-1.5"
                     onClick={() => navigate(`/orders/${order.id}`)}
                   >
                     <Eye className="w-4 h-4" />Ver detalhes
                   </Button>
                   <Button
                     size="sm"
-                    className="flex-1 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+                    className="gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
                     onClick={() => handleRepeatOrder(order)}
                   >
                     <RefreshCw className="w-4 h-4" />Repetir pedido
