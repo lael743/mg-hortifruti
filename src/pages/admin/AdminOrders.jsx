@@ -35,6 +35,12 @@ const PERIOD_OPTIONS = [
   { value: 'custom', label: 'Período personalizado' },
 ];
 
+// Parseia string "YYYY-MM-DD" como data LOCAL (evita bug de UTC midnight)
+function parseLocalDate(str) {
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 function getPeriodRange(period, customStart, customEnd) {
   const now = new Date();
   switch (period) {
@@ -43,8 +49,8 @@ function getPeriodRange(period, customStart, customEnd) {
     case 'week': return [startOfWeek(now, { locale: ptBR }), endOfWeek(now, { locale: ptBR })];
     case 'month': return [startOfMonth(now), endOfMonth(now)];
     case 'custom': return [
-      customStart ? startOfDay(new Date(customStart)) : null,
-      customEnd ? endOfDay(new Date(customEnd)) : null,
+      customStart ? startOfDay(parseLocalDate(customStart)) : null,
+      customEnd ? endOfDay(parseLocalDate(customEnd)) : null,
     ];
     default: return [null, null];
   }
@@ -58,7 +64,7 @@ export default function AdminOrders() {
   const [period, setPeriod] = useState('all');
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
-  const [groupFilter, setGroupFilter] = useState(''); // city or company_name filter
+  const [cityFilters, setCityFilters] = useState([]); // multiple cities
   const [showPurchaseList, setShowPurchaseList] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [showAdHocModal, setShowAdHocModal] = useState(false);
@@ -202,9 +208,11 @@ export default function AdminOrders() {
     const orderDate = new Date(o.created_date);
     const matchPeriod = (!periodStart || orderDate >= periodStart) && (!periodEnd || orderDate <= periodEnd);
 
-    const matchGroup = !groupFilter ||
-      u?.city?.toLowerCase().includes(groupFilter.toLowerCase()) ||
-      u?.company_name?.toLowerCase().includes(groupFilter.toLowerCase());
+    const matchGroup = cityFilters.length === 0 ||
+      cityFilters.some(f =>
+        u?.city?.toLowerCase().includes(f.toLowerCase()) ||
+        u?.company_name?.toLowerCase().includes(f.toLowerCase())
+      );
 
     return matchSearch && matchStatus && matchPeriod && matchGroup;
   });
@@ -224,7 +232,7 @@ export default function AdminOrders() {
     if (period === 'custom' && (customStart || customEnd)) {
       parts[0] = `${customStart || '?'} a ${customEnd || '?'}`;
     }
-    if (groupFilter) parts.push(`Grupo: "${groupFilter}"`);
+    if (cityFilters.length > 0) parts.push(`Cidades: ${cityFilters.join(', ')}`);
     if (statusFilter !== 'Todos') parts.push(`Status: ${statusFilter}`);
     if (search) parts.push(`Busca: "${search}"`);
     return parts.join(' • ');
@@ -473,7 +481,7 @@ export default function AdminOrders() {
     setTimeout(() => w.print(), 400);
   };
 
-  const hasActiveFilters = period !== 'all' || groupFilter || statusFilter !== 'Todos' || search;
+  const hasActiveFilters = period !== 'all' || cityFilters.length > 0 || statusFilter !== 'Todos' || search;
 
   return (
     <div className="space-y-4">
@@ -516,29 +524,37 @@ export default function AdminOrders() {
             </>
           )}
 
-          <div className="flex-1 min-w-[180px]">
-            <Label className="text-xs mb-1 block">Grupo / Cidade</Label>
-            <div className="relative">
-              <Input
-                placeholder="Ex: Quatigá, Mercadinho..."
-                className="h-9 pr-8"
-                value={groupFilter}
-                onChange={e => setGroupFilter(e.target.value)}
-              />
-              {groupFilter && (
-                <button onClick={() => setGroupFilter('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-            {cities.length > 0 && !groupFilter && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {cities.slice(0, 6).map(city => (
-                  <button key={city} onClick={() => setGroupFilter(city)}
-                    className="text-[10px] bg-background border rounded-full px-2 py-0.5 hover:bg-primary hover:text-primary-foreground transition-colors">
+          <div className="flex-1 min-w-[200px]">
+            <Label className="text-xs mb-1 block">Cidade / Grupo</Label>
+            {/* Selected city chips */}
+            {cityFilters.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-1">
+                {cityFilters.map(city => (
+                  <span key={city} className="inline-flex items-center gap-1 text-[11px] bg-primary text-primary-foreground rounded-full px-2 py-0.5">
                     {city}
-                  </button>
+                    <button onClick={() => setCityFilters(f => f.filter(c => c !== city))} className="hover:opacity-70">
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </span>
                 ))}
+                <button onClick={() => setCityFilters([])} className="text-[10px] text-muted-foreground underline">limpar</button>
+              </div>
+            )}
+            {/* City quick-select buttons */}
+            {cities.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {cities.map(city => {
+                  const active = cityFilters.includes(city);
+                  return (
+                    <button
+                      key={city}
+                      onClick={() => setCityFilters(f => active ? f.filter(c => c !== city) : [...f, city])}
+                      className={`text-[10px] border rounded-full px-2 py-0.5 transition-colors ${active ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-primary hover:text-primary-foreground'}`}
+                    >
+                      {city}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -576,7 +592,7 @@ export default function AdminOrders() {
         {hasActiveFilters && (
           <p className="text-xs text-muted-foreground">
             Mostrando <strong>{filtered.length}</strong> de {orders.length} pedidos com os filtros aplicados.
-            {' '}<button onClick={() => { setPeriod('all'); setGroupFilter(''); setStatusFilter('Todos'); setSearch(''); }} className="underline text-primary">Limpar filtros</button>
+            {' '}<button onClick={() => { setPeriod('all'); setCityFilters([]); setStatusFilter('Todos'); setSearch(''); }} className="underline text-primary">Limpar filtros</button>
           </p>
         )}
       </div>
