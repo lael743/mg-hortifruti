@@ -501,7 +501,7 @@ export default function AdminOrders() {
       </div>
 
       {/* Period & group filters */}
-      <div className="bg-white dark:bg-slate-950 rounded-xl p-4 space-y-4 border border-border shadow-sm">
+      <div className="bg-white dark:bg-slate-950 rounded-xl p-4 space-y-4 border-2 border-slate-300 dark:border-slate-600 shadow-sm">
         <div className="flex flex-wrap gap-4 items-end">
           <div className="flex-1 min-w-[180px]">
             <Label className="text-xs font-semibold mb-2 block text-foreground">Período</Label>
@@ -528,33 +528,37 @@ export default function AdminOrders() {
             <Label className="text-xs font-semibold mb-2 block text-foreground">Cidade / Grupo</Label>
             {/* Selected city chips */}
             {cityFilters.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {cityFilters.map(city => (
-                  <span key={city} className="inline-flex items-center gap-1 text-xs bg-primary text-primary-foreground rounded-full px-2.5 py-1 font-medium">
-                    {city}
-                    <button onClick={() => setCityFilters(f => f.filter(c => c !== city))} className="hover:opacity-70">
-                      <X className="w-2.5 h-2.5" />
-                    </button>
-                  </span>
-                ))}
-                <button onClick={() => setCityFilters([])} className="text-xs text-muted-foreground underline hover:text-foreground">Limpar</button>
+              <div className="mb-3 pb-3 border-b border-border">
+                <div className="flex flex-wrap gap-2">
+                  {cityFilters.map(city => (
+                    <span key={city} className="inline-flex items-center gap-1.5 text-sm bg-primary text-primary-foreground rounded-full px-3 py-1.5 font-medium">
+                      {city}
+                      <button onClick={() => setCityFilters(f => f.filter(c => c !== city))} className="hover:opacity-70">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                  <button onClick={() => setCityFilters([])} className="text-sm text-muted-foreground underline hover:text-foreground self-center ml-auto">Limpar</button>
+                </div>
               </div>
             )}
             {/* City quick-select buttons */}
             {cities.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {cities.map(city => {
-                  const active = cityFilters.includes(city);
-                  return (
-                    <button
-                      key={city}
-                      onClick={() => setCityFilters(f => active ? f.filter(c => c !== city) : [...f, city])}
-                      className={`text-xs border rounded-full px-2.5 py-1 font-medium transition-all ${active ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'bg-background border-border hover:bg-primary hover:text-primary-foreground hover:border-primary'}`}
-                    >
-                      {city}
-                    </button>
-                  );
-                })}
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                  {cities.map(city => {
+                    const active = cityFilters.includes(city);
+                    return (
+                      <button
+                        key={city}
+                        onClick={() => setCityFilters(f => active ? f.filter(c => c !== city) : [...f, city])}
+                        className={`text-sm border-2 rounded-lg px-3 py-2 font-medium transition-all text-center ${active ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'bg-background border-slate-300 dark:border-slate-600 hover:bg-primary hover:text-primary-foreground hover:border-primary'}`}
+                      >
+                        {city}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
@@ -606,7 +610,7 @@ export default function AdminOrders() {
           {sorted.map(order => {
             const u = getClientInfo(order);
             return (
-              <Card key={order.id} className="p-4">
+              <Card key={order.id} className="p-4 border-2 border-slate-300 dark:border-slate-600">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
