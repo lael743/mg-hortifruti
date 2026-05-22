@@ -26,34 +26,14 @@ const statusColors = {
 
 const STATUSES = ['Todos', 'Pendente', 'Confirmado', 'Entregue', 'Cancelado'];
 
-const PERIOD_OPTIONS = [
-  { value: 'all', label: 'Todos os períodos' },
-  { value: 'today', label: 'Hoje' },
-  { value: 'yesterday', label: 'Ontem' },
-  { value: 'week', label: 'Esta semana' },
-  { value: 'month', label: 'Este mês' },
-  { value: 'custom', label: 'Período personalizado' },
-];
-
 // Parseia string "YYYY-MM-DD" como data LOCAL (evita bug de UTC midnight)
 function parseLocalDate(str) {
   const [y, m, d] = str.split('-').map(Number);
   return new Date(y, m - 1, d);
 }
 
-function getPeriodRange(period, customStart, customEnd) {
-  const now = new Date();
-  switch (period) {
-    case 'today': return [startOfDay(now), endOfDay(now)];
-    case 'yesterday': { const y = subDays(now, 1); return [startOfDay(y), endOfDay(y)]; }
-    case 'week': return [startOfWeek(now, { locale: ptBR }), endOfWeek(now, { locale: ptBR })];
-    case 'month': return [startOfMonth(now), endOfMonth(now)];
-    case 'custom': return [
-      customStart ? startOfDay(parseLocalDate(customStart)) : null,
-      customEnd ? endOfDay(parseLocalDate(customEnd)) : null,
-    ];
-    default: return [null, null];
-  }
+function toDateInputValue(date) {
+  return format(date, 'yyyy-MM-dd');
 }
 
 export default function AdminOrders() {
@@ -61,9 +41,8 @@ export default function AdminOrders() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [expandedOrder, setExpandedOrder] = useState(null);
-  const [period, setPeriod] = useState('all');
-  const [customStart, setCustomStart] = useState('');
-  const [customEnd, setCustomEnd] = useState('');
+  const [customStart, setCustomStart] = useState(toDateInputValue(subDays(new Date(), 1)));
+  const [customEnd, setCustomEnd] = useState(toDateInputValue(new Date()));
   const [cityFilters, setCityFilters] = useState([]); // multiple cities
   const [showPurchaseList, setShowPurchaseList] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
@@ -191,7 +170,8 @@ export default function AdminOrders() {
     },
   });
 
-  const [periodStart, periodEnd] = getPeriodRange(period, customStart, customEnd);
+  const periodStart = customStart ? startOfDay(parseLocalDate(customStart)) : null;
+  const periodEnd = customEnd ? endOfDay(parseLocalDate(customEnd)) : null;
 
   const filtered = orders.filter(o => {
     const u = getClientInfo(o);
@@ -227,11 +207,7 @@ export default function AdminOrders() {
 
   // Label for the purchase list dialog
   const periodLabel = (() => {
-    const base = PERIOD_OPTIONS.find(p => p.value === period)?.label || 'Todos';
-    const parts = [base];
-    if (period === 'custom' && (customStart || customEnd)) {
-      parts[0] = `${customStart || '?'} a ${customEnd || '?'}`;
-    }
+    const parts = [`${customStart || '?'} a ${customEnd || '?'}`];
     if (cityFilters.length > 0) parts.push(`Cidades: ${cityFilters.join(', ')}`);
     if (statusFilter !== 'Todos') parts.push(`Status: ${statusFilter}`);
     if (search) parts.push(`Busca: "${search}"`);
@@ -481,7 +457,7 @@ export default function AdminOrders() {
     setTimeout(() => w.print(), 400);
   };
 
-  const hasActiveFilters = period !== 'all' || cityFilters.length > 0 || statusFilter !== 'Todos' || search;
+  const hasActiveFilters = cityFilters.length > 0 || statusFilter !== 'Todos' || search || customStart || customEnd;
 
   return (
     <div className="space-y-4">
@@ -492,32 +468,21 @@ export default function AdminOrders() {
         </Button>
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar por cliente, empresa, CNPJ, cidade..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+          <Input placeholder="Buscar por cliente, empresa, CNPJ, cidade..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 border-slate-400" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="w-40 border-slate-400"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
         </Select>
       </div>
 
       {/* Period & group filters */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl border-2 border-slate-300 dark:border-slate-600 shadow-sm overflow-hidden">
-        {/* City filter bar — full width top strip */}
-        <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center gap-3">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border-2 border-slate-400 dark:border-slate-500 shadow-sm overflow-hidden">
+
+        {/* City list — scrollable single row */}
+        <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center gap-2">
           <span className="text-[11px] font-semibold text-muted-foreground shrink-0 uppercase tracking-wide">Cidade</span>
-          {/* Selected chips */}
-          {cityFilters.length > 0 && (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {cityFilters.map(city => (
-                <span key={city} className="inline-flex items-center gap-1 text-[11px] bg-primary text-primary-foreground rounded-full px-2.5 py-0.5 font-medium">
-                  {city}
-                  <button onClick={() => setCityFilters(f => f.filter(c => c !== city))} className="hover:opacity-70"><X className="w-2.5 h-2.5" /></button>
-                </span>
-              ))}
-              <button onClick={() => setCityFilters([])} className="text-[11px] text-muted-foreground underline hover:text-foreground ml-1">Limpar</button>
-            </div>
-          )}
-          <div className="flex gap-1.5 overflow-x-auto flex-1">
+          <div className="flex gap-1.5 overflow-x-auto flex-1 pb-0.5">
             {cities.map(city => {
               const active = cityFilters.includes(city);
               return (
@@ -533,67 +498,63 @@ export default function AdminOrders() {
           </div>
         </div>
 
-        <div className="p-4 space-y-4">
-        <div className="flex flex-wrap gap-4 items-end">
-          <div className="flex-1 min-w-[180px]">
-            <Label className="text-xs font-semibold mb-2 block text-foreground">Período</Label>
-            <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="h-10 bg-background"><SelectValue /></SelectTrigger>
-              <SelectContent>{PERIOD_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-            </Select>
+        {/* Selected city chips — below the list */}
+        {cityFilters.length > 0 && (
+          <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-1.5 flex items-center gap-1.5 flex-wrap bg-primary/5">
+            <span className="text-[10px] text-muted-foreground shrink-0">Selecionadas:</span>
+            {cityFilters.map(city => (
+              <span key={city} className="inline-flex items-center gap-1 text-[11px] bg-primary text-primary-foreground rounded-full px-2.5 py-0.5 font-medium">
+                {city}
+                <button onClick={() => setCityFilters(f => f.filter(c => c !== city))} className="hover:opacity-70"><X className="w-2.5 h-2.5" /></button>
+              </span>
+            ))}
+            <button onClick={() => setCityFilters([])} className="text-[11px] text-muted-foreground underline hover:text-foreground ml-1">Limpar</button>
+          </div>
+        )}
+
+        <div className="p-4">
+          <div className="flex flex-wrap gap-3 items-end">
+            <div>
+              <Label className="text-xs font-semibold mb-2 block text-foreground">De</Label>
+              <Input type="date" className="h-10 w-36 bg-background" value={customStart} onChange={e => setCustomStart(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold mb-2 block text-foreground">Até</Label>
+              <Input type="date" className="h-10 w-36 bg-background" value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
+            </div>
+            <Button
+              onClick={() => setShowPurchaseList(true)}
+              disabled={filtered.length === 0}
+              className="h-10 shrink-0"
+            >
+              <ShoppingBasket className="w-4 h-4 mr-1.5" />
+              Lista de Compra ({filtered.length})
+            </Button>
+            <Button
+              onClick={handlePrintAllClients}
+              disabled={filtered.length === 0}
+              variant="outline"
+              className="h-10 shrink-0 border-slate-400"
+            >
+              <Users className="w-4 h-4 mr-1.5" />
+              Espelho por Cliente
+            </Button>
+            <Button
+              variant={sortBy === 'alpha' ? 'default' : 'outline'}
+              className="h-10 shrink-0 border-slate-400"
+              onClick={() => setSortBy(s => s === 'alpha' ? 'date' : 'alpha')}
+            >
+              {sortBy === 'alpha' ? <ArrowDownAZ className="w-4 h-4 mr-1.5" /> : <ArrowDownUp className="w-4 h-4 mr-1.5" />}
+              {sortBy === 'alpha' ? 'A→Z Empresa' : 'Mais recente'}
+            </Button>
           </div>
 
-          {period === 'custom' && (
-            <>
-              <div>
-                <Label className="text-xs font-semibold mb-2 block text-foreground">De</Label>
-                <Input type="date" className="h-10 w-36 bg-background" value={customStart} onChange={e => setCustomStart(e.target.value)} />
-              </div>
-              <div>
-                <Label className="text-xs font-semibold mb-2 block text-foreground">Até</Label>
-                <Input type="date" className="h-10 w-36 bg-background" value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
-              </div>
-            </>
+          {hasActiveFilters && (
+            <p className="text-xs text-muted-foreground mt-3">
+              Mostrando <strong>{filtered.length}</strong> de {orders.length} pedidos.
+              {' '}<button onClick={() => { setCityFilters([]); setStatusFilter('Todos'); setSearch(''); setCustomStart(toDateInputValue(subDays(new Date(), 1))); setCustomEnd(toDateInputValue(new Date())); }} className="underline text-primary">Limpar filtros</button>
+            </p>
           )}
-
-
-
-          <Button
-            onClick={() => setShowPurchaseList(true)}
-            disabled={filtered.length === 0}
-            className="h-10 shrink-0"
-            title="Compilar lista de compra dos pedidos filtrados"
-          >
-            <ShoppingBasket className="w-4 h-4 mr-1.5" />
-            Lista de Compra ({filtered.length})
-          </Button>
-          <Button
-            onClick={handlePrintAllClients}
-            disabled={filtered.length === 0}
-            variant="outline"
-            className="h-10 shrink-0"
-            title="Imprimir espelho de entrega por cliente (quebra de página por cliente)"
-          >
-            <Users className="w-4 h-4 mr-1.5" />
-            Espelho por Cliente
-          </Button>
-          <Button
-            variant={sortBy === 'alpha' ? 'default' : 'outline'}
-            className="h-10 shrink-0"
-            onClick={() => setSortBy(s => s === 'alpha' ? 'date' : 'alpha')}
-            title="Alternar ordenação"
-          >
-            {sortBy === 'alpha' ? <ArrowDownAZ className="w-4 h-4 mr-1.5" /> : <ArrowDownUp className="w-4 h-4 mr-1.5" />}
-            {sortBy === 'alpha' ? 'A→Z Empresa' : 'Mais recente'}
-          </Button>
-        </div>
-
-        {hasActiveFilters && (
-          <p className="text-xs text-muted-foreground">
-            Mostrando <strong>{filtered.length}</strong> de {orders.length} pedidos com os filtros aplicados.
-            {' '}<button onClick={() => { setPeriod('all'); setCityFilters([]); setStatusFilter('Todos'); setSearch(''); }} className="underline text-primary">Limpar filtros</button>
-          </p>
-        )}
         </div>
       </div>
 
@@ -606,7 +567,7 @@ export default function AdminOrders() {
           {sorted.map(order => {
             const u = getClientInfo(order);
             return (
-              <Card key={order.id} className="p-4 border-2 border-slate-300 dark:border-slate-600">
+              <Card key={order.id} className="p-4 border-2 border-slate-400 dark:border-slate-500 shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-slate-900">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
