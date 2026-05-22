@@ -541,22 +541,22 @@ export default function AdminOrders() {
               </div>
             )}
             {/* City quick-select buttons */}
-            {cities.length > 0 && (
-              <div className="flex flex-wrap gap-3">
-                {cities.map(city => {
-                  const active = cityFilters.includes(city);
-                  return (
-                    <button
-                      key={city}
-                      onClick={() => setCityFilters(f => active ? f.filter(c => c !== city) : [...f, city])}
-                      className={`text-sm border-2 rounded-lg px-4 py-2 font-medium transition-all whitespace-nowrap ${active ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'bg-background border-slate-300 dark:border-slate-600 hover:bg-primary hover:text-primary-foreground hover:border-primary'}`}
-                    >
-                      {city}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+             {cities.length > 0 && (
+               <div className="flex gap-2 overflow-x-auto pb-1">
+                 {cities.map(city => {
+                   const active = cityFilters.includes(city);
+                   return (
+                     <button
+                       key={city}
+                       onClick={() => setCityFilters(f => active ? f.filter(c => c !== city) : [...f, city])}
+                       className={`text-xs border rounded-full px-3 py-1 font-medium transition-all whitespace-nowrap shrink-0 ${active ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'bg-background border-slate-300 dark:border-slate-600 hover:bg-primary hover:text-primary-foreground hover:border-primary'}`}
+                     >
+                       {city}
+                     </button>
+                   );
+                 })}
+               </div>
+             )}
           </div>
 
           <Button
