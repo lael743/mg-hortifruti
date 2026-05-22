@@ -501,12 +501,12 @@ export default function AdminOrders() {
       </div>
 
       {/* Period & group filters */}
-      <div className="bg-muted/40 rounded-xl p-3 space-y-3 border">
-        <div className="flex flex-wrap gap-3 items-end">
+      <div className="bg-white dark:bg-slate-950 rounded-xl p-4 space-y-4 border border-border shadow-sm">
+        <div className="flex flex-wrap gap-4 items-end">
           <div className="flex-1 min-w-[180px]">
-            <Label className="text-xs mb-1 block">Período</Label>
+            <Label className="text-xs font-semibold mb-2 block text-foreground">Período</Label>
             <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-10 bg-background"><SelectValue /></SelectTrigger>
               <SelectContent>{PERIOD_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
             </Select>
           </div>
@@ -514,42 +514,42 @@ export default function AdminOrders() {
           {period === 'custom' && (
             <>
               <div>
-                <Label className="text-xs mb-1 block">De</Label>
-                <Input type="date" className="h-9 w-36" value={customStart} onChange={e => setCustomStart(e.target.value)} />
+                <Label className="text-xs font-semibold mb-2 block text-foreground">De</Label>
+                <Input type="date" className="h-10 w-36 bg-background" value={customStart} onChange={e => setCustomStart(e.target.value)} />
               </div>
               <div>
-                <Label className="text-xs mb-1 block">Até</Label>
-                <Input type="date" className="h-9 w-36" value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
+                <Label className="text-xs font-semibold mb-2 block text-foreground">Até</Label>
+                <Input type="date" className="h-10 w-36 bg-background" value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
               </div>
             </>
           )}
 
           <div className="flex-1 min-w-[200px]">
-            <Label className="text-xs mb-1 block">Cidade / Grupo</Label>
+            <Label className="text-xs font-semibold mb-2 block text-foreground">Cidade / Grupo</Label>
             {/* Selected city chips */}
             {cityFilters.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-1">
+              <div className="flex flex-wrap gap-1.5 mb-2">
                 {cityFilters.map(city => (
-                  <span key={city} className="inline-flex items-center gap-1 text-[11px] bg-primary text-primary-foreground rounded-full px-2 py-0.5">
+                  <span key={city} className="inline-flex items-center gap-1 text-xs bg-primary text-primary-foreground rounded-full px-2.5 py-1 font-medium">
                     {city}
                     <button onClick={() => setCityFilters(f => f.filter(c => c !== city))} className="hover:opacity-70">
                       <X className="w-2.5 h-2.5" />
                     </button>
                   </span>
                 ))}
-                <button onClick={() => setCityFilters([])} className="text-[10px] text-muted-foreground underline">limpar</button>
+                <button onClick={() => setCityFilters([])} className="text-xs text-muted-foreground underline hover:text-foreground">Limpar</button>
               </div>
             )}
             {/* City quick-select buttons */}
             {cities.length > 0 && (
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5">
                 {cities.map(city => {
                   const active = cityFilters.includes(city);
                   return (
                     <button
                       key={city}
                       onClick={() => setCityFilters(f => active ? f.filter(c => c !== city) : [...f, city])}
-                      className={`text-[10px] border rounded-full px-2 py-0.5 transition-colors ${active ? 'bg-primary text-primary-foreground border-primary' : 'bg-background hover:bg-primary hover:text-primary-foreground'}`}
+                      className={`text-xs border rounded-full px-2.5 py-1 font-medium transition-all ${active ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'bg-background border-border hover:bg-primary hover:text-primary-foreground hover:border-primary'}`}
                     >
                       {city}
                     </button>
@@ -562,7 +562,7 @@ export default function AdminOrders() {
           <Button
             onClick={() => setShowPurchaseList(true)}
             disabled={filtered.length === 0}
-            className="bg-primary text-primary-foreground h-9 shrink-0"
+            className="h-10 shrink-0"
             title="Compilar lista de compra dos pedidos filtrados"
           >
             <ShoppingBasket className="w-4 h-4 mr-1.5" />
@@ -572,7 +572,7 @@ export default function AdminOrders() {
             onClick={handlePrintAllClients}
             disabled={filtered.length === 0}
             variant="outline"
-            className="h-9 shrink-0"
+            className="h-10 shrink-0"
             title="Imprimir espelho de entrega por cliente (quebra de página por cliente)"
           >
             <Users className="w-4 h-4 mr-1.5" />
@@ -580,7 +580,7 @@ export default function AdminOrders() {
           </Button>
           <Button
             variant={sortBy === 'alpha' ? 'default' : 'outline'}
-            className="h-9 shrink-0"
+            className="h-10 shrink-0"
             onClick={() => setSortBy(s => s === 'alpha' ? 'date' : 'alpha')}
             title="Alternar ordenação"
           >
