@@ -72,7 +72,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-200 dark:bg-slate-950" style={{backgroundColor: '#1e2530'}}>
+    <div className="min-h-screen" style={{backgroundColor: '#e8f5e9', backgroundImage: 'radial-gradient(circle, #b2dfdb 1px, transparent 1px)', backgroundSize: '24px 24px'}}>
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Painel Administrativo</h1>

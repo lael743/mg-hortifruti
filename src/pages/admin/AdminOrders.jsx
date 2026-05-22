@@ -501,7 +501,39 @@ export default function AdminOrders() {
       </div>
 
       {/* Period & group filters */}
-      <div className="bg-white dark:bg-slate-950 rounded-xl p-4 space-y-4 border-2 border-slate-300 dark:border-slate-600 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border-2 border-slate-300 dark:border-slate-600 shadow-sm overflow-hidden">
+        {/* City filter bar — full width top strip */}
+        <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center gap-3">
+          <span className="text-[11px] font-semibold text-muted-foreground shrink-0 uppercase tracking-wide">Cidade</span>
+          {/* Selected chips */}
+          {cityFilters.length > 0 && (
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {cityFilters.map(city => (
+                <span key={city} className="inline-flex items-center gap-1 text-[11px] bg-primary text-primary-foreground rounded-full px-2.5 py-0.5 font-medium">
+                  {city}
+                  <button onClick={() => setCityFilters(f => f.filter(c => c !== city))} className="hover:opacity-70"><X className="w-2.5 h-2.5" /></button>
+                </span>
+              ))}
+              <button onClick={() => setCityFilters([])} className="text-[11px] text-muted-foreground underline hover:text-foreground ml-1">Limpar</button>
+            </div>
+          )}
+          <div className="flex gap-1.5 overflow-x-auto flex-1">
+            {cities.map(city => {
+              const active = cityFilters.includes(city);
+              return (
+                <button
+                  key={city}
+                  onClick={() => setCityFilters(f => active ? f.filter(c => c !== city) : [...f, city])}
+                  className={`text-[11px] border rounded-full px-2.5 py-0.5 font-medium transition-all whitespace-nowrap shrink-0 ${active ? 'bg-primary text-primary-foreground border-primary' : 'border-slate-300 text-muted-foreground hover:bg-primary/10 hover:border-primary'}`}
+                >
+                  {city}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="p-4 space-y-4">
         <div className="flex flex-wrap gap-4 items-end">
           <div className="flex-1 min-w-[180px]">
             <Label className="text-xs font-semibold mb-2 block text-foreground">Período</Label>
@@ -524,40 +556,7 @@ export default function AdminOrders() {
             </>
           )}
 
-          <div className="flex-1 min-w-[200px]">
-            <Label className="text-xs font-semibold mb-2 block text-foreground">Cidade / Grupo</Label>
-            {/* Selected city chips */}
-            {cityFilters.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-3 pb-3 border-b border-border items-center">
-                {cityFilters.map(city => (
-                  <span key={city} className="inline-flex items-center gap-1.5 text-sm bg-primary text-primary-foreground rounded-full px-3 py-1.5 font-medium">
-                    {city}
-                    <button onClick={() => setCityFilters(f => f.filter(c => c !== city))} className="hover:opacity-70">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-                <button onClick={() => setCityFilters([])} className="text-sm text-muted-foreground underline hover:text-foreground">Limpar</button>
-              </div>
-            )}
-            {/* City quick-select buttons */}
-             {cities.length > 0 && (
-               <div className="flex gap-2 overflow-x-auto pb-1">
-                 {cities.map(city => {
-                   const active = cityFilters.includes(city);
-                   return (
-                     <button
-                       key={city}
-                       onClick={() => setCityFilters(f => active ? f.filter(c => c !== city) : [...f, city])}
-                       className={`text-xs border rounded-full px-3 py-1 font-medium transition-all whitespace-nowrap shrink-0 ${active ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'bg-background border-slate-300 dark:border-slate-600 hover:bg-primary hover:text-primary-foreground hover:border-primary'}`}
-                     >
-                       {city}
-                     </button>
-                   );
-                 })}
-               </div>
-             )}
-          </div>
+
 
           <Button
             onClick={() => setShowPurchaseList(true)}
@@ -595,6 +594,7 @@ export default function AdminOrders() {
             {' '}<button onClick={() => { setPeriod('all'); setCityFilters([]); setStatusFilter('Todos'); setSearch(''); }} className="underline text-primary">Limpar filtros</button>
           </p>
         )}
+        </div>
       </div>
 
       {isLoading ? (
