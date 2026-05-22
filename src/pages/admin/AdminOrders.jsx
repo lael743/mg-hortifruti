@@ -714,6 +714,7 @@ export default function AdminOrders() {
           orders={filtered}
           userByEmail={userByEmail}
           periodLabel={periodLabel}
+          companyName={company?.company_name || ''}
           onClose={() => setShowPurchaseList(false)}
         />
       )}

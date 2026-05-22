@@ -24,7 +24,7 @@ function parseWeightKg(weightStr) {
   return unit === 'g' ? val / 1000 : val;
 }
 
-export default function OrderPurchaseListDialog({ orders, userByEmail, periodLabel, onClose }) {
+export default function OrderPurchaseListDialog({ orders, userByEmail, periodLabel, onClose, companyName = '' }) {
   // Aggregate all items across orders
   const consolidated = useMemo(() => {
     const map = {};
@@ -64,58 +64,47 @@ export default function OrderPurchaseListDialog({ orders, userByEmail, periodLab
       const estimatedWeight = i.weight_kg != null ? `~${(i.weight_kg * i.total_qty).toFixed(1)} kg` : '-';
       return `
       <tr>
+        <td style="text-align:center;font-weight:bold;font-size:14px">${i.total_qty}</td>
         <td>${i.product_name}</td>
         <td>${i.packaging_type}${i.weight ? ' · ' + i.weight : ''}</td>
-        <td style="text-align:center;font-weight:bold;font-size:16px">${i.total_qty}</td>
         <td style="text-align:center;color:#666">${estimatedWeight}</td>
-        <td style="text-align:right">R$ ${i.total_value.toFixed(2)}</td>
-        <td style="text-align:center">${i.orders_count}</td>
       </tr>`;
     }).join('');
-
-    const orderNumbers = orders.map(o => o.order_number).join(', ');
-    const clientNames = [...new Set(orders.map(o =>
-      o.customer_display_name || o.customer_name || o.customer_email
-    ))].join(', ');
 
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
       <html><head><title>Lista de Compra Consolidada</title>
       <style>
-        body { font-family: Arial, sans-serif; padding: 24px; color: #222; }
-        h1 { font-size: 20px; margin-bottom: 4px; }
-        .meta { font-size: 13px; color: #555; margin-bottom: 16px; }
+        body { font-family: Arial, sans-serif; padding: 20px; color: #222; }
+        .company { font-size: 16px; font-weight: bold; margin-bottom: 12px; }
+        h1 { font-size: 18px; margin-bottom: 2px; }
+        .meta { font-size: 12px; color: #555; margin-bottom: 12px; }
         .meta p { margin: 2px 0; }
-        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-        th, td { padding: 9px 11px; text-align: left; border: 1px solid #ddd; font-size: 13px; }
-        th { background: #f0f0f0; font-weight: 600; }
-        .total-row { font-weight: bold; background: #f8f8f8; }
-        .summary { margin-top: 16px; text-align: right; font-size: 15px; }
-        .footer { margin-top: 24px; font-size: 11px; color: #999; border-top: 1px solid #eee; padding-top: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th, td { padding: 5px 8px; text-align: left; border: 1px solid #ccc; font-size: 12px; }
+        th { background: #e8e8e8; font-weight: 600; }
+        .total-row { font-weight: bold; background: #f5f5f5; }
+        .footer { margin-top: 16px; font-size: 10px; color: #999; border-top: 1px solid #ddd; padding-top: 6px; }
       </style></head><body>
-      <h1>📋 Lista de Compra Consolidada</h1>
+      ${companyName ? `<div class="company">${companyName}</div>` : ''}
+      <h1>Lista de Compra Consolidada</h1>
       <div class="meta">
          <p><strong>Período / Filtro:</strong> ${periodLabel}</p>
-         <p><strong>Pedidos compilados:</strong> ${orders.length}</p>
-         ${orderNumbers ? `<p><strong>Pedidos #:</strong> ${orderNumbers}</p>` : ''}
-         ${clientNames ? `<p><strong>Clientes:</strong> ${clientNames}</p>` : ''}
+         <p><strong>Total de pedidos:</strong> ${orders.length}</p>
          <p><strong>Gerado em:</strong> ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
        </div>
       <table>
         <tr>
-          <th>Produto</th><th>Embalagem</th>
           <th style="text-align:center">Qtd Total</th>
+          <th>Produto</th>
+          <th>Embalagem</th>
           <th style="text-align:center">Peso Est.</th>
-          <th style="text-align:right">Valor Total</th>
-          <th style="text-align:center">Pedidos</th>
         </tr>
         ${rows}
         <tr class="total-row">
-          <td colspan="2">TOTAL</td>
           <td style="text-align:center">${totalItems}</td>
+          <td colspan="2">TOTAL</td>
           <td style="text-align:center">${hasWeightData ? '~' + totalWeightKg.toFixed(1) + ' kg' : '-'}</td>
-          <td style="text-align:right">R$ ${grandTotal.toFixed(2)}</td>
-          <td style="text-align:center">${orders.length}</td>
         </tr>
       </table>
       <div class="footer">Lista gerada automaticamente pelo sistema de pedidos.</div>
@@ -144,32 +133,26 @@ export default function OrderPurchaseListDialog({ orders, userByEmail, periodLab
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left">
+                     <th className="pb-2 font-semibold text-center">Qtd Total</th>
                      <th className="pb-2 font-semibold">Produto</th>
                      <th className="pb-2 font-semibold">Embalagem</th>
-                     <th className="pb-2 font-semibold text-center">Qtd</th>
                      <th className="pb-2 font-semibold text-center">Peso Est.</th>
-                     <th className="pb-2 font-semibold text-right">Valor</th>
-                     <th className="pb-2 font-semibold text-center">Pedidos</th>
                 </tr>
               </thead>
               <tbody>
                 {consolidated.map((item, idx) => (
                   <tr key={idx} className="border-b hover:bg-muted/30">
-                     <td className="py-2 font-medium">{item.product_name}</td>
-                     <td className="py-2 text-muted-foreground text-xs">{item.packaging_type}{item.weight && ` • ${item.weight}`}</td>
-                     <td className="py-2 text-center font-bold text-primary text-base">{item.total_qty}</td>
-                     <td className="py-2 text-center text-xs text-muted-foreground">{item.weight_kg != null ? `~${(item.weight_kg * item.total_qty).toFixed(1)} kg` : '-'}</td>
-                     <td className="py-2 text-right">R$ {item.total_value.toFixed(2)}</td>
-                     <td className="py-2 text-center text-muted-foreground">{item.orders_count}</td>
+                     <td className="py-1 text-center font-bold text-primary">{item.total_qty}</td>
+                     <td className="py-1 font-medium">{item.product_name}</td>
+                     <td className="py-1 text-muted-foreground text-xs">{item.packaging_type}{item.weight && ` • ${item.weight}`}</td>
+                     <td className="py-1 text-center text-xs text-muted-foreground">{item.weight_kg != null ? `~${(item.weight_kg * item.total_qty).toFixed(1)} kg` : '-'}</td>
                   </tr>
                 ))}
                 <tr className="font-bold bg-muted/50">
-                   <td className="py-2 pl-1">TOTAL</td>
+                   <td className="py-1 text-center text-primary">{totalItems}</td>
+                   <td className="py-1">TOTAL</td>
                    <td />
-                   <td className="py-2 text-center text-primary text-base">{totalItems}</td>
-                   <td className="py-2 text-center text-xs">{hasWeightData ? `~${totalWeightKg.toFixed(1)} kg` : '-'}</td>
-                   <td className="py-2 text-right">R$ {grandTotal.toFixed(2)}</td>
-                   <td className="py-2 text-center">{orders.length}</td>
+                   <td className="py-1 text-center text-xs">{hasWeightData ? `~${totalWeightKg.toFixed(1)} kg` : '-'}</td>
                 </tr>
               </tbody>
             </table>
