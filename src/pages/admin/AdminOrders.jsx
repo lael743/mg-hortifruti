@@ -165,7 +165,8 @@ export default function AdminOrders() {
   });
 
   const updateOrderItemsMutation = useMutation({
-    mutationFn: ({ id, items, total }) => base44.entities.Order.update(id, { items, total }),
+    mutationFn: ({ id, items, total, subtotal, discount_type, discount_value, discount_amount }) =>
+      base44.entities.Order.update(id, { items, total, subtotal, discount_type, discount_value, discount_amount }),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['admin-orders'] });
       toast.success('Pedido atualizado com sucesso');
@@ -302,6 +303,11 @@ export default function AdminOrders() {
                 </tr>
               </tfoot>
             </table>
+            ${order.discount_amount > 0 ? `
+            <div style="text-align:right;margin-top:4px;font-size:11px;color:#555;">
+              Subtotal itens: R$ ${(order.subtotal ?? (order.total + order.discount_amount)).toFixed(2)} &nbsp;|&nbsp;
+              <span style="color:#16a34a;font-weight:bold;">Desconto${order.discount_type === 'percent' ? ` (${order.discount_value}%)` : ''}: - R$ ${order.discount_amount.toFixed(2)}</span>
+            </div>` : ''}
             ${order.notes ? `<p style="margin-top:6px;font-size:11px;color:#666;"><strong>Obs:</strong> ${order.notes}</p>` : ''}
           </div>`;
       }).join('');
@@ -453,6 +459,11 @@ export default function AdminOrders() {
             </tr>
           </tfoot>
         </table>
+        ${order.discount_amount > 0 ? `
+        <div style="text-align:right;margin-top:4px;font-size:11px;color:#555;">
+          Subtotal itens: R$ ${(order.subtotal ?? (order.total + order.discount_amount)).toFixed(2)} &nbsp;|&nbsp;
+          <span style="color:#16a34a;font-weight:bold;">Desconto${order.discount_type === 'percent' ? ` (${order.discount_value}%)` : ''}: - R$ ${order.discount_amount.toFixed(2)}</span>
+        </div>` : ''}
         ${order.notes ? `<p style="margin-top:6px;font-size:11px;color:#666;"><strong>Obs:</strong> ${order.notes}</p>` : ''}
       </div>
       <div class="print-footer">Impresso em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} &nbsp;|&nbsp; ${company?.company_name || ''}</div>
@@ -609,7 +620,14 @@ export default function AdminOrders() {
                     <p className="text-xs text-muted-foreground mt-1">
                       {format(new Date(order.created_date), "dd/MM/yyyy HH:mm", { locale: ptBR })} • {order.items?.length || 0} itens
                     </p>
-                    <p className="font-bold text-primary mt-1">R$ {order.total?.toFixed(2)}</p>
+                    <p className="font-bold text-primary mt-1">
+                      R$ {order.total?.toFixed(2)}
+                      {order.discount_amount > 0 && (
+                        <span className="ml-2 text-xs font-normal text-green-700 bg-green-50 border border-green-200 rounded px-1.5 py-0.5">
+                          🏷️ Desc. R$ {order.discount_amount.toFixed(2)}
+                        </span>
+                      )}
+                    </p>
                   </div>
 
                   <div className="flex gap-1 flex-shrink-0">
@@ -742,7 +760,7 @@ export default function AdminOrders() {
           <OrderEditDialog
             key={freshOrder.id + JSON.stringify(freshOrder.items)}
             order={freshOrder}
-            onSave={({ items, total }) => updateOrderItemsMutation.mutate({ id: freshOrder.id, items, total })}
+            onSave={(payload) => updateOrderItemsMutation.mutate({ id: freshOrder.id, ...payload })}
             onClose={() => setEditingOrder(null)}
           />
         );

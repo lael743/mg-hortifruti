@@ -173,8 +173,23 @@ export default function OrderDetail() {
             </tbody>
           </table>
 
-          <div className="total text-right mt-4 pt-4 border-t">
-            <span className="text-2xl font-extrabold text-primary">R$ {order.total?.toFixed(2)}</span>
+          <div className="mt-4 pt-4 border-t space-y-1">
+            {order.discount_amount > 0 && (
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Subtotal dos itens:</span>
+                <span>R$ {(order.subtotal ?? (order.total + order.discount_amount)).toFixed(2)}</span>
+              </div>
+            )}
+            {order.discount_amount > 0 && (
+              <div className="flex justify-between text-sm text-green-700 font-medium">
+                <span>🏷️ Desconto{order.discount_type === 'percent' ? ` (${order.discount_value}%)` : ''}:</span>
+                <span>− R$ {order.discount_amount.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between total">
+              <span className="font-bold">Total:</span>
+              <span className="text-2xl font-extrabold text-primary">R$ {order.total?.toFixed(2)}</span>
+            </div>
           </div>
 
           {order.notes && (

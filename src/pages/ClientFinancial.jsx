@@ -64,7 +64,10 @@ export default function ClientFinancial() {
         <td>#${o.order_number || o.id.slice(-6)}</td>
         <td>${o.items?.length || 0} itens</td>
         <td>${o.status}</td>
-        <td style="text-align:right"><strong>R$ ${o.total?.toFixed(2)}</strong></td>
+        <td style="text-align:right">
+          <strong>R$ ${o.total?.toFixed(2)}</strong>
+          ${o.discount_amount > 0 ? `<br/><span style="font-size:10px;color:#16a34a;">🏷️ Desc. R$ ${o.discount_amount.toFixed(2)}</span>` : ''}
+        </td>
       </tr>
     `).join('');
 
@@ -173,7 +176,14 @@ export default function ClientFinancial() {
                     <td className="px-4 py-3">
                       <Badge className={`${statusColors[order.status]} border text-[10px]`}>{order.status}</Badge>
                     </td>
-                    <td className="px-4 py-3 text-right font-bold text-primary">R$ {order.total?.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-primary">
+                      R$ {order.total?.toFixed(2)}
+                      {order.discount_amount > 0 && (
+                        <span className="block text-[10px] text-green-600 font-normal">
+                          🏷️ -{order.discount_type === 'percent' ? `${order.discount_value}%` : `R$ ${order.discount_amount.toFixed(2)}`}
+                        </span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

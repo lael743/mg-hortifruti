@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Pencil, Check, X, Trash2, ArrowLeftRight, PackagePlus, Minus, Plus, Gift } from 'lucide-react';
+import { Pencil, Check, X, Trash2, ArrowLeftRight, PackagePlus, Minus, Plus, Gift, Tag } from 'lucide-react';
 import AddOrderItemModal from './AddOrderItemModal';
 import BonusItemModal from './BonusItemModal';
 
@@ -21,6 +21,10 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
   const [replaceSearch, setReplaceSearch] = useState('');
   const [showAddItems, setShowAddItems] = useState(false);
   const [showBonusModal, setShowBonusModal] = useState(false);
+  const [discountType, setDiscountType] = useState(order.discount_type || 'percent');
+  const [discountInput, setDiscountInput] = useState(
+    order.discount_value != null && order.discount_value > 0 ? String(order.discount_value) : ''
+  );
 
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
@@ -91,9 +95,14 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
   };
 
   // --- Totals --- (bonus items are excluded from total)
-  const newTotal = items.reduce((sum, item) => item.is_bonus ? sum : sum + (item.final_unit_price * item.quantity), 0);
+  const itemsSubtotal = items.reduce((sum, item) => item.is_bonus ? sum : sum + (item.final_unit_price * item.quantity), 0);
+  const discountInputNum = parseFloat(discountInput) || 0;
+  const discountAmount = discountInput && discountInputNum > 0
+    ? (discountType === 'percent' ? itemsSubtotal * (discountInputNum / 100) : Math.min(discountInputNum, itemsSubtotal))
+    : 0;
+  const newTotal = Math.max(0, itemsSubtotal - discountAmount);
   const originalItems = order.items || [];
-  const originalTotal = originalItems.reduce((sum, item) => sum + ((item.unit_price ?? 0) * item.quantity), 0);
+  const originalTotal = order.total ?? originalItems.reduce((sum, item) => sum + ((item.unit_price ?? 0) * item.quantity), 0);
 
   const changeQty = (idx, delta) => {
     setItems(prev => prev.map((item, i) => {
@@ -110,6 +119,8 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
 
   const hasChanges = (() => {
     if (items.length !== originalItems.length) return true;
+    const discountChanged = discountAmount !== (order.discount_amount ?? 0);
+    if (discountChanged) return true;
     return items.some((item, i) => {
       const orig = originalItems[i];
       return !orig || item.quantity !== orig.quantity || item.final_unit_price !== (orig.final_unit_price ?? orig.unit_price) || item.product_id !== orig.product_id;
@@ -117,7 +128,14 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
   })();
 
   const handleSave = () => {
-    onSave({ items, total: newTotal });
+    onSave({
+      items,
+      subtotal: itemsSubtotal,
+      discount_type: discountAmount > 0 ? discountType : null,
+      discount_value: discountAmount > 0 ? discountInputNum : 0,
+      discount_amount: discountAmount,
+      total: newTotal,
+    });
   };
 
   const handleAddItems = (newItems) => {
@@ -292,9 +310,63 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
           })}
         </div>
 
+        {/* Discount section */}
+        <div className="mt-3 pt-3 border-t">
+          <div className="flex items-center gap-2 mb-2">
+            <Tag className="w-4 h-4 text-primary" />
+            <span className="text-sm font-semibold">Desconto no pedido</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-md border overflow-hidden shrink-0">
+              <button
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${discountType === 'percent' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}
+                onClick={() => setDiscountType('percent')}
+              >% Porcentagem</button>
+              <button
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${discountType === 'value' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}
+                onClick={() => setDiscountType('value')}
+              >R$ Valor fixo</button>
+            </div>
+            <div className="relative flex-1 max-w-[140px]">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                {discountType === 'percent' ? '%' : 'R$'}
+              </span>
+              <Input
+                type="number" min="0" step="0.01"
+                value={discountInput}
+                onChange={e => setDiscountInput(e.target.value)}
+                className="pl-7 h-8 text-sm"
+                placeholder="0"
+              />
+            </div>
+            {discountInput && parseFloat(discountInput) > 0 && (
+              <button onClick={() => setDiscountInput('')} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+            {discountAmount > 0 && (
+              <span className="text-sm font-semibold text-green-700">
+                − R$ {discountAmount.toFixed(2)}
+              </span>
+            )}
+          </div>
+        </div>
+
         {/* Totals summary */}
-        <div className="mt-2 pt-3 border-t space-y-1 text-sm">
-          {hasChanges && (
+        <div className="mt-3 pt-3 border-t space-y-1 text-sm">
+          {discountAmount > 0 && (
+            <div className="flex justify-between text-muted-foreground">
+              <span>Subtotal dos itens:</span>
+              <span>R$ {itemsSubtotal.toFixed(2)}</span>
+            </div>
+          )}
+          {discountAmount > 0 && (
+            <div className="flex justify-between text-green-700 font-medium">
+              <span>Desconto ({discountType === 'percent' ? `${discountInputNum}%` : 'valor fixo'}):</span>
+              <span>− R$ {discountAmount.toFixed(2)}</span>
+            </div>
+          )}
+          {hasChanges && !discountAmount && (
             <div className="flex justify-between text-muted-foreground">
               <span>Total original:</span>
               <span className="line-through">R$ {originalTotal.toFixed(2)}</span>
@@ -302,9 +374,9 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
           )}
           <div className="flex justify-between font-bold text-base">
             <span>Total do pedido:</span>
-            <span className={hasChanges ? 'text-amber-700' : ''}>R$ {newTotal.toFixed(2)}</span>
+            <span className={hasChanges ? (discountAmount > 0 ? 'text-green-700' : 'text-amber-700') : ''}>R$ {newTotal.toFixed(2)}</span>
           </div>
-          {hasChanges && (
+          {hasChanges && !discountAmount && (
             <div className="flex justify-between text-xs text-amber-600">
               <span>Diferença:</span>
               <span>{newTotal < originalTotal ? '-' : '+'}R$ {Math.abs(newTotal - originalTotal).toFixed(2)}</span>

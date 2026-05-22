@@ -53,9 +53,31 @@
         }
       }
     },
+    "subtotal": {
+      "type": "number",
+      "description": "Subtotal dos itens antes do desconto"
+    },
+    "discount_type": {
+      "type": "string",
+      "enum": [
+        "value",
+        "percent"
+      ],
+      "description": "Tipo do desconto: valor fixo ou percentual"
+    },
+    "discount_value": {
+      "type": "number",
+      "description": "Valor do desconto (em R$ se type=value, ou % se type=percent)",
+      "default": 0
+    },
+    "discount_amount": {
+      "type": "number",
+      "description": "Valor monet\u00e1rio do desconto aplicado (sempre em R$)",
+      "default": 0
+    },
     "total": {
       "type": "number",
-      "description": "Valor total do pedido"
+      "description": "Valor total do pedido (ap\u00f3s desconto)"
     },
     "status": {
       "type": "string",

@@ -68,12 +68,14 @@ export default function AdminReports() {
 
   const handleExportCSV = () => {
     const rows = [
-      ['Data', 'Cliente', 'Email', 'Status', 'Total', 'Itens'],
+      ['Data', 'Cliente', 'Email', 'Status', 'Subtotal', 'Desconto', 'Total', 'Itens'],
       ...filtered.map(o => [
         format(new Date(o.created_date), 'dd/MM/yyyy HH:mm'),
         o.customer_name || '',
         o.customer_email || '',
         o.status || '',
+        (o.subtotal ?? o.total ?? 0).toFixed(2),
+        (o.discount_amount || 0).toFixed(2),
         (o.total || 0).toFixed(2),
         (o.items || []).map(i => `${i.quantity}x ${i.product_name}`).join('; '),
       ])
@@ -96,7 +98,10 @@ export default function AdminReports() {
         <td>${userByEmail[o.customer_email]?.company_name || o.customer_name || o.customer_email}</td>
         <td>${o.status}</td>
         <td>${(o.items || []).length} item(s)</td>
-        <td style="text-align:right">R$ ${(o.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+        <td style="text-align:right">
+          R$ ${(o.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          ${o.discount_amount > 0 ? `<br/><span style="font-size:10px;color:#16a34a;">🏷️ Desc. -R$ ${o.discount_amount.toFixed(2)}</span>` : ''}
+        </td>
       </tr>
     `).join('');
     const html = `
@@ -251,6 +256,11 @@ export default function AdminReports() {
                       </td>
                       <td className="p-3 text-right font-semibold text-primary">
                         R$ {(order.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {order.discount_amount > 0 && (
+                          <span className="block text-[10px] text-green-600 font-normal">
+                            🏷️ − R$ {order.discount_amount.toFixed(2)}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
