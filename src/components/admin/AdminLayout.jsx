@@ -72,7 +72,8 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Painel Administrativo</h1>
         <div className="flex gap-2">
@@ -155,6 +156,7 @@ export default function AdminLayout() {
       </div>
 
       <Outlet context={{ user }} />
-    </div>
-  );
-}
+      </div>
+      </div>
+      );
+      }
