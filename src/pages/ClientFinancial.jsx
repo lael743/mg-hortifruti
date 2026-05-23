@@ -45,6 +45,25 @@ export default function ClientFinancial() {
     enabled: !!user,
   });
 
+  const { data: priceGroups = [] } = useQuery({
+    queryKey: ['price-groups'],
+    queryFn: () => base44.entities.PriceGroup.list(),
+    enabled: !!user,
+  });
+  const userPriceGroup = user?.price_group_id
+    ? priceGroups.find(g => g.id === user.price_group_id)
+    : null;
+
+  const { data: customPrices = [] } = useQuery({
+    queryKey: ['custom-prices-catalog', userPriceGroup?.id],
+    queryFn: () => base44.entities.CustomPrice.filter({ price_group_id: userPriceGroup.id }),
+    enabled: !!userPriceGroup && userPriceGroup.type === 'custom',
+  });
+
+  const customPriceMap = userPriceGroup?.type === 'custom'
+    ? Object.fromEntries(customPrices.map(cp => [cp.product_id, cp.custom_price]))
+    : {};
+
   const stats = useMemo(() => {
     const active = orders.filter(o => o.status !== 'Cancelado');
     const entregue = orders.filter(o => o.status === 'Entregue');
@@ -209,7 +228,8 @@ export default function ClientFinancial() {
           myOrders={orders}
           allOrders={allOrders}
           isLoggedIn={true}
-          priceGroup={null}
+          priceGroup={userPriceGroup}
+          customPriceMap={customPriceMap}
           maxPerSection={4}
         />
       )}
