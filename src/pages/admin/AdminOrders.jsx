@@ -234,14 +234,19 @@ export default function AdminOrders() {
       </div>`;
 
   const handlePrintAllClients = () => {
-    // Group filtered orders by customer_email
+    // Group orders respecting the current sort order (sorted already applies date or alpha)
     const grouped = {};
-    filtered.forEach(order => {
-      if (!grouped[order.customer_email]) grouped[order.customer_email] = [];
+    const emailOrder = [];
+    sorted.forEach(order => {
+      if (!grouped[order.customer_email]) {
+        grouped[order.customer_email] = [];
+        emailOrder.push(order.customer_email);
+      }
       grouped[order.customer_email].push(order);
     });
 
-    const clientPages = Object.entries(grouped).map(([email, clientOrders], index) => {
+    const clientPages = emailOrder.map((email, index) => {
+      const clientOrders = grouped[email];
       const u = getClientInfo(clientOrders[0]);
       const companyHeader = buildCompanyHeader(u.salesperson_name, u.salesperson_whatsapp);
       const orderBlocks = clientOrders.map(order => {
