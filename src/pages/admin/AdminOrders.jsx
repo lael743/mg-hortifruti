@@ -52,7 +52,7 @@ export default function AdminOrders() {
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['admin-orders'],
-    queryFn: () => base44.entities.Order.list('-created_date'),
+    queryFn: () => base44.entities.Order.list('-created_date', 5000),
   });
 
   const { data: settings = [] } = useQuery({
