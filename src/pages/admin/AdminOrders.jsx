@@ -185,8 +185,9 @@ export default function AdminOrders() {
 
     const matchStatus = statusFilter === 'Todos' || o.status === statusFilter;
 
-    const orderDate = new Date(o.created_date);
-    const matchPeriod = (!periodStart || orderDate >= periodStart) && (!periodEnd || orderDate <= periodEnd);
+    // Converte a data do pedido para o fuso local (Campo Grande UTC-4) antes de comparar
+    const orderDateLocal = new Date(new Date(o.created_date).toLocaleString('en-US', { timeZone: 'America/Campo_Grande' }));
+    const matchPeriod = (!periodStart || orderDateLocal >= periodStart) && (!periodEnd || orderDateLocal <= periodEnd);
 
     const matchGroup = cityFilters.length === 0 ||
       cityFilters.some(f =>
