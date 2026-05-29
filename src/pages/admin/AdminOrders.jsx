@@ -250,7 +250,7 @@ export default function AdminOrders() {
       const u = getClientInfo(clientOrders[0]);
       const companyHeader = buildCompanyHeader(u.salesperson_name, u.salesperson_whatsapp);
       const orderBlocks = clientOrders.map(order => {
-        const itemsRows = (order.items || []).map(item => {
+        const itemsRows = [...(order.items || [])].sort((a, b) => (a.product_name || '').localeCompare(b.product_name || '', 'pt-BR')).map(item => {
            const effPrice = item.final_unit_price ?? item.unit_price;
            // Somente destaca como desconto se o preço final for MENOR que o original
            const isDisc = item.final_unit_price != null && item.final_unit_price < item.unit_price;
