@@ -270,7 +270,7 @@ export default function AdminOrders() {
           <div class="order-block">
             <div class="order-header">
               <span>Pedido #${order.order_number || '—'}</span>
-              <span>${format(new Date(order.created_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+              <span>${new Date(order.created_date).toLocaleString('pt-BR', { timeZone: 'America/Campo_Grande', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
               <span class="status-badge status-${order.status}">${order.status}</span>
             </div>
             <table>
@@ -318,7 +318,7 @@ export default function AdminOrders() {
           </div>
           ${orderBlocks}
           <div class="client-total">Total geral do cliente: <strong>R$ ${clientTotal.toFixed(2)}</strong> (${clientOrders.length} pedido${clientOrders.length > 1 ? 's' : ''})</div>
-          <div class="print-footer">Impresso em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} &nbsp;|&nbsp; ${company?.company_name || ''}</div>
+          <div class="print-footer">Impresso em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Campo_Grande', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} &nbsp;|&nbsp; ${company?.company_name || ''}</div>
         </div>`;
     }).join('');
 
