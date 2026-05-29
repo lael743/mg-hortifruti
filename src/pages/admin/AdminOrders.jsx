@@ -368,7 +368,7 @@ export default function AdminOrders() {
   const handlePrintSeparation = (order) => {
     const u = getClientInfo(order);
 
-    const itemsRows = (order.items || []).map(item => {
+    const itemsRows = [...(order.items || [])].sort((a, b) => (a.product_name || '').localeCompare(b.product_name || '', 'pt-BR')).map(item => {
       const ep = item.final_unit_price ?? item.unit_price;
       // Somente destaca como desconto se o preço final for MENOR que o original
       const isDisc = item.final_unit_price != null && item.final_unit_price < item.unit_price;
