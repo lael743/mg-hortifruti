@@ -1,0 +1,37 @@
+{
+  "name": "Supplier",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do fornecedor"
+    },
+    "cnpj_cpf": {
+      "type": "string",
+      "description": "CNPJ ou CPF"
+    },
+    "contact_name": {
+      "type": "string",
+      "description": "Nome do contato"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefone / WhatsApp"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

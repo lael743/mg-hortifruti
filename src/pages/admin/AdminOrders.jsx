@@ -312,7 +312,7 @@ export default function AdminOrders() {
               <h3 style="margin:0;">${u.company_name || u.full_name || email}</h3>
               ${buildCityBadge(u.city, u.state)}
             </div>
-            ${u.company_name ? `<p><strong>Contato:</strong> ${u.full_name}</p>` : ''}
+            ${u.company_name && u.full_name ? `<p><strong>Contato:</strong> ${u.full_name}</p>` : ''}
             ${u.cnpj_cpf ? `<p><strong>CNPJ/CPF:</strong> ${u.cnpj_cpf}</p>` : ''}
             ${u.address ? `<p><strong>Endereço:</strong> ${u.address}${u.city ? `, ${u.city}` : ''}${u.state ? ` - ${u.state}` : ''}</p>` : ''}
             ${u.whatsapp ? `<p><strong>WhatsApp:</strong> ${u.whatsapp}</p>` : ''}
@@ -417,7 +417,7 @@ export default function AdminOrders() {
           <h3 style="margin:0;">${u.company_name || u.full_name || order.customer_email}</h3>
           ${buildCityBadge(u.city, u.state)}
         </div>
-        ${u.company_name ? `<p><strong>Contato:</strong> ${u.full_name}</p>` : ''}
+        ${u.company_name && u.full_name ? `<p><strong>Contato:</strong> ${u.full_name}</p>` : ''}
         ${u.cnpj_cpf ? `<p><strong>CNPJ/CPF:</strong> ${u.cnpj_cpf}</p>` : ''}
         ${u.address ? `<p><strong>Endereço:</strong> ${u.address}${u.city ? `, ${u.city}` : ''}${u.state ? ` - ${u.state}` : ''}</p>` : ''}
         ${u.whatsapp ? `<p><strong>WhatsApp:</strong> ${u.whatsapp}</p>` : ''}

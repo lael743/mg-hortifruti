@@ -1,0 +1,99 @@
+{
+  "name": "Transaction",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "entrada",
+        "saida",
+        "pagamento_fornecedor",
+        "despesa",
+        "boleto",
+        "cheque"
+      ],
+      "description": "Tipo da transa\u00e7\u00e3o"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Valor da transa\u00e7\u00e3o"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data da transa\u00e7\u00e3o"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de vencimento (boletos, cheques)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o da transa\u00e7\u00e3o"
+    },
+    "category_id": {
+      "type": "string",
+      "description": "ID da categoria"
+    },
+    "category_name": {
+      "type": "string",
+      "description": "Nome da categoria (desnormalizado)"
+    },
+    "supplier_name": {
+      "type": "string",
+      "description": "Nome do fornecedor"
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "Email do cliente (cr\u00e9dito/d\u00e9bito)"
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Nome do cliente"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "dinheiro",
+        "pix",
+        "cartao_credito",
+        "cartao_debito",
+        "cheque",
+        "boleto",
+        "transferencia"
+      ],
+      "description": "M\u00e9todo de pagamento"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pendente",
+        "pago",
+        "compensado",
+        "vencido",
+        "cancelado"
+      ],
+      "default": "pendente",
+      "description": "Status da transa\u00e7\u00e3o"
+    },
+    "document_number": {
+      "type": "string",
+      "description": "N\u00famero do documento (boleto, cheque, NF)"
+    },
+    "bank": {
+      "type": "string",
+      "description": "Banco / conta de origem ou destino"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "type",
+    "amount",
+    "date",
+    "description"
+  ]
+}
