@@ -65,14 +65,14 @@ export function printPriceTable({ products, priceGroup, customPrices, clientOrde
 
     const cellStyle = "height:22px;max-height:22px;overflow:hidden;border:1px solid #ddd;padding:0 3px;";
     return `<tr style="${rowStyle}">
-       <td style="${cellStyle}">
-         <div style="font-weight:bold;font-size:10px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;">${p.name}</div>
-         <div style="color:#666;font-size:7px;white-space:nowrap;">${p.packaging_type}${p.weight ? ' · ' + p.weight : ''}</div>
-       </td>
+       <td style="${cellStyle}width:32px;"><div style="border-bottom:1px solid #aaa;height:10px;margin-top:6px;"></div></td>
+       ${ultCol}
        <td style="${cellStyle}text-align:center;white-space:nowrap;">${priceHtml}</td>
        <td style="${cellStyle}text-align:center;white-space:nowrap;">${pricePerUnitHtml}</td>
-       ${ultCol}
-       <td style="${cellStyle}width:32px;"><div style="border-bottom:1px solid #aaa;height:10px;margin-top:6px;"></div></td>
+       <td style="${cellStyle}">
+         <div style="font-weight:bold;font-size:10px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">${p.name}</div>
+         <div style="color:#666;font-size:7px;white-space:nowrap;">${p.packaging_type}${p.weight ? ' · ' + p.weight : ''}</div>
+       </td>
      </tr>`;
   };
 
@@ -90,11 +90,11 @@ export function printPriceTable({ products, priceGroup, customPrices, clientOrde
     : '';
 
   const theadRow = `<tr style="background:#2d7a3a;color:#fff;">
-  <th style="padding:3px 4px;text-align:left;font-size:7px;">PRODUTO</th>
+  <th style="padding:3px 4px;font-size:7px;">QTD</th>
+  ${hasClientData ? `<th style="padding:3px 4px;font-size:7px;" title="Qtd última compra">ÚLT.</th>` : ''}
   <th style="padding:3px 4px;font-size:7px;">PREÇO</th>
   <th style="padding:3px 4px;font-size:7px;">R$/KG·UN</th>
-  ${hasClientData ? `<th style="padding:3px 4px;font-size:7px;" title="Qtd última compra">ÚLT.</th>` : ''}
-  <th style="padding:3px 4px;font-size:7px;">QTD</th>
+  <th style="padding:3px 4px;text-align:left;font-size:7px;">PRODUTO</th>
   </tr>`;
 
   let tableRows = '';
