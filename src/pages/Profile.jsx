@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User, Building2, Phone, MapPin, FileText, Save, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import CityAutocomplete from '@/components/common/CityAutocomplete';
 
 const STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
@@ -137,7 +138,7 @@ export default function Profile() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs mb-1 block">Cidade</Label>
-                <Input value={form.city} onChange={set('city')} placeholder="Cidade" />
+                <CityAutocomplete value={form.city} onChange={(v) => setForm(f => ({ ...f, city: v }))} state={form.state} placeholder="Cidade" />
               </div>
               <div>
                 <Label className="text-xs mb-1 block">Estado</Label>

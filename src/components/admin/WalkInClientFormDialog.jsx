@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import CityAutocomplete from '@/components/common/CityAutocomplete';
 
 const STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
@@ -114,7 +115,7 @@ export default function WalkInClientFormDialog({ client, onClose, onSaved }) {
             </div>
             <div>
               <Label className="text-xs">Cidade</Label>
-              <Input value={form.city} onChange={e => set('city', e.target.value)} />
+              <CityAutocomplete value={form.city} onChange={v => set('city', v)} state={form.state} />
             </div>
             <div>
               <Label className="text-xs">Estado</Label>

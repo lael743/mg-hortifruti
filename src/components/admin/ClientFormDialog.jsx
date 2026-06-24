@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
+import CityAutocomplete from '@/components/common/CityAutocomplete';
 
 const STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
@@ -137,7 +138,7 @@ export default function ClientFormDialog({ client, onClose, onSaved }) {
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2">
               <Label>Cidade</Label>
-              <Input value={form.city} onChange={(e) => set('city', e.target.value)} placeholder="Ex: São Paulo" />
+              <CityAutocomplete value={form.city} onChange={(v) => set('city', v)} state={form.state} placeholder="Ex: São Paulo" />
             </div>
             <div>
               <Label>Estado</Label>

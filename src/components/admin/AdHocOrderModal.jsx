@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 import { X, Trash2, ShoppingCart, UserPlus, MapPin, Phone, FileText, Store, User } from 'lucide-react';
+import CityAutocomplete from '@/components/common/CityAutocomplete';
 
 const STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
@@ -254,7 +255,7 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
                       <div><Label className="text-xs">CNPJ / CPF</Label><Input value={clientData.cnpj_cpf} onChange={e => setClientData(p=>({...p,cnpj_cpf:e.target.value}))} /></div>
                       <div><Label className="text-xs">WhatsApp / Telefone</Label><Input value={clientData.whatsapp} onChange={e => setClientData(p=>({...p,whatsapp:e.target.value}))} /></div>
                       <div><Label className="text-xs">Endereço</Label><Input value={clientData.address} onChange={e => setClientData(p=>({...p,address:e.target.value}))} /></div>
-                      <div><Label className="text-xs">Cidade</Label><Input value={clientData.city} onChange={e => setClientData(p=>({...p,city:e.target.value}))} /></div>
+                      <div><Label className="text-xs">Cidade</Label><CityAutocomplete value={clientData.city} onChange={v => setClientData(p=>({...p,city:v}))} state={clientData.state} /></div>
                       <div>
                         <Label className="text-xs">Estado</Label>
                         <Select value={clientData.state} onValueChange={v => setClientData(p=>({...p,state:v}))}>

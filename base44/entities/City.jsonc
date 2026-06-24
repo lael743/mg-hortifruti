@@ -1,0 +1,40 @@
+{
+  "name": "City",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome da cidade (normalizado)"
+    },
+    "state": {
+      "type": "string",
+      "description": "Estado (UF)"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Cidade ativa para uso"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

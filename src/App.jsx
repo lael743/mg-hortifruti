@@ -23,6 +23,7 @@ import AdminChat from './pages/admin/AdminChat';
 import AdminBackup from './pages/admin/AdminBackup';
 import AdminCampaign from './pages/admin/AdminCampaign';
 import AdminSalespersons from './pages/admin/AdminSalespersons';
+import AdminCities from './pages/admin/AdminCities';
 import ClientFinancial from './pages/ClientFinancial';
 
 import Profile from './pages/Profile';
@@ -76,6 +77,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/backup" element={<AdminBackup />} />
           <Route path="/admin/campaign" element={<AdminCampaign />} />
           <Route path="/admin/salespersons" element={<AdminSalespersons />} />
+          <Route path="/admin/cities" element={<AdminCities />} />
         </Route>
       </Route>
       <Route element={<FinancialLayout />}>
