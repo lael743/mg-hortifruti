@@ -15,7 +15,7 @@ const STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG'
 const EMPTY_CLIENT = {
   full_name: '', company_name: '', cnpj_cpf: '',
   whatsapp: '', address: '', city: '', state: '',
-  price_group_id: '', price_group_name: '', salesperson_id: '', notes: '',
+  email: '', price_group_id: '', price_group_name: '', salesperson_id: '', notes: '',
 };
 
 export default function AdHocOrderModal({ onClose, onSaved }) {
@@ -84,6 +84,7 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
       address: c.address || '',
       city: c.city || '',
       state: c.state || '',
+      email: c.email || '',
       price_group_id: c.price_group_id || '',
       price_group_name: c.price_group_name || '',
       salesperson_id: c.salesperson_id || '',

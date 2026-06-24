@@ -20,9 +20,9 @@ Deno.serve(async (req) => {
         let customerDisplayName = client_data.company_name || client_data.full_name;
         let finalWalkInClientId = walk_in_client_id || null;
 
-        if (client_type === 'direct' && client_data.email) {
-            // Cliente direto (usuário cadastrado) — usa o email real
-            customerEmail = client_data.email;
+        if (client_type === 'direct') {
+            // Cliente direto (usuário cadastrado) — usa o email real, NUNCA cria WalkInClient
+            customerEmail = client_data.email || `direto_${walk_in_client_id || 'sem_email'}@pedido.local`;
             finalWalkInClientId = null;
         } else if (client_type === 'walk_in' || (!client_type && walk_in_client_id)) {
             // Cliente avulso — salva/atualiza WalkInClient
