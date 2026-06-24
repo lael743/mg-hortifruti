@@ -13,8 +13,8 @@ import { Link as RouterLink } from 'react-router-dom';
 
 const tabs = [
   { label: 'Dashboard', path: '/admin/dashboard', icon: BarChart2 },
-  { label: 'Produtos', path: '/admin', icon: Package },
-  { label: 'Pedidos', path: '/admin/orders', icon: ClipboardList },
+  { label: 'Pedidos', path: '/admin', icon: ClipboardList },
+  { label: 'Produtos', path: '/admin/products', icon: Package },
   { label: 'Clientes', path: '/admin/clients', icon: Users },
   { label: 'Tabelas', path: '/admin/price-groups', icon: Tag },
   { label: 'Relatórios', path: '/admin/reports', icon: FileText },
