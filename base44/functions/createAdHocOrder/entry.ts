@@ -5,41 +5,66 @@ Deno.serve(async (req) => {
         const base44 = createClientFromRequest(req);
         const user = await base44.auth.me();
 
-        if (user?.role !== 'admin') {
-            return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { walk_in_client_id, client_data, items, total, notes } = await req.json();
+        const { walk_in_client_id, client_type, client_data, items, total, notes } = await req.json();
 
         if (!client_data?.full_name) {
             return Response.json({ error: 'Nome do cliente é obrigatório' }, { status: 400 });
         }
 
-        // Salva ou atualiza o WalkInClient
-        let walkInClientId = walk_in_client_id;
-        let clientName = client_data.full_name;
-        let clientDisplayName = client_data.company_name || client_data.full_name;
+        let customerEmail;
+        let customerName = client_data.full_name;
+        let customerDisplayName = client_data.company_name || client_data.full_name;
+        let finalWalkInClientId = walk_in_client_id || null;
 
-        const clientPayload = {
-            full_name: client_data.full_name,
-            company_name: client_data.company_name || '',
-            cnpj_cpf: client_data.cnpj_cpf || '',
-            whatsapp: client_data.whatsapp || '',
-            address: client_data.address || '',
-            city: client_data.city || '',
-            state: client_data.state || '',
-            price_group_id: client_data.price_group_id || '',
-            price_group_name: client_data.price_group_name || '',
-            notes: client_data.notes || '',
-        };
+        if (client_type === 'direct' && client_data.email) {
+            // Cliente direto (usuário cadastrado) — usa o email real
+            customerEmail = client_data.email;
+            finalWalkInClientId = null;
+        } else if (client_type === 'walk_in' || (!client_type && walk_in_client_id)) {
+            // Cliente avulso — salva/atualiza WalkInClient
+            const clientPayload = {
+                full_name: client_data.full_name,
+                company_name: client_data.company_name || '',
+                cnpj_cpf: client_data.cnpj_cpf || '',
+                whatsapp: client_data.whatsapp || '',
+                address: client_data.address || '',
+                city: client_data.city || '',
+                state: client_data.state || '',
+                price_group_id: client_data.price_group_id || '',
+                price_group_name: client_data.price_group_name || '',
+                notes: client_data.notes || '',
+            };
 
-        if (walkInClientId) {
-            // Atualiza cliente existente
-            await base44.asServiceRole.entities.WalkInClient.update(walkInClientId, clientPayload);
+            if (walk_in_client_id) {
+                await base44.asServiceRole.entities.WalkInClient.update(walk_in_client_id, clientPayload);
+            } else {
+                const newClient = await base44.asServiceRole.entities.WalkInClient.create(clientPayload);
+                finalWalkInClientId = newClient.id;
+            }
+
+            customerEmail = `avulso_${finalWalkInClientId}@pedido.local`;
         } else {
-            // Cria novo cliente avulso
+            // Novo cliente avulso sem ID prévio
+            const clientPayload = {
+                full_name: client_data.full_name,
+                company_name: client_data.company_name || '',
+                cnpj_cpf: client_data.cnpj_cpf || '',
+                whatsapp: client_data.whatsapp || '',
+                address: client_data.address || '',
+                city: client_data.city || '',
+                state: client_data.state || '',
+                price_group_id: client_data.price_group_id || '',
+                price_group_name: client_data.price_group_name || '',
+                notes: client_data.notes || '',
+            };
+
             const newClient = await base44.asServiceRole.entities.WalkInClient.create(clientPayload);
-            walkInClientId = newClient.id;
+            finalWalkInClientId = newClient.id;
+            customerEmail = `avulso_${finalWalkInClientId}@pedido.local`;
         }
 
         // Gerar próximo número de pedido
@@ -48,15 +73,12 @@ Deno.serve(async (req) => {
             ? lastOrders[0].order_number + 1
             : 1;
 
-        // Email fictício único por cliente avulso para manter compatibilidade com a entidade Order
-        const pseudoEmail = `avulso_${walkInClientId}@pedido.local`;
-
         const newOrder = await base44.asServiceRole.entities.Order.create({
             order_number: nextOrderNumber,
-            customer_email: pseudoEmail,
-            customer_name: clientName,
-            customer_display_name: clientDisplayName,
-            walk_in_client_id: walkInClientId,
+            customer_email: customerEmail,
+            customer_name: customerName,
+            customer_display_name: customerDisplayName,
+            walk_in_client_id: finalWalkInClientId,
             items: items,
             total: total,
             status: 'Confirmado',
@@ -67,8 +89,8 @@ Deno.serve(async (req) => {
         await base44.asServiceRole.entities.ContasAReceber.create({
             order_id: newOrder.id,
             order_number: newOrder.order_number,
-            customer_email: pseudoEmail,
-            customer_name: clientDisplayName,
+            customer_email: customerEmail,
+            customer_name: customerDisplayName,
             total_amount: total,
             delivery_date: new Date().toISOString().split('T')[0],
             status: 'pendente_definicao',
@@ -77,7 +99,7 @@ Deno.serve(async (req) => {
             installments: [],
         });
 
-        return Response.json({ success: true, order: newOrder, walk_in_client_id: walkInClientId });
+        return Response.json({ success: true, order: newOrder, walk_in_client_id: finalWalkInClientId });
     } catch (error) {
         console.error('Error creating ad-hoc order:', error);
         return Response.json({ error: error.message }, { status: 500 });
