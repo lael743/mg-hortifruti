@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
-import { X, Trash2, ShoppingCart, UserPlus } from 'lucide-react';
+import { X, Trash2, ShoppingCart, UserPlus, MapPin, Phone, FileText, Store, User } from 'lucide-react';
 
 const STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
@@ -19,18 +19,22 @@ const EMPTY_CLIENT = {
 };
 
 export default function AdHocOrderModal({ onClose, onSaved }) {
-  const [selectedClient, setSelectedClient] = useState(null); // WalkInClient record
+  const [selectedClient, setSelectedClient] = useState(null);
   const [clientSearch, setClientSearch] = useState('');
   const [productSearch, setProductSearch] = useState('');
   const [orderItems, setOrderItems] = useState([]);
   const [orderNotes, setOrderNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [clientData, setClientData] = useState({ ...EMPTY_CLIENT });
+  const [clientType, setClientType] = useState(null); // 'direct' | 'walk_in'
   const [isNewClient, setIsNewClient] = useState(false);
 
-  const { data: walkInClients = [] } = useQuery({
-    queryKey: ['walk-in-clients'],
-    queryFn: () => base44.entities.WalkInClient.list('-created_date'),
+  const { data: allClients = [] } = useQuery({
+    queryKey: ['all-clients-adhoc'],
+    queryFn: async () => {
+      const res = await base44.functions.invoke('listAllClients');
+      return res.data.clients || [];
+    },
   });
 
   const { data: products = [] } = useQuery({
@@ -57,11 +61,11 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
   const activeProducts = products.filter(p => p.active);
 
   const filteredClients = clientSearch.length > 1
-    ? walkInClients.filter(c =>
-        c.full_name?.toLowerCase().includes(clientSearch.toLowerCase()) ||
-        c.company_name?.toLowerCase().includes(clientSearch.toLowerCase()) ||
-        c.cnpj_cpf?.toLowerCase().includes(clientSearch.toLowerCase()) ||
-        c.whatsapp?.includes(clientSearch)
+    ? allClients.filter(c =>
+        (c.full_name || '').toLowerCase().includes(clientSearch.toLowerCase()) ||
+        (c.company_name || '').toLowerCase().includes(clientSearch.toLowerCase()) ||
+        (c.cnpj_cpf || '').toLowerCase().includes(clientSearch.toLowerCase()) ||
+        (c.whatsapp || '').includes(clientSearch)
       )
     : [];
 
@@ -71,6 +75,7 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
 
   const selectClient = (c) => {
     setSelectedClient(c);
+    setClientType(c.client_type);
     setClientData({
       full_name: c.full_name || '',
       company_name: c.company_name || '',
@@ -82,7 +87,7 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
       price_group_id: c.price_group_id || '',
       price_group_name: c.price_group_name || '',
       salesperson_id: c.salesperson_id || '',
-      notes: c.notes || '',
+      notes: '',
     });
     setClientSearch('');
     setIsNewClient(false);
@@ -90,6 +95,7 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
 
   const clearClient = () => {
     setSelectedClient(null);
+    setClientType(null);
     setClientData({ ...EMPTY_CLIENT });
     setIsNewClient(false);
   };
@@ -150,7 +156,8 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
     setSaving(true);
     try {
       await base44.functions.invoke('createAdHocOrder', {
-        walk_in_client_id: selectedClient?.id || null,
+        walk_in_client_id: clientType === 'walk_in' ? selectedClient?.id : null,
+        client_type: clientType,
         client_data: clientData,
         items: orderItems,
         total,
@@ -171,22 +178,31 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
         <DialogHeader>
           <DialogTitle>Novo Pedido Avulso</DialogTitle>
           <DialogDescription>
-            Selecione um cliente avulso cadastrado ou cadastre um novo. O histórico de pedidos fica vinculado ao cadastro.
+            Selecione um cliente (cadastrado ou avulso) ou cadastre um novo. O histórico de pedidos fica vinculado ao cadastro.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 pt-2">
           {/* CLIENTE */}
           <div className="border rounded-xl p-4 space-y-3 bg-muted/20">
-            <h3 className="font-semibold text-sm">Cliente Avulso</h3>
+            <h3 className="font-semibold text-sm flex items-center gap-2"><User className="w-4 h-4 text-primary" />Cliente</h3>
 
             {selectedClient ? (
-              <div className="flex items-center justify-between bg-secondary/60 rounded-lg px-3 py-2">
-                <div>
-                  <p className="font-medium text-sm">{selectedClient.company_name || selectedClient.full_name}</p>
-                  {selectedClient.company_name && <p className="text-xs text-muted-foreground">{selectedClient.full_name}</p>}
-                  {selectedClient.whatsapp && <p className="text-xs text-muted-foreground">📱 {selectedClient.whatsapp}</p>}
-                  {selectedClient.city && <p className="text-xs text-muted-foreground">📍 {selectedClient.city}{selectedClient.state && ` - ${selectedClient.state}`}</p>}
+              <div className="flex items-start justify-between bg-background rounded-lg px-3 py-2.5">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-medium text-sm">{selectedClient.company_name || selectedClient.full_name}</p>
+                    <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${selectedClient.client_type === 'walk_in' ? 'border-amber-400 text-amber-700' : 'border-blue-400 text-blue-700'}`}>
+                      {selectedClient.client_type === 'walk_in' ? 'Avulso' : 'Cadastrado'}
+                    </span>
+                  </div>
+                  {selectedClient.company_name && <p className="text-xs text-muted-foreground flex items-center gap-1"><Store className="w-3 h-3" />Contato: {selectedClient.full_name}</p>}
+                  {selectedClient.cnpj_cpf && <p className="text-xs text-muted-foreground flex items-center gap-1"><FileText className="w-3 h-3" />{selectedClient.cnpj_cpf}</p>}
+                  {(selectedClient.city || selectedClient.state) && <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />{[selectedClient.city, selectedClient.state].filter(Boolean).join(' - ')}</p>}
+                  {selectedClient.whatsapp && <p className="text-xs text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3" />{selectedClient.whatsapp}</p>}
+                  {clientData.price_group_name && (
+                    <span className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary border-primary/20">{clientData.price_group_name}</span>
+                  )}
                 </div>
                 <Button variant="ghost" size="sm" onClick={clearClient}>
                   <X className="w-4 h-4 mr-1" />Trocar
@@ -197,21 +213,26 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
                 {/* Busca de clientes cadastrados */}
                 <div className="relative">
                   <Input
-                    placeholder="Buscar cliente avulso cadastrado (nome, empresa, CNPJ, WhatsApp)..."
+                    placeholder="Buscar cliente (nome, empresa, CNPJ, WhatsApp)..."
                     value={clientSearch}
                     onChange={e => { setClientSearch(e.target.value); setIsNewClient(false); }}
                   />
                   {filteredClients.length > 0 && (
                     <div className="absolute z-50 top-full left-0 right-0 border rounded-md mt-1 max-h-44 overflow-y-auto bg-background shadow-lg">
                       {filteredClients.map(c => (
-                        <div key={c.id} className="px-3 py-2 hover:bg-muted cursor-pointer border-b last:border-b-0"
+                        <div key={`${c.client_type}-${c.id}`} className="px-3 py-2 hover:bg-muted cursor-pointer border-b last:border-b-0"
                           onClick={() => selectClient(c)}>
-                          <p className="text-sm font-medium">{c.company_name || c.full_name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium">{c.company_name || c.full_name}</p>
+                            <span className={`inline-flex items-center rounded-md border px-1.5 py-0.5 text-[10px] font-semibold ${c.client_type === 'walk_in' ? 'border-amber-400 text-amber-700' : 'border-blue-400 text-blue-700'}`}>
+                              {c.client_type === 'walk_in' ? 'Avulso' : 'Cadastrado'}
+                            </span>
+                          </div>
                           {c.company_name && <p className="text-xs text-muted-foreground">{c.full_name}</p>}
-                          <div className="flex gap-2 text-xs text-muted-foreground">
-                            {c.city && <span>📍 {c.city}{c.state && ` - ${c.state}`}</span>}
-                            {c.whatsapp && <span>📱 {c.whatsapp}</span>}
-                            {c.cnpj_cpf && <span>📄 {c.cnpj_cpf}</span>}
+                          <div className="flex gap-2 text-xs text-muted-foreground mt-0.5">
+                            {c.city && <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3" />{c.city}{c.state && ` - ${c.state}`}</span>}
+                            {c.whatsapp && <span className="flex items-center gap-0.5"><Phone className="w-3 h-3" />{c.whatsapp}</span>}
+                            {c.cnpj_cpf && <span className="flex items-center gap-0.5"><FileText className="w-3 h-3" />{c.cnpj_cpf}</span>}
                           </div>
                         </div>
                       ))}
