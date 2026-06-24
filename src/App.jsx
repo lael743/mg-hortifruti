@@ -24,7 +24,7 @@ import AdminBackup from './pages/admin/AdminBackup';
 import AdminCampaign from './pages/admin/AdminCampaign';
 import AdminSalespersons from './pages/admin/AdminSalespersons';
 import ClientFinancial from './pages/ClientFinancial';
-import NewOrder from './pages/NewOrder';
+
 import Profile from './pages/Profile';
 import FinancialLayout from './components/financial/FinancialLayout.jsx';
 import FinancialDashboard from './pages/financial/FinancialDashboard';
@@ -62,7 +62,6 @@ const AuthenticatedApp = () => {
         <Route path="/" element={<Catalog />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/orders" element={<Orders />} />
-        <Route path="/new-order" element={<NewOrder />} />
         <Route path="/orders/:id" element={<OrderDetail />} />
         <Route path="/financial" element={<ClientFinancial />} />
         <Route path="/profile" element={<Profile />} />

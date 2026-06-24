@@ -5,8 +5,8 @@ Deno.serve(async (req) => {
         const base44 = createClientFromRequest(req);
         const user = await base44.auth.me();
 
-        if (!user) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!user || user.role !== 'admin') {
+            return Response.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
         }
 
         const { walk_in_client_id, client_type, client_data, items, total, notes } = await req.json();

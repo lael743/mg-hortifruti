@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Menu, User, LogOut, Package, LayoutDashboard, Leaf, TrendingUp, MessageCircle, UserCog, PlusCircle } from 'lucide-react';
+import { ShoppingCart, Menu, User, LogOut, Package, LayoutDashboard, Leaf, TrendingUp, MessageCircle, UserCog } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,6 @@ export default function Navbar({ user }) {
 
   const navLinks = user ? [
     { label: 'Catálogo', path: '/' },
-    { label: 'Novo Pedido', path: '/new-order' },
     { label: 'Meus Pedidos', path: '/orders' },
     ...(!isAdmin ? [{ label: 'Financeiro', path: '/financial' }] : []),
   ] : [];
