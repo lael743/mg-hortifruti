@@ -7,8 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Download, Search, FileText, Filter } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+
+
+const formatLocalDateTime = (dateStr) =>
+  new Date(dateStr).toLocaleString('pt-BR', {
+    timeZone: 'America/Porto_Velho',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).replace(/\u202f/g, ' ');
 
 const STATUS_COLORS = {
   Pendente: 'bg-yellow-100 text-yellow-800',
@@ -20,8 +29,8 @@ const STATUS_COLORS = {
 export default function AdminReports() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const firstOfMonth = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd');
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
+  const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
   const [dateStart, setDateStart] = useState(firstOfMonth);
   const [dateEnd, setDateEnd] = useState(today);
 
@@ -67,7 +76,7 @@ export default function AdminReports() {
     const rows = [
       ['Data', 'Cliente', 'Email', 'Status', 'Subtotal', 'Desconto', 'Total', 'Itens'],
       ...filtered.map(o => [
-        format(new Date(o.created_date), 'dd/MM/yyyy HH:mm'),
+        formatLocalDateTime(o.created_date),
         o.customer_name || '',
         o.customer_email || '',
         o.status || '',
@@ -91,7 +100,7 @@ export default function AdminReports() {
     const periodLabel = dateStart && dateEnd ? `${dateStart} a ${dateEnd}` : 'Período selecionado';
     const rows = filtered.map(o => `
       <tr>
-        <td>${format(new Date(o.created_date), 'dd/MM/yyyy HH:mm')}</td>
+        <td>${formatLocalDateTime(o.created_date)}</td>
         <td>${userByEmail[o.customer_email]?.company_name || o.customer_name || o.customer_email}</td>
         <td>${o.status}</td>
         <td>${(o.items || []).length} item(s)</td>
@@ -116,7 +125,7 @@ export default function AdminReports() {
       </style></head>
       <body>
         <h2>Relatório — ${periodLabel}</h2>
-        <p>Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}</p>
+        <p>Gerado em ${formatLocalDateTime(new Date())}</p>
         <div class="summary">
           <div class="stat"><b>${summary.count}</b>Pedidos</div>
           <div class="stat"><b>R$ ${summary.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b>Faturamento Bruto</div>
@@ -237,7 +246,7 @@ export default function AdminReports() {
                   {filtered.map(order => (
                     <tr key={order.id} className="border-t border-border hover:bg-muted/30 transition-colors">
                       <td className="p-3 text-muted-foreground whitespace-nowrap">
-                        {format(new Date(order.created_date), 'dd/MM/yyyy HH:mm')}
+                        {formatLocalDateTime(order.created_date)}
                       </td>
                       <td className="p-3">
                         <p className="font-medium">{userByEmail[order.customer_email]?.company_name || order.customer_name || '—'}</p>
