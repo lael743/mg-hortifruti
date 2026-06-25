@@ -36,6 +36,16 @@ function toDateInputValue(date) {
   return format(date, 'yyyy-MM-dd');
 }
 
+// Formata data no fuso America/Cuiaba (UTC-4), já que date-fns format ignora timeZone
+function fmtCuiaba(date, fmtStr) {
+  const opts = { timeZone: 'America/Cuiaba', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+  const parts = new Intl.DateTimeFormat('pt-BR', opts).formatToParts(date);
+  const p = Object.fromEntries(parts.map(x => [x.type, x.value]));
+  if (fmtStr === "dd/MM/yyyy HH:mm") return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`;
+  if (fmtStr === "dd/MM/yyyy 'às' HH:mm") return `${p.day}/${p.month}/${p.year} às ${p.hour}:${p.minute}`;
+  return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`;
+}
+
 export default function AdminOrders() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -425,7 +435,7 @@ export default function AdminOrders() {
       <div class="order-block">
         <div class="order-header">
           <span>Pedido #${order.order_number || '—'}</span>
-          <span>${format(new Date(order.created_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR, timeZone: 'America/Cuiaba' })}</span>
+          <span>${fmtCuiaba(new Date(order.created_date), "dd/MM/yyyy 'às' HH:mm")}</span>
           <span>${order.status}</span>
         </div>
         <table>
@@ -599,7 +609,7 @@ export default function AdminOrders() {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                       {format(new Date(order.created_date), "dd/MM/yyyy HH:mm", { locale: ptBR, timeZone: 'America/Cuiaba' })} • {order.items?.length || 0} itens
+                       {fmtCuiaba(new Date(order.created_date), "dd/MM/yyyy HH:mm")} • {order.items?.length || 0} itens
                      </p>
                     <p className="font-bold text-primary mt-1">
                       R$ {order.total?.toFixed(2)}
