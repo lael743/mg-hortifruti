@@ -1,0 +1,66 @@
+{
+  "name": "OrderTemplate",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do modelo de pedido"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio dono do modelo"
+    },
+    "items": {
+      "type": "array",
+      "description": "Itens salvos no modelo",
+      "items": {
+        "type": "object",
+        "properties": {
+          "product_id": {
+            "type": "string"
+          },
+          "product_name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "packaging_type": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "name",
+    "user_email",
+    "items"
+  ],
+  "rls": {
+    "create": {
+      "data.user_email": "{{user.email}}"
+    },
+    "read": {
+      "$or": [
+        {
+          "data.user_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "data.user_email": "{{user.email}}"
+    },
+    "delete": {
+      "data.user_email": "{{user.email}}"
+    }
+  }
+}

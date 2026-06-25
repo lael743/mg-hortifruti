@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Trash2, Minus, Plus, ShoppingCart, ArrowLeft, Package } from 'lucide-react';
+import { Trash2, Minus, Plus, ShoppingCart, ArrowLeft, Package, Bookmark, BookmarkPlus } from 'lucide-react';
 import { getCart, saveCart, removeFromCart, updateCartQuantity, clearCart, getCartTotal } from '@/lib/cartStore';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { generateOrderNumber } from '@/lib/orderNumberService';
+import SaveTemplateDialog from '@/components/cart/SaveTemplateDialog';
+import LoadTemplateDialog from '@/components/cart/LoadTemplateDialog';
 
 export default function Cart() {
   const { user } = useOutletContext();
@@ -16,6 +18,8 @@ export default function Cart() {
   const [cart, setCart] = useState([]);
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [showLoadTemplate, setShowLoadTemplate] = useState(false);
 
   useEffect(() => {
     setCart(getCart());
@@ -63,20 +67,36 @@ export default function Cart() {
         <ShoppingCart className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
         <h2 className="text-xl font-bold mb-2">Carrinho vazio</h2>
         <p className="text-muted-foreground mb-6">Adicione produtos do catálogo ao seu carrinho.</p>
-        <Button onClick={() => navigate('/')} variant="outline">
-          <ArrowLeft className="w-4 h-4 mr-2" />Voltar ao Catálogo
-        </Button>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Button onClick={() => navigate('/')} variant="outline">
+            <ArrowLeft className="w-4 h-4 mr-2" />Voltar ao Catálogo
+          </Button>
+          <Button onClick={() => setShowLoadTemplate(true)} variant="secondary">
+            <Bookmark className="w-4 h-4 mr-2" />Carregar Modelo
+          </Button>
+        </div>
+        {showLoadTemplate && (
+          <LoadTemplateDialog user={user} onClose={() => setShowLoadTemplate(false)} onLoaded={() => setShowLoadTemplate(false)} />
+        )}
       </main>
     );
   }
 
   return (
     <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-bold">Carrinho</h1>
-        <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
-          <ArrowLeft className="w-4 h-4 mr-1" />Continuar Comprando
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowLoadTemplate(true)}>
+            <Bookmark className="w-4 h-4 mr-1" />Modelos
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowSaveTemplate(true)}>
+            <BookmarkPlus className="w-4 h-4 mr-1" />Salvar Modelo
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
+            <ArrowLeft className="w-4 h-4 mr-1" />Continuar
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -137,6 +157,21 @@ export default function Cart() {
           {submitting ? 'Finalizando...' : 'Finalizar Pedido'}
         </Button>
       </Card>
+      {showSaveTemplate && (
+        <SaveTemplateDialog
+          cartItems={cart}
+          user={user}
+          onClose={() => setShowSaveTemplate(false)}
+          onSaved={() => setShowSaveTemplate(false)}
+        />
+      )}
+      {showLoadTemplate && (
+        <LoadTemplateDialog
+          user={user}
+          onClose={() => setShowLoadTemplate(false)}
+          onLoaded={() => setShowLoadTemplate(false)}
+        />
+      )}
     </main>
   );
 }
