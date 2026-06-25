@@ -200,18 +200,8 @@ export default function Catalog() {
           maxPrice={maxPrice || 500}
           isLoggedIn={!!user}
           extraCategories={company?.custom_categories || []}
+          sortAZ={sortAZ} setSortAZ={setSortAZ}
         />
-        <div className="flex justify-end">
-          <button
-            onClick={() => setSortAZ(v => !v)}
-            className={`inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors ${
-              sortAZ ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-muted text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <span className="font-bold text-xs">A→Z</span>
-            {sortAZ ? 'Ordenado' : 'Ordenar A-Z'}
-          </button>
-        </div>
       </div>
 
       {user && myOrders.length > 0 && (

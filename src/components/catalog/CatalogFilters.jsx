@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, X, SlidersHorizontal, Heart } from 'lucide-react';
+import { Search, X, SlidersHorizontal, Heart, ArrowDownAZ } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 
 const DEFAULT_CATEGORIES = ['Todas', 'Frutas', 'Verduras', 'Legumes', 'Temperos', 'Outros'];
 
-export default function CatalogFilters({ search, setSearch, category, setCategory, priceRange, setPriceRange, onlyFavorites, setOnlyFavorites, maxPrice, isLoggedIn, extraCategories = [] }) {
+export default function CatalogFilters({ search, setSearch, category, setCategory, priceRange, setPriceRange, onlyFavorites, setOnlyFavorites, maxPrice, isLoggedIn, extraCategories = [], sortAZ, setSortAZ }) {
   const categories = [...new Set([...DEFAULT_CATEGORIES, ...extraCategories])];
   const [showAdvanced, setShowAdvanced] = useState(false);
   const hasAdvancedFilter = onlyFavorites || priceRange[1] < maxPrice || priceRange[0] > 0;
@@ -41,15 +41,36 @@ export default function CatalogFilters({ search, setSearch, category, setCategor
           </Button>
         ))}
         {isLoggedIn && (
-          <Button
-            variant={hasAdvancedFilter ? 'default' : 'outline'}
-            size="sm"
-            className={`ml-auto gap-1.5 ${hasAdvancedFilter ? 'bg-primary text-primary-foreground' : ''}`}
-            onClick={() => setShowAdvanced(v => !v)}
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            Filtros{hasAdvancedFilter ? ' ●' : ''}
-          </Button>
+          <div className="ml-auto flex items-center gap-1.5">
+            <Button
+              variant={onlyFavorites ? 'default' : 'outline'}
+              size="sm"
+              className={`gap-1.5 px-3 ${onlyFavorites ? 'bg-red-500 text-white hover:bg-red-600 border-red-500' : ''}`}
+              onClick={() => setOnlyFavorites(v => !v)}
+              title="Mostrar apenas favoritos"
+            >
+              <Heart className={`w-3.5 h-3.5 ${onlyFavorites ? 'fill-white' : ''}`} />
+              <span className="hidden sm:inline">Favoritos</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`h-8 w-8 ${sortAZ ? 'text-primary' : 'text-muted-foreground'}`}
+              onClick={() => setSortAZ(v => !v)}
+              title={sortAZ ? 'Ordenado A→Z' : 'Ordenar A→Z'}
+            >
+              <ArrowDownAZ className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={hasAdvancedFilter ? 'default' : 'outline'}
+              size="sm"
+              className={`gap-1.5 ${hasAdvancedFilter ? 'bg-primary text-primary-foreground' : ''}`}
+              onClick={() => setShowAdvanced(v => !v)}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              Filtros{hasAdvancedFilter ? ' ●' : ''}
+            </Button>
+          </div>
         )}
       </div>
 
@@ -123,7 +144,7 @@ export default function CatalogFilters({ search, setSearch, category, setCategor
             }`}
           >
             <Heart className={`w-4 h-4 ${onlyFavorites ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
-            Mostrar apenas favoritos
+            {onlyFavorites ? 'Mostrando apenas favoritos' : 'Filtrar por favoritos'}
           </button>
         </div>
       )}
