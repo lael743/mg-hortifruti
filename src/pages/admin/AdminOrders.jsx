@@ -192,9 +192,6 @@ export default function AdminOrders() {
     },
   });
 
-  const periodStart = customStart ? startOfDay(parseLocalDate(customStart)) : null;
-  const periodEnd = customEnd ? endOfDay(parseLocalDate(customEnd)) : null;
-
   const filtered = orders.filter(o => {
     const u = getClientInfo(o);
 
@@ -207,9 +204,10 @@ export default function AdminOrders() {
 
     const matchStatus = statusFilter === 'Todos' || o.status === statusFilter;
 
-    // Converte a data do pedido para o fuso local (America/Porto_Velho UTC-4) antes de comparar
-    const orderDateLocal = new Date(new Date(o.created_date).toLocaleString('en-US', { timeZone: 'America/Porto_Velho' }));
-    const matchPeriod = (!periodStart || orderDateLocal >= periodStart) && (!periodEnd || orderDateLocal <= periodEnd);
+    // Extrai YYYY-MM-DD da data do pedido no fuso local e compara como string com os filtros
+    const orderDateStr = parseAsUTC(o.created_date)
+      .toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
+    const matchPeriod = (!customStart || orderDateStr >= customStart) && (!customEnd || orderDateStr <= customEnd);
 
     const matchGroup = cityFilters.length === 0 ||
       cityFilters.some(f =>
