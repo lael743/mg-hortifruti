@@ -9,15 +9,24 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Download, Search, FileText, Filter } from 'lucide-react';
 
 
-const formatLocalDateTime = (dateStr) =>
-  new Date(dateStr).toLocaleString('pt-BR', {
+function parseAsUTC(dateInput) {
+  if (dateInput instanceof Date) return dateInput;
+  let str = String(dateInput);
+  if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
+    str = str + 'Z';
+  }
+  return new Date(str);
+}
+
+function formatLocalDateTime(dateInput) {
+  const date = parseAsUTC(dateInput);
+  const parts = new Intl.DateTimeFormat('pt-BR', {
     timeZone: 'America/Porto_Velho',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).replace(/\u202f/g, ' ');
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  }).formatToParts(date);
+  const p = Object.fromEntries(parts.map(x => [x.type, x.value]));
+  return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`;
+}
 
 const STATUS_COLORS = {
   Pendente: 'bg-yellow-100 text-yellow-800',
