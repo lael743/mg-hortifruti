@@ -21,6 +21,36 @@ export default function LoadTemplateDialog({ user, onClose, onLoaded }) {
     queryFn: () => base44.entities.Product.list(),
   });
 
+  const { data: priceGroups = [] } = useQuery({
+    queryKey: ['price-groups'],
+    queryFn: () => base44.entities.PriceGroup.list(),
+    enabled: !!user,
+  });
+  const userPriceGroup = user?.price_group_id
+    ? priceGroups.find(g => g.id === user.price_group_id)
+    : null;
+
+  const { data: customPrices = [] } = useQuery({
+    queryKey: ['custom-prices-template', userPriceGroup?.id],
+    queryFn: () => base44.entities.CustomPrice.filter({ price_group_id: userPriceGroup.id }),
+    enabled: !!userPriceGroup && userPriceGroup.type === 'custom',
+  });
+  const customPriceMap = userPriceGroup?.type === 'custom'
+    ? Object.fromEntries(customPrices.map(cp => [cp.product_id, cp.custom_price]))
+    : {};
+
+  const getEffectivePrice = (product) => {
+    const basePrice = product.promo_active && product.promo_price ? product.promo_price : product.price;
+    if (!userPriceGroup) return basePrice;
+    if (userPriceGroup.type === 'percentage') {
+      return basePrice * (1 - (userPriceGroup.discount_percent || 0) / 100);
+    }
+    if (userPriceGroup.type === 'custom') {
+      return customPriceMap[product.id] != null ? customPriceMap[product.id] : basePrice;
+    }
+    return basePrice;
+  };
+
   const handleLoad = (template) => {
     const missing = [];
     const cartItems = [];
@@ -31,7 +61,7 @@ export default function LoadTemplateDialog({ user, onClose, onLoaded }) {
         missing.push(item.product_name);
         return;
       }
-      const unit_price = product.promo_active && product.promo_price ? product.promo_price : product.price;
+      const unit_price = getEffectivePrice(product);
       cartItems.push({
         product_id: product.id,
         product_name: product.name,
