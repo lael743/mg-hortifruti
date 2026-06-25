@@ -425,7 +425,7 @@ export default function AdminOrders() {
       <div class="order-block">
         <div class="order-header">
           <span>Pedido #${order.order_number || '—'}</span>
-          <span>${format(new Date(order.created_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+          <span>${format(new Date(order.created_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR, timeZone: 'America/Cuiaba' })}</span>
           <span>${order.status}</span>
         </div>
         <table>
@@ -599,8 +599,8 @@ export default function AdminOrders() {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {format(new Date(order.created_date), "dd/MM/yyyy HH:mm", { locale: ptBR })} • {order.items?.length || 0} itens
-                    </p>
+                       {format(new Date(order.created_date), "dd/MM/yyyy HH:mm", { locale: ptBR, timeZone: 'America/Cuiaba' })} • {order.items?.length || 0} itens
+                     </p>
                     <p className="font-bold text-primary mt-1">
                       R$ {order.total?.toFixed(2)}
                       {order.discount_amount > 0 && (
