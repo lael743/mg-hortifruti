@@ -36,9 +36,21 @@ function toDateInputValue(date) {
   return format(date, 'yyyy-MM-dd');
 }
 
-// Formata data no fuso America/Cuiaba (UTC-4), já que date-fns format ignora timeZone
-function fmtCuiaba(date, fmtStr) {
-  const opts = { timeZone: 'America/Cuiaba', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+// Normaliza string ISO (com ou sem 'Z') para um Date UTC válido antes de formatar no fuso local
+function parseAsUTC(dateInput) {
+  if (dateInput instanceof Date) return dateInput;
+  let str = String(dateInput);
+  // Se termina com 'Z' já é UTC explícito; se não, assume UTC e adiciona 'Z'
+  if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
+    str = str + 'Z';
+  }
+  return new Date(str);
+}
+
+// Formata data no fuso IANA America/Porto_Velho (UTC-4) usando Intl.DateTimeFormat
+function fmtLocal(dateInput, fmtStr) {
+  const date = parseAsUTC(dateInput);
+  const opts = { timeZone: 'America/Porto_Velho', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
   const parts = new Intl.DateTimeFormat('pt-BR', opts).formatToParts(date);
   const p = Object.fromEntries(parts.map(x => [x.type, x.value]));
   if (fmtStr === "dd/MM/yyyy HH:mm") return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}`;
@@ -195,8 +207,8 @@ export default function AdminOrders() {
 
     const matchStatus = statusFilter === 'Todos' || o.status === statusFilter;
 
-    // Converte a data do pedido para o fuso local (Campo Grande UTC-4) antes de comparar
-    const orderDateLocal = new Date(new Date(o.created_date).toLocaleString('en-US', { timeZone: 'America/Campo_Grande' }));
+    // Converte a data do pedido para o fuso local (America/Porto_Velho UTC-4) antes de comparar
+    const orderDateLocal = new Date(new Date(o.created_date).toLocaleString('en-US', { timeZone: 'America/Porto_Velho' }));
     const matchPeriod = (!periodStart || orderDateLocal >= periodStart) && (!periodEnd || orderDateLocal <= periodEnd);
 
     const matchGroup = cityFilters.length === 0 ||
@@ -435,7 +447,7 @@ export default function AdminOrders() {
       <div class="order-block">
         <div class="order-header">
           <span>Pedido #${order.order_number || '—'}</span>
-          <span>${fmtCuiaba(new Date(order.created_date), "dd/MM/yyyy 'às' HH:mm")}</span>
+          <span>${fmtLocal(order.created_date, "dd/MM/yyyy 'às' HH:mm")}</span>
           <span>${order.status}</span>
         </div>
         <table>
@@ -609,7 +621,7 @@ export default function AdminOrders() {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                       {fmtCuiaba(new Date(order.created_date), "dd/MM/yyyy HH:mm")} • {order.items?.length || 0} itens
+                       {fmtLocal(order.created_date, "dd/MM/yyyy HH:mm")} • {order.items?.length || 0} itens
                      </p>
                     <p className="font-bold text-primary mt-1">
                       R$ {order.total?.toFixed(2)}
