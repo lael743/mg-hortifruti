@@ -18,6 +18,15 @@ const statusColors = {
   Cancelado: 'bg-red-100 text-red-800 border-red-200',
 };
 
+function parseAsUTC(dateInput) {
+  if (dateInput instanceof Date) return dateInput;
+  let str = String(dateInput);
+  if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
+    str = str + 'Z';
+  }
+  return new Date(str);
+}
+
 export default function ClientFinancial() {
   const { user } = useOutletContext();
   const navigate = useNavigate();
@@ -79,7 +88,7 @@ export default function ClientFinancial() {
   const handleExportPDF = () => {
     const rows = orders.map(o => `
       <tr>
-        <td>${format(new Date(o.created_date), 'dd/MM/yyyy')}</td>
+        <td>${format(parseAsUTC(o.created_date), 'dd/MM/yyyy')}</td>
         <td>#${o.order_number || o.id.slice(-6)}</td>
         <td>${o.items?.length || 0} itens</td>
         <td>${o.status}</td>
@@ -188,7 +197,7 @@ export default function ClientFinancial() {
                 {orders.map(order => (
                   <tr key={order.id} className="border-b hover:bg-muted/20 cursor-pointer" onClick={() => navigate(`/orders/${order.id}`)}>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {format(new Date(order.created_date), 'dd/MM/yyyy', { locale: ptBR })}
+                      {format(parseAsUTC(order.created_date), 'dd/MM/yyyy', { locale: ptBR })}
                     </td>
                     <td className="px-4 py-3 font-mono text-sm font-bold">#{order.order_number || order.id.slice(-6)}</td>
                     <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{order.items?.length || 0}</td>

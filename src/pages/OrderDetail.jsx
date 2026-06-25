@@ -19,6 +19,15 @@ const statusColors = {
   Cancelado: 'bg-red-100 text-red-800 border-red-200',
 };
 
+function parseAsUTC(dateInput) {
+  if (dateInput instanceof Date) return dateInput;
+  let str = String(dateInput);
+  if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
+    str = str + 'Z';
+  }
+  return new Date(str);
+}
+
 export default function OrderDetail() {
   const { user } = useOutletContext();
   const navigate = useNavigate();
@@ -122,7 +131,7 @@ export default function OrderDetail() {
             <div>
               <h1 className="text-xl font-bold">Pedido #{order.order_number || order.id.slice(-6)}</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {format(new Date(order.created_date), "dd 'de' MMMM, yyyy 'às' HH:mm", { locale: ptBR })}
+                {format(parseAsUTC(order.created_date), "dd 'de' MMMM, yyyy 'às' HH:mm", { locale: ptBR })}
               </p>
               {order.customer_name && (
                 <p className="text-sm mt-2">Cliente: <strong>{order.customer_name}</strong></p>

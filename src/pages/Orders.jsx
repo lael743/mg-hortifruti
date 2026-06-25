@@ -27,6 +27,15 @@ const statusDot = {
   Cancelado: 'bg-red-400',
 };
 
+function parseAsUTC(dateInput) {
+  if (dateInput instanceof Date) return dateInput;
+  let str = String(dateInput);
+  if (!str.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(str)) {
+    str = str + 'Z';
+  }
+  return new Date(str);
+}
+
 export default function Orders() {
   const { user } = useOutletContext();
   const navigate = useNavigate();
@@ -135,7 +144,7 @@ export default function Orders() {
       const startDate = startOfMonth(subMonths(now, parseInt(dateFilter)));
       const endDate = endOfMonth(now);
       result = result.filter(o => {
-        const d = new Date(o.created_date);
+        const d = parseAsUTC(o.created_date);
         return d >= startDate && d <= endDate;
       });
     }
@@ -288,7 +297,7 @@ export default function Orders() {
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {format(new Date(order.created_date), "dd 'de' MMM, yyyy", { locale: ptBR })}
+                      {format(parseAsUTC(order.created_date), "dd 'de' MMM, yyyy", { locale: ptBR })}
                       {' · '}
                       {order.items?.length || 0} {order.items?.length === 1 ? 'item' : 'itens'}
                     </p>
