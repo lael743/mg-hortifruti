@@ -51,10 +51,7 @@ export default function Orders() {
       return;
     }
     const orderNum = order.order_number || order.id.slice(-6);
-    const itemsText = order.items?.map(item =>
-      `• ${item.quantity}x ${item.product_name}`
-    ).join('\n') || '';
-    const message = `Olá! Gostaria de solicitar o *cancelamento* do Pedido #${orderNum}.\n\n*Resumo do pedido:*\n${itemsText}\n\n*Total:* R$ ${order.total?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\nAguardo confirmação. Obrigado!`;
+    const message = `Olá! Gostaria de solicitar o *cancelamento* do Pedido #${orderNum}.\n\n*Total:* R$ ${order.total?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\nAguardo confirmação. Obrigado!`;
     const url = `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
