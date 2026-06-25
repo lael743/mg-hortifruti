@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,25 +31,33 @@ export default function Orders() {
   const { user } = useOutletContext();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [confirmDelete, setConfirmDelete] = useState(null);
-
-  const deleteMutation = useMutation({
-    mutationFn: (orderId) => base44.entities.Order.delete(orderId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['contas-a-receber'] });
-      setConfirmDelete(null);
-      toast.success('Pedido excluído com sucesso.');
-    },
-  });
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['my-orders', user?.email],
     queryFn: () => base44.entities.Order.filter({ customer_email: user.email }, '-created_date'),
     enabled: !!user,
   });
+
+  const { data: companySettings } = useQuery({
+    queryKey: ['company-settings'],
+    queryFn: () => base44.entities.CompanySettings.list(),
+  });
+
+  const handleCancelRequest = (order) => {
+    const settings = Array.isArray(companySettings) ? companySettings[0] : null;
+    const whatsapp = settings?.whatsapp?.replace(/\D/g, '') || '';
+    if (!whatsapp) {
+      toast.error('Não foi possível encontrar o WhatsApp da empresa.');
+      return;
+    }
+    const orderNum = order.order_number || order.id.slice(-6);
+    const itemsText = order.items?.map(item =>
+      `• ${item.quantity}x ${item.product_name}`
+    ).join('\n') || '';
+    const message = `Olá! Gostaria de solicitar o *cancelamento* do Pedido #${orderNum}.\n\n*Resumo do pedido:*\n${itemsText}\n\n*Total:* R$ ${order.total?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\nAguardo confirmação. Obrigado!`;
+    const url = `https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
 
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
@@ -325,31 +333,15 @@ export default function Orders() {
                   >
                     <RefreshCw className="w-4 h-4" />Repetir pedido
                   </Button>
-                  {confirmDelete === order.id ? (
-                    <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="gap-1"
-                        disabled={deleteMutation.isPending}
-                        onClick={() => deleteMutation.mutate(order.id)}
-                      >
-                        Confirmar
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => setConfirmDelete(null)}>
-                        Cancelar
-                      </Button>
-                    </div>
-                  ) : (
                     <Button
                       size="sm"
                       variant="ghost"
                       className="text-destructive hover:bg-destructive/10 hover:text-destructive px-2"
-                      onClick={() => setConfirmDelete(order.id)}
+                      title="Solicitar cancelamento via WhatsApp"
+                      onClick={() => handleCancelRequest(order)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
-                  )}
                 </div>
               </div>
             </Card>
