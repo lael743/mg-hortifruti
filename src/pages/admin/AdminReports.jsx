@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Download, Search, FileText, Filter } from 'lucide-react';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const STATUS_COLORS = {
@@ -42,12 +42,9 @@ export default function AdminReports() {
   }, [allUsers]);
 
   const filtered = useMemo(() => {
-    const start = dateStart ? startOfDay(parseISO(dateStart)) : null;
-    const end = dateEnd ? endOfDay(parseISO(dateEnd)) : null;
-
     return orders.filter(o => {
-      const date = new Date(o.created_date);
-      const inRange = (!start || date >= start) && (!end || date <= end);
+      const orderDateStr = new Date(o.created_date).toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
+      const inRange = (!dateStart || orderDateStr >= dateStart) && (!dateEnd || orderDateStr <= dateEnd);
       const inStatus = statusFilter === 'all' || o.status === statusFilter;
       const u = userByEmail[o.customer_email] || {};
       const inSearch = !search ||

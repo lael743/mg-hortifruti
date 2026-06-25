@@ -78,16 +78,18 @@ export default function AdminDashboard() {
     queryFn: () => base44.entities.User.list(),
   });
 
-  const cutoff = useMemo(() => {
-    if (period === '7d') return subDays(new Date(), 7);
-    if (period === '30d') return subDays(new Date(), 30);
-    if (period === '90d') return subDays(new Date(), 90);
-    return subMonths(new Date(), 6);
+  const cutoffStr = useMemo(() => {
+    if (period === '7d') return subDays(new Date(), 7).toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
+    if (period === '30d') return subDays(new Date(), 30).toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
+    if (period === '90d') return subDays(new Date(), 90).toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
+    return subMonths(new Date(), 6).toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
   }, [period]);
 
+  const localDateStr = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
+
   const filtered = useMemo(() =>
-    orders.filter(o => o.status !== 'Cancelado' && new Date(o.created_date) >= cutoff),
-    [orders, cutoff]
+    orders.filter(o => o.status !== 'Cancelado' && localDateStr(o.created_date) >= cutoffStr),
+    [orders, cutoffStr]
   );
 
   const totalRevenue = useMemo(() => filtered.reduce((s, o) => s + (o.total || 0), 0), [filtered]);
@@ -99,7 +101,7 @@ export default function AdminDashboard() {
   const inactiveClients = useMemo(() => {
     const emailsBeforePeriod = new Set(
       orders
-        .filter(o => o.status !== 'Cancelado' && new Date(o.created_date) < cutoff)
+        .filter(o => o.status !== 'Cancelado' && localDateStr(o.created_date) < cutoffStr)
         .map(o => o.customer_email)
     );
     return [...emailsBeforePeriod]
@@ -120,11 +122,11 @@ export default function AdminDashboard() {
         };
       })
       .sort((a, b) => (b.daysSince || 0) - (a.daysSince || 0));
-  }, [orders, cutoff, uniqueClientsInPeriod, allUsers]);
+  }, [orders, cutoffStr, uniqueClientsInPeriod, allUsers]);
 
   // Clients who haven't bought in X days (separate, based on inactiveDays input)
   const notBoughtInDays = useMemo(() => {
-    const dayCutoff = subDays(new Date(), inactiveDays);
+    const dayCutoffStr = subDays(new Date(), inactiveDays).toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
     const lastOrderByEmail = {};
     orders.filter(o => o.status !== 'Cancelado').forEach(o => {
       const d = new Date(o.created_date);
@@ -133,7 +135,7 @@ export default function AdminDashboard() {
       }
     });
     return Object.entries(lastOrderByEmail)
-      .filter(([, v]) => v.date < dayCutoff)
+      .filter(([, v]) => localDateStr(v.date) < dayCutoffStr)
       .map(([email, v]) => {
         const u = allUsers.find(u => u.email === email);
         return {
