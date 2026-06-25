@@ -61,7 +61,7 @@ export default function AdminReports() {
 
   const filtered = useMemo(() => {
     return orders.filter(o => {
-      const orderDateStr = new Date(o.created_date).toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
+      const orderDateStr = parseAsUTC(o.created_date).toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
       const inRange = (!dateStart || orderDateStr >= dateStart) && (!dateEnd || orderDateStr <= dateEnd);
       const inStatus = statusFilter === 'all' || o.status === statusFilter;
       const u = userByEmail[o.customer_email] || {};
