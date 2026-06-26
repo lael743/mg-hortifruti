@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Tag, Package, Minus, Plus, Heart, CheckCircle2 } from 'lucide-react';
+import { ShoppingCart, Tag, Package, Minus, Plus, Heart, CheckCircle2, ShoppingBag } from 'lucide-react';
 import { toggleFavorite, isFavorite } from '@/lib/favoritesStore';
 import { addToCart, getCart } from '@/lib/cartStore';
 import { toast } from 'sonner';
@@ -13,7 +13,29 @@ const getCartQty = (productId) => {
   return item ? item.quantity : 0;
 };
 
-export default function ProductCard({ product, isLoggedIn, priceGroup, customPrice }) {
+function getPricePerUnit(product, displayPrice) {
+  if (!displayPrice || displayPrice <= 0) return null;
+  const weight = String(product.weight || '').toLowerCase().replace(/\s/g, '');
+
+  if (product.packaging_type === 'Unidade') {
+    const match = weight.match(/([\d.,]+)/);
+    if (match) {
+      const num = parseFloat(match[1].replace(',', '.'));
+      if (num > 0) return { unit: '/un', value: displayPrice / num };
+    }
+    return { unit: '/un', value: displayPrice };
+  }
+
+  const match = weight.match(/([\d.,]+)\s*(kg|g|gr)?/);
+  if (!match) return null;
+  let num = parseFloat(match[1].replace(',', '.'));
+  if (isNaN(num) || num <= 0) return null;
+  const u = match[2] || '';
+  if (u === 'g' || u === 'gr') num = num / 1000;
+  return { unit: '/kg', value: displayPrice / num };
+}
+
+export default function ProductCard({ product, isLoggedIn, priceGroup, customPrice, lastOrderProductIds }) {
   const [qty, setQty] = useState(1);
   const [fav, setFav] = useState(() => isFavorite(product.id));
   const [cartQty, setCartQty] = useState(() => getCartQty(product.id));
@@ -41,6 +63,8 @@ export default function ProductCard({ product, isLoggedIn, priceGroup, customPri
     : basePrice * (1 - discount / 100);
   const hasGroupDiscount = !isCustomTable && discount !== 0 && isLoggedIn;
   const hasCustomPrice = isCustomTable && customPrice !== undefined && isLoggedIn;
+  const pricePerUnit = isLoggedIn ? getPricePerUnit(product, displayPrice) : null;
+  const wasInLastOrder = isLoggedIn && lastOrderProductIds && lastOrderProductIds.has(product.id);
 
   const handleAdd = () => {
     for (let i = 0; i < qty; i++) {
@@ -76,6 +100,12 @@ export default function ProductCard({ product, isLoggedIn, priceGroup, customPri
           <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground font-bold shadow-lg">
             <Tag className="w-3 h-3 mr-1" />PROMO
           </Badge>
+        )}
+        {wasInLastOrder && (
+          <div className="absolute top-3 left-3 z-10 flex items-center gap-1 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md">
+            <ShoppingBag className="w-3 h-3" />
+            Último pedido
+          </div>
         )}
         {cartQty > 0 && (
           <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full shadow-md">
@@ -120,6 +150,11 @@ export default function ProductCard({ product, isLoggedIn, priceGroup, customPri
               {hasCustomPrice && (
                 <span className="text-[10px] text-primary font-semibold block">
                   Tabela: {priceGroup.name}
+                </span>
+              )}
+              {pricePerUnit && (
+                <span className="text-[10px] text-muted-foreground">
+                  ≈ R$ {pricePerUnit.value.toFixed(2)} {pricePerUnit.unit}
                 </span>
               )}
             </div>

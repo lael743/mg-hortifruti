@@ -71,6 +71,10 @@ export default function Catalog() {
     enabled: !!user,
   });
 
+  const lastOrderProductIds = myOrders[0]
+    ? new Set((myOrders[0].items || []).map(i => i.product_id))
+    : new Set();
+
   const { data: allOrders = [] } = useQuery({
     queryKey: ['all-orders-reco'],
     queryFn: () => base44.entities.Order.list(),
@@ -235,7 +239,7 @@ export default function Catalog() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {promoProducts.map(p => (
-                  <ProductCard key={p.id} product={p} isLoggedIn={!!user} priceGroup={userPriceGroup} customPrice={customPriceMap[p.id]} />
+                  <ProductCard key={p.id} product={p} isLoggedIn={!!user} priceGroup={userPriceGroup} customPrice={customPriceMap[p.id]} lastOrderProductIds={lastOrderProductIds} />
                 ))}
               </div>
             </section>
@@ -251,7 +255,7 @@ export default function Catalog() {
               <>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {visibleRegular.map(p => (
-                  <ProductCard key={p.id} product={p} isLoggedIn={!!user} priceGroup={userPriceGroup} customPrice={customPriceMap[p.id]} />
+                  <ProductCard key={p.id} product={p} isLoggedIn={!!user} priceGroup={userPriceGroup} customPrice={customPriceMap[p.id]} lastOrderProductIds={lastOrderProductIds} />
                 ))}
               </div>
               {hasMore && (
