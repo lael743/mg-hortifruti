@@ -340,6 +340,7 @@ export default function AdminOrders() {
           </div>
           ${orderBlocks}
           <div class="client-total">Total geral do cliente: <strong>R$ ${clientTotal.toFixed(2)}</strong> (${clientOrders.length} pedido${clientOrders.length > 1 ? 's' : ''})</div>
+          ${company?.report_footer ? `<div style="margin-top:14px;border-top:1px dashed #ccc;padding-top:8px;font-size:10px;color:#666;text-align:center;white-space:pre-line;">${company.report_footer}</div>` : ''}
           <div class="print-footer">Impresso em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Campo_Grande', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} &nbsp;|&nbsp; ${company?.company_name || ''}</div>
         </div>`;
     }).join('');
@@ -400,6 +401,7 @@ export default function AdminOrders() {
           <p style="font-size:20px;font-weight:bold;color:#14532d;margin:0 0 6px;">R$ ${amount.toFixed(2)}</p>
           <p style="font-size:10px;color:#555;margin:0 0 2px;">Chave PIX:</p>
           <p style="font-size:11px;font-weight:bold;color:#166534;margin:0;word-break:break-all;">${pixKey}</p>
+          <p style="font-size:10px;color:#166534;margin:6px 0 0;font-style:italic;">Escaneie o QR Code ou copie a chave PIX acima para efetuar o pagamento.</p>
         </div>
       </div>`;
   };
@@ -505,6 +507,7 @@ export default function AdminOrders() {
         ${order.notes ? `<p style="margin-top:6px;font-size:11px;color:#666;"><strong>Obs:</strong> ${order.notes}</p>` : ''}
       </div>
       ${buildPixBlock(order.total)}
+      ${company?.report_footer ? `<div style="margin-top:14px;border-top:1px dashed #ccc;padding-top:8px;font-size:10px;color:#666;text-align:center;white-space:pre-line;">${company.report_footer}</div>` : ''}
       <div class="print-footer">Impresso em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} &nbsp;|&nbsp; ${company?.company_name || ''}</div>
     </div></body></html>`;
 
