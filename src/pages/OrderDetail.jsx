@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { addToCart, clearCart } from '@/lib/cartStore';
 import { toast } from 'sonner';
+import PixQrCode from '@/components/common/PixQrCode';
 
 const statusColors = {
   Pendente: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -48,6 +49,12 @@ export default function OrderDetail() {
     queryKey: ['salespersons'],
     queryFn: () => base44.entities.Salesperson.list(),
   });
+
+  const { data: settingsList = [] } = useQuery({
+    queryKey: ['company-settings'],
+    queryFn: () => base44.entities.CompanySettings.list(),
+  });
+  const company = settingsList[0];
 
   // Busca o salesperson_id do usuário atual para encontrar o vendedor
   const salespersonId = user?.salesperson_id;
@@ -204,6 +211,17 @@ export default function OrderDetail() {
           {order.notes && (
             <div className="mt-4 p-3 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground"><strong>Observações:</strong> {order.notes}</p>
+            </div>
+          )}
+
+          {company?.pix_key && order.status !== 'Cancelado' && (
+            <div className="mt-6">
+              <PixQrCode
+                pixKey={company.pix_key}
+                amount={order.total}
+                merchantName={company.company_name}
+                merchantCity={company.city}
+              />
             </div>
           )}
         </Card>

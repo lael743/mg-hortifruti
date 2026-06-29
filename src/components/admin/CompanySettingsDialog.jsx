@@ -19,6 +19,7 @@ export default function CompanySettingsDialog({ onClose }) {
     company_name: '', cnpj: '', address: '', city: '', state: '',
     whatsapp: '', whatsapp2: '', email: '', logo_url: '',
     banner_url: '', banner_title: '', banner_subtitle: '', report_footer: '',
+    pix_key: '',
   });
   const [existingId, setExistingId] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -43,6 +44,7 @@ export default function CompanySettingsDialog({ onClose }) {
           banner_title: s.banner_title || '',
           banner_subtitle: s.banner_subtitle || '',
           report_footer: s.report_footer || '',
+          pix_key: s.pix_key || '',
         });
       }
     });
@@ -216,6 +218,11 @@ export default function CompanySettingsDialog({ onClose }) {
 
           {/* ABA OUTROS */}
           <TabsContent value="outros" className="space-y-4 pt-4">
+            <div>
+              <Label>Chave PIX</Label>
+              <Input value={form.pix_key} onChange={e => set('pix_key', e.target.value)} placeholder="CPF, CNPJ, email, telefone ou chave aleatória" />
+              <p className="text-xs text-muted-foreground mt-1">Quando preenchida, um QR Code PIX será exibido nos pedidos dos clientes.</p>
+            </div>
             <div>
               <Label>Rodapé dos Relatórios</Label>
               <Textarea value={form.report_footer} onChange={e => set('report_footer', e.target.value)} placeholder="Ex: Sujeito a alterações de preço sem aviso prévio." rows={3} />

@@ -75,6 +75,10 @@
     "whatsapp_campaign_message": {
       "type": "string",
       "description": "Mensagem padr\u00e3o de campanha WhatsApp para clientes"
+    },
+    "pix_key": {
+      "type": "string",
+      "description": "Chave PIX para pagamentos (CPF, CNPJ, email, telefone ou chave aleat\u00f3ria)"
     }
   },
   "required": [
