@@ -319,8 +319,9 @@ export default function AdminOrders() {
               <span style="color:#16a34a;font-weight:bold;">Desconto${order.discount_type === 'percent' ? ` (${order.discount_value}%)` : ''}: - R$ ${order.discount_amount.toFixed(2)}</span>
             </div>` : ''}
             ${order.notes ? `<p style="margin-top:6px;font-size:11px;color:#666;"><strong>Obs:</strong> ${order.notes}</p>` : ''}
-          </div>`;
-      }).join('');
+            </div>
+            ${buildPixBlock(order.total)}`;
+            }).join('');
 
       const clientTotal = clientOrders.reduce((s, o) => s + (o.total || 0), 0);
 
@@ -372,6 +373,35 @@ export default function AdminOrders() {
     w.document.write(html);
     w.document.close();
     setTimeout(() => w.print(), 400);
+  };
+
+  // Gera payload PIX (BR Code) e retorna HTML com QR Code para impressão
+  const buildPixBlock = (amount) => {
+    if (!company?.pix_key || !amount || amount <= 0) return '';
+    const pixKey = company.pix_key;
+    const name = (company.company_name || 'Pagamento').slice(0, 25).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9 ]/g, '').trim();
+    const city = (company.city || 'BRASIL').slice(0, 15).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9 ]/g, '').toUpperCase().trim();
+    const amountStr = amount.toFixed(2);
+    const field = (id, val) => `${id}${String(val.length).padStart(2,'0')}${val}`;
+    const merchantAccount = field('26', field('00','BR.GOV.BCB.PIX') + field('01', pixKey));
+    const payload0 = `000201${merchantAccount}${field('52','0000')}${field('53','986')}${field('54',amountStr)}${field('58','BR')}${field('59',name)}${field('60',city)}${field('62',field('05','***'))}6304`;
+    let crc = 0xFFFF;
+    for (let i = 0; i < payload0.length; i++) {
+      crc ^= payload0.charCodeAt(i) << 8;
+      for (let j = 0; j < 8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1;
+    }
+    const pixPayload = payload0 + (crc & 0xFFFF).toString(16).toUpperCase().padStart(4,'0');
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(pixPayload)}`;
+    return `
+      <div style="margin-top:14px;border:2px solid #16a34a;border-radius:8px;padding:12px;display:flex;align-items:center;gap:16px;background:#f0fdf4;">
+        <img src="${qrUrl}" alt="QR Code PIX" style="width:120px;height:120px;border-radius:4px;flex-shrink:0;" />
+        <div>
+          <p style="font-weight:bold;color:#15803d;font-size:13px;margin:0 0 4px;">Pagar com PIX</p>
+          <p style="font-size:20px;font-weight:bold;color:#14532d;margin:0 0 6px;">R$ ${amount.toFixed(2)}</p>
+          <p style="font-size:10px;color:#555;margin:0 0 2px;">Chave PIX:</p>
+          <p style="font-size:11px;font-weight:bold;color:#166534;margin:0;word-break:break-all;">${pixKey}</p>
+        </div>
+      </div>`;
   };
 
   const calcPricePerKg = (price, weight) => {
@@ -474,6 +504,7 @@ export default function AdminOrders() {
         </div>` : ''}
         ${order.notes ? `<p style="margin-top:6px;font-size:11px;color:#666;"><strong>Obs:</strong> ${order.notes}</p>` : ''}
       </div>
+      ${buildPixBlock(order.total)}
       <div class="print-footer">Impresso em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} &nbsp;|&nbsp; ${company?.company_name || ''}</div>
     </div></body></html>`;
 
