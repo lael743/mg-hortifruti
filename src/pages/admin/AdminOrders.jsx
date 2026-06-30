@@ -401,7 +401,7 @@ export default function AdminOrders() {
           <p style="font-size:20px;font-weight:bold;color:#14532d;margin:0 0 6px;">R$ ${amount.toFixed(2)}</p>
           <p style="font-size:10px;color:#555;margin:0 0 2px;">Chave PIX:</p>
           <p style="font-size:11px;font-weight:bold;color:#166534;margin:0;word-break:break-all;">${pixKey}</p>
-          <p style="font-size:10px;color:#166534;margin:6px 0 0;font-style:italic;">Escaneie o QR Code ou copie a chave PIX acima para efetuar o pagamento.</p>
+          <p style="font-size:10px;color:#166534;margin:6px 0 0;font-style:italic;">Escaneie o QR Code ou copie a chave PIX acima para efetuar o pagamento. Após pagamento encaminhar comprovante.</p>
         </div>
       </div>`;
   };
