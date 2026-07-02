@@ -61,10 +61,13 @@ const PERIODS = [
   { label: 'Últimos 30 dias', value: '30d' },
   { label: 'Últimos 90 dias', value: '90d' },
   { label: 'Últimos 6 meses', value: '6m' },
+  { label: 'Personalizado', value: 'custom' },
 ];
 
 export default function AdminDashboard() {
   const [period, setPeriod] = useState('30d');
+  const [customStart, setCustomStart] = useState(subDays(new Date(), 30).toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' }));
+  const [customEnd, setCustomEnd] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' }));
   const [topMode, setTopMode] = useState('qty');
   const [inactiveDays, setInactiveDays] = useState(30);
 
@@ -79,17 +82,23 @@ export default function AdminDashboard() {
   });
 
   const cutoffStr = useMemo(() => {
+    if (period === 'custom') return customStart;
     if (period === '7d') return subDays(new Date(), 7).toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
     if (period === '30d') return subDays(new Date(), 30).toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
     if (period === '90d') return subDays(new Date(), 90).toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
     return subMonths(new Date(), 6).toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
-  }, [period]);
+  }, [period, customStart]);
+
+  const endCutoffStr = useMemo(() => {
+    if (period === 'custom') return customEnd;
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
+  }, [period, customEnd]);
 
   const localDateStr = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
 
   const filtered = useMemo(() =>
-    orders.filter(o => o.status !== 'Cancelado' && localDateStr(o.created_date) >= cutoffStr),
-    [orders, cutoffStr]
+    orders.filter(o => o.status !== 'Cancelado' && localDateStr(o.created_date) >= cutoffStr && localDateStr(o.created_date) <= endCutoffStr),
+    [orders, cutoffStr, endCutoffStr]
   );
 
   const totalRevenue = useMemo(() => filtered.reduce((s, o) => s + (o.total || 0), 0), [filtered]);
@@ -202,16 +211,25 @@ export default function AdminDashboard() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {PERIODS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-full sm:w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PERIODS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {period === 'custom' && (
+            <>
+              <Input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} className="w-full sm:w-40" />
+              <span className="text-xs text-muted-foreground hidden sm:inline">até</span>
+              <Input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="w-full sm:w-40" />
+            </>
+          )}
+        </div>
       </div>
 
       {/* KPI Cards */}
