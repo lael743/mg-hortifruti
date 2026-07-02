@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { MessageCircle, Send, Loader2, User, Trash2, X, PhoneOff } from 'lucide-react';
+import { MessageCircle, Send, Loader2, User, Trash2, X, PhoneOff, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -138,9 +138,9 @@ export default function AdminChat() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-160px)] gap-4">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-160px)] gap-4">
       {/* Conversation list */}
-      <Card className="w-72 flex-shrink-0 overflow-hidden flex flex-col">
+      <Card className={`w-full md:w-72 flex-shrink-0 overflow-hidden flex-col ${selectedConv ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-3 border-b">
           <h2 className="font-semibold text-sm flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-primary" /> Conversas
@@ -183,7 +183,7 @@ export default function AdminChat() {
       </Card>
 
       {/* Chat panel */}
-      <Card className="flex-1 flex flex-col overflow-hidden">
+      <Card className={`flex-1 flex-col overflow-hidden ${selectedConv ? 'flex' : 'hidden md:flex'}`}>
         {!selectedConv ? (
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
             <div className="text-center">
@@ -194,6 +194,9 @@ export default function AdminChat() {
         ) : (
           <>
             <div className="px-4 py-3 border-b flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="h-8 w-8 md:hidden" onClick={() => setSelectedConv(null)} title="Voltar">
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                 <User className="w-4 h-4 text-primary" />
               </div>

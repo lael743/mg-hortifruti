@@ -88,7 +88,7 @@ export default function AdminProducts() {
           {sortAZ === false ? <ArrowDownAZ className="w-4 h-4" /> : <ArrowUpAZ className="w-4 h-4" />}
         </Button>
         <Button className="bg-primary text-primary-foreground" onClick={() => { setEditProduct(null); setShowForm(true); }}>
-          <Plus className="w-4 h-4 mr-1" />Novo Produto
+          <Plus className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Novo Produto</span>
         </Button>
       </div>
 

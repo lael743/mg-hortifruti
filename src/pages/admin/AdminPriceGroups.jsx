@@ -196,7 +196,7 @@ export default function AdminPriceGroups() {
         <div className="space-y-3">
           {groups.map(g => (
             <Card key={g.id} className="p-4">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                   {g.type === 'custom' ? <ListOrdered className="w-5 h-5 text-primary" /> : <Percent className="w-5 h-5 text-primary" />}
                 </div>
@@ -221,7 +221,7 @@ export default function AdminPriceGroups() {
                     )}
                   </p>
                 </div>
-                <div className="flex gap-1 flex-shrink-0">
+                <div className="flex gap-1 flex-wrap sm:flex-nowrap">
                   {g.type === 'custom' && (
                     <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setCustomPriceGroup(g)}>
                       <ListOrdered className="w-3.5 h-3.5 mr-1" />Definir Preços

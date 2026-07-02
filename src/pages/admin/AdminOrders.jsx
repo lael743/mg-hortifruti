@@ -524,14 +524,14 @@ export default function AdminOrders() {
       {/* Filters row */}
       <div className="flex gap-3 flex-wrap">
         <Button onClick={() => setShowAdHocModal(true)} className="shrink-0">
-          <Plus className="w-4 h-4 mr-1.5" />Novo Pedido Avulso
+          <Plus className="w-4 h-4 sm:mr-1.5" /><span className="hidden sm:inline">Novo Pedido Avulso</span>
         </Button>
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Buscar por cliente, empresa, CNPJ, cidade..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 border-slate-400" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40 border-slate-400"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-40 border-slate-400"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
         </Select>
       </div>
@@ -576,19 +576,19 @@ export default function AdminOrders() {
           <div className="flex flex-wrap gap-3 items-end">
             <div>
               <Label className="text-xs font-semibold mb-2 block text-foreground">De</Label>
-              <Input type="date" className="h-10 w-36 bg-background" value={customStart} onChange={e => setCustomStart(e.target.value)} />
+              <Input type="date" className="h-10 w-full sm:w-36 bg-background" value={customStart} onChange={e => setCustomStart(e.target.value)} />
             </div>
             <div>
               <Label className="text-xs font-semibold mb-2 block text-foreground">Até</Label>
-              <Input type="date" className="h-10 w-36 bg-background" value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
+              <Input type="date" className="h-10 w-full sm:w-36 bg-background" value={customEnd} onChange={e => setCustomEnd(e.target.value)} />
             </div>
             <Button
               onClick={() => setShowPurchaseList(true)}
               disabled={filtered.length === 0}
               className="h-10 shrink-0"
             >
-              <ShoppingBasket className="w-4 h-4 mr-1.5" />
-              Lista de Compra ({filtered.length})
+              <ShoppingBasket className="w-4 h-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Lista de Compra</span> ({filtered.length})
             </Button>
             <Button
               onClick={handlePrintAllClients}
@@ -596,16 +596,16 @@ export default function AdminOrders() {
               variant="outline"
               className="h-10 shrink-0 border-slate-400"
             >
-              <Users className="w-4 h-4 mr-1.5" />
-              Espelho por Cliente
+              <Users className="w-4 h-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Espelho por Cliente</span>
             </Button>
             <Button
               variant={sortBy === 'alpha' ? 'default' : 'outline'}
               className="h-10 shrink-0 border-slate-400"
               onClick={() => setSortBy(s => s === 'alpha' ? 'date' : 'alpha')}
             >
-              {sortBy === 'alpha' ? <ArrowDownAZ className="w-4 h-4 mr-1.5" /> : <ArrowDownUp className="w-4 h-4 mr-1.5" />}
-              {sortBy === 'alpha' ? 'A→Z Empresa' : 'Mais recente'}
+              {sortBy === 'alpha' ? <ArrowDownAZ className="w-4 h-4 sm:mr-1.5" /> : <ArrowDownUp className="w-4 h-4 sm:mr-1.5" />}
+              <span className="hidden sm:inline">{sortBy === 'alpha' ? 'A→Z Empresa' : 'Mais recente'}</span>
             </Button>
           </div>
 
@@ -628,7 +628,7 @@ export default function AdminOrders() {
             const u = getClientInfo(order);
             return (
               <Card key={order.id} className="p-4 border-2 border-slate-400 dark:border-slate-500 shadow-sm hover:shadow-md transition-shadow bg-white dark:bg-slate-900">
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-sm">{u.company_name || u.full_name || order.customer_name}</span>
@@ -665,7 +665,7 @@ export default function AdminOrders() {
                     </p>
                   </div>
 
-                  <div className="flex gap-1 flex-shrink-0">
+                  <div className="flex gap-1 flex-wrap sm:flex-nowrap sm:flex-shrink-0">
                    <DropdownMenu>
                      <DropdownMenuTrigger asChild>
                        <Button variant="outline" size="sm">

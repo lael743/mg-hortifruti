@@ -74,8 +74,8 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Painel Administrativo</h1>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold">Painel Administrativo</h1>
         <div className="flex gap-2">
           <Button
             variant={catalogActive ? 'outline' : 'destructive'}
@@ -85,8 +85,8 @@ export default function AdminLayout() {
             title={catalogActive ? 'Desativar catálogo (manutenção)' : 'Ativar catálogo'}
           >
             {catalogActive
-              ? <><ShieldOff className="w-4 h-4 mr-1" />Desativar Catálogo</>
-              : <><ShieldCheck className="w-4 h-4 mr-1" />Ativar Catálogo</>}
+              ? <><ShieldOff className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Desativar Catálogo</span></>
+              : <><ShieldCheck className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Ativar Catálogo</span></>}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -129,27 +129,27 @@ export default function AdminLayout() {
           <AdminNotifications />
           <Link to="/">
             <Button variant="ghost" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-1" />Catálogo
+              <ArrowLeft className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Catálogo</span>
             </Button>
           </Link>
         </div>
       </div>
       {showSettings && <CompanySettingsDialog onClose={() => setShowSettings(false)} />}
 
-      <div className="flex gap-1 bg-muted p-1 rounded-xl">
+      <div className="flex gap-1 bg-muted p-1 rounded-xl overflow-x-auto">
         {tabs.map(tab => {
           const isActive = location.pathname === tab.path;
           const Icon = tab.icon;
           const isChat = tab.path === '/admin/chat';
           const badge = isChat && unreadCount > 0 ? unreadCount : 0;
           return (
-            <Link key={tab.path} to={tab.path} className="flex-1">
+            <Link key={tab.path} to={tab.path} className="flex-shrink-0 sm:flex-1">
               <Button
                 variant={isActive ? 'default' : 'ghost'}
                 className={`w-full relative ${isActive ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}
                 size="sm"
               >
-                <Icon className="w-4 h-4 mr-1.5" />{tab.label}
+                <Icon className="w-4 h-4 sm:mr-1.5" /><span className="hidden sm:inline">{tab.label}</span>
                 {badge > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">
                     {badge > 99 ? '99+' : badge}
