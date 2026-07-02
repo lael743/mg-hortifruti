@@ -160,58 +160,64 @@ export default function AdminReports() {
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-2xl font-bold">Relatórios</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handlePrint} size="sm">
-            <FileText className="w-4 h-4 mr-1" /> Imprimir
+        <h1 className="text-xl sm:text-2xl font-bold">Relatórios</h1>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={handlePrint} size="sm" className="flex-1 sm:flex-none">
+            <FileText className="w-4 h-4 sm:mr-1" /><span className="sm:inline">Imprimir</span>
           </Button>
-          <Button onClick={handleExportCSV} size="sm">
-            <Download className="w-4 h-4 mr-1" /> Exportar CSV
+          <Button onClick={handleExportCSV} size="sm" className="flex-1 sm:flex-none">
+            <Download className="w-4 h-4 sm:mr-1" /><span className="sm:inline">Exportar CSV</span>
           </Button>
         </div>
       </div>
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-3 items-end">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
-              <Filter className="w-4 h-4" /> Filtros
+        <CardContent className="p-4 space-y-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium">
+            <Filter className="w-4 h-4" /> Filtros
+          </div>
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 sm:items-end">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground block">De</label>
+              <Input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} className="w-full sm:w-36" />
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">De</label>
-              <Input type="date" value={dateStart} onChange={e => setDateStart(e.target.value)} className="w-36" />
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground block">Até</label>
+              <Input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)} className="w-full sm:w-36" />
             </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">Até</label>
-              <Input type="date" value={dateEnd} onChange={e => setDateEnd(e.target.value)} className="w-36" />
+            <div className="space-y-1 col-span-2 sm:col-span-1">
+              <label className="text-xs text-muted-foreground block">Status</label>
+              <select
+                value={statusFilter}
+                onChange={e => setStatusFilter(e.target.value)}
+                className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="all">Todos os status</option>
+                <option value="Pendente">Pendente</option>
+                <option value="Confirmado">Confirmado</option>
+                <option value="Entregue">Entregue</option>
+                <option value="Cancelado">Cancelado</option>
+              </select>
             </div>
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              <option value="all">Todos os status</option>
-              <option value="Pendente">Pendente</option>
-              <option value="Confirmado">Confirmado</option>
-              <option value="Entregue">Entregue</option>
-              <option value="Cancelado">Cancelado</option>
-            </select>
-            <div className="relative flex-1 min-w-[180px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                className="pl-9"
-                placeholder="Buscar cliente..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
+            <div className="space-y-1 col-span-2 sm:col-span-1 sm:flex-1 sm:min-w-[180px]">
+              <label className="text-xs text-muted-foreground block">Cliente</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  placeholder="Buscar cliente..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: 'Total de Pedidos', value: summary.count },
           { label: 'Faturamento Bruto', value: `R$ ${summary.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` },
@@ -219,9 +225,9 @@ export default function AdminReports() {
           { label: 'Pendentes', value: summary.pending },
         ].map(s => (
           <Card key={s.label}>
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className="text-xl font-bold mt-1">{s.value}</p>
+            <CardContent className="p-3 sm:p-4">
+              <p className="text-[11px] sm:text-xs text-muted-foreground leading-tight">{s.label}</p>
+              <p className="text-base sm:text-xl font-bold mt-1 break-words">{s.value}</p>
             </CardContent>
           </Card>
         ))}
