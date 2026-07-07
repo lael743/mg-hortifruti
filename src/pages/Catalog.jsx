@@ -120,7 +120,8 @@ export default function Catalog() {
     );
   }
 
-  const activeProducts = products.filter(p => p.active !== false);
+  const isAdmin = user?.role === 'admin';
+  const activeProducts = products.filter(p => p.active !== false && (isAdmin || (p.price || 0) > 0));
   const maxPrice = Math.max(0, ...activeProducts.map(p => p.promo_active && p.promo_price ? p.promo_price : p.price || 0));
 
   const normalizeStr = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
