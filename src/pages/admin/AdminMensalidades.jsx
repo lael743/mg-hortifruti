@@ -11,15 +11,16 @@ import { toast } from 'sonner';
 import MensalidadeFormDialog from '@/components/admin/MensalidadeFormDialog';
 import PixQrDialog from '@/components/admin/PixQrDialog';
 
-const OWNER_EMAIL = 'centralgpsf@gmail.com';
+const LOCAL_TZ = 'America/Porto_Velho';
 
 function todayStr() {
-  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
+  return new Date().toLocaleDateString('en-CA', { timeZone: LOCAL_TZ });
 }
 
 export default function AdminMensalidades() {
   const { user } = useOutletContext();
-  const isOwner = user?.email === OWNER_EMAIL;
+  // O proprietário do app é identificado pelo email (a role é travada em 'admin' pela plataforma)
+  const isOwner = user?.email === 'centralgpsf@gmail.com';
   const queryClient = useQueryClient();
   const [editingItem, setEditingItem] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -28,20 +29,17 @@ export default function AdminMensalidades() {
 
   const { data: mensalidades = [], isLoading } = useQuery({
     queryKey: ['mensalidades'],
-    queryFn: async () => {
-      const res = await base44.functions.invoke('manageMensalidade', { action: 'list' });
-      return res.data?.items || [];
-    },
+    queryFn: () => base44.entities.Mensalidade.list('-data_vencimento', 200),
   });
 
   const marcarPagaMutation = useMutation({
-    mutationFn: (id) => base44.functions.invoke('manageMensalidade', { action: 'markPaid', id }),
+    mutationFn: (id) => base44.functions.invoke('manageMensalidade', { action: 'markPaid', mensalidadeId: id }),
     onSuccess: (resp) => {
       queryClient.invalidateQueries({ queryKey: ['mensalidades'] });
-      const proximaData = resp?.data?.proximaData;
-      if (proximaData) {
-        const d = new Date(proximaData + 'T12:00:00').toLocaleDateString('pt-BR');
-        toast.success(`Paga! Próximo vencimento criado: ${d}`);
+      const proxima = resp?.data?.proxima;
+      if (proxima) {
+        const d = new Date(proxima.data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR');
+        toast.success(`Mensalidade paga! Próximo vencimento criado: ${d}`);
       } else {
         toast.success('Mensalidade marcada como paga!');
       }
@@ -50,17 +48,18 @@ export default function AdminMensalidades() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.functions.invoke('manageMensalidade', { action: 'delete', id }),
+    mutationFn: (id) => base44.functions.invoke('manageMensalidade', { action: 'delete', mensalidadeId: id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mensalidades'] });
       setConfirmDelete(null);
       toast.success('Mensalidade excluída.');
     },
-    onError: () => toast.error('Erro ao excluir.'),
+    onError: () => toast.error('Erro ao excluir mensalidade.'),
   });
 
   const hoje = todayStr();
-  const pendentes = mensalidades.filter(m => m.status !== 'paga');
+
+  const pendentes = mensalidades.filter(m => m.status === 'pendente');
   const pagas = mensalidades.filter(m => m.status === 'paga');
 
   function statusBadge(m) {
@@ -71,7 +70,7 @@ export default function AdminMensalidades() {
 
   function renderCard(m) {
     return (
-      <Card key={m.id} className="p-4 border border-slate-200 shadow-sm bg-white space-y-3">
+      <Card key={m.id} className="p-4 border-2 border-slate-200 shadow-sm bg-white space-y-3">
         <div className="flex items-start justify-between gap-2 flex-wrap">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -79,40 +78,62 @@ export default function AdminMensalidades() {
               {statusBadge(m)}
               {m.recorrente && (
                 <Badge className="bg-blue-100 text-blue-800 border-blue-200 border gap-1">
-                  <Repeat className="w-3 h-3" /> Recorrente
+                  <Repeat className="w-3 h-3" />Recorrente
                 </Badge>
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Vencimento: <strong>{m.data_vencimento ? new Date(m.data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</strong>
               &nbsp;•&nbsp;
-              <span className="text-primary font-bold">R$ {m.valor?.toFixed(2)}</span>
+              <span className="text-primary font-bold text-sm">R$ {m.valor?.toFixed(2)}</span>
             </p>
           </div>
           <div className="flex gap-1 shrink-0 flex-wrap">
+            {/* Ações de pagamento — visíveis para todos */}
             {(m.tipo_cobranca || []).includes('boleto') && m.boleto_url && (
               <a href={m.boleto_url} target="_blank" rel="noopener noreferrer">
-                <Button size="sm" variant="outline" className="gap-1 text-xs"><FileDown className="w-3.5 h-3.5" />PDF</Button>
+                <Button size="sm" variant="outline" className="gap-1 text-xs border-slate-300">
+                  <FileDown className="w-3.5 h-3.5" />Boleto PDF
+                </Button>
               </a>
             )}
             {(m.tipo_cobranca || []).includes('boleto') && m.boleto_link && (
               <a href={m.boleto_link} target="_blank" rel="noopener noreferrer">
-                <Button size="sm" variant="outline" className="gap-1 text-xs"><Link2 className="w-3.5 h-3.5" />Boleto</Button>
+                <Button size="sm" variant="outline" className="gap-1 text-xs border-slate-300">
+                  <Link2 className="w-3.5 h-3.5" />Link Boleto
+                </Button>
               </a>
             )}
             {(m.tipo_cobranca || []).includes('link') && m.link_pagamento && (
               <a href={m.link_pagamento} target="_blank" rel="noopener noreferrer">
-                <Button size="sm" variant="outline" className="gap-1 text-xs"><Link2 className="w-3.5 h-3.5" />Link</Button>
+                <Button size="sm" variant="outline" className="gap-1 text-xs border-slate-300">
+                  <Link2 className="w-3.5 h-3.5" />Link
+                </Button>
+              </a>
+            )}
+            {m.recorrente && m.link_assinatura && (
+              <a href={m.link_assinatura} target="_blank" rel="noopener noreferrer">
+                <Button size="sm" variant="outline" className="gap-1 text-xs border-blue-300 text-blue-700 hover:bg-blue-50">
+                  <Repeat className="w-3.5 h-3.5" />Assinatura
+                </Button>
               </a>
             )}
             {(m.tipo_cobranca || []).includes('pix') && m.pix_chave && (
-              <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => setQrMensalidade(m)}>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1 text-xs border-slate-300"
+                onClick={() => setQrMensalidade(m)}
+              >
                 <QrCode className="w-3.5 h-3.5" />PIX QR
               </Button>
             )}
-            {isOwner && m.status !== 'paga' && (
+
+            {/* Ações exclusivas do proprietário */}
+            {isOwner && m.status === 'pendente' && (
               <Button
-                size="sm" variant="outline"
+                size="sm"
+                variant="outline"
                 className="gap-1 text-xs border-green-300 text-green-700 hover:bg-green-50"
                 onClick={() => marcarPagaMutation.mutate(m.id)}
                 disabled={marcarPagaMutation.isPending}
@@ -142,7 +163,8 @@ export default function AdminMensalidades() {
         {m.notas && <p className="text-xs text-muted-foreground bg-muted rounded px-2 py-1">{m.notas}</p>}
         {(m.tipo_cobranca || []).includes('pix') && m.pix_chave && (
           <div className="text-xs bg-blue-50 border border-blue-200 rounded px-2 py-1 text-blue-800">
-            <strong>PIX:</strong> {m.pix_chave} &nbsp;•&nbsp; <strong>R$ {m.valor?.toFixed(2)}</strong>
+            <strong>PIX:</strong> {m.pix_tipo ? `[${m.pix_tipo.toUpperCase()}] ` : ''}{m.pix_chave}
+            &nbsp;•&nbsp;Valor: <strong>R$ {m.valor?.toFixed(2)}</strong>
           </div>
         )}
       </Card>
@@ -205,7 +227,10 @@ export default function AdminMensalidades() {
       )}
 
       {qrMensalidade && (
-        <PixQrDialog mensalidade={qrMensalidade} onClose={() => setQrMensalidade(null)} />
+        <PixQrDialog
+          mensalidade={qrMensalidade}
+          onClose={() => setQrMensalidade(null)}
+        />
       )}
     </div>
   );
