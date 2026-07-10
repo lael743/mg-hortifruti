@@ -15,7 +15,8 @@ Deno.serve(async (req) => {
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
     const body = await req.json();
-    const { action, id, data } = body;
+    const { action, data } = body;
+    const id = body.mensalidadeId || body.id;
 
     if (action === 'list') {
       const items = await base44.asServiceRole.entities.Mensalidade.list('-data_vencimento', 200);
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      return Response.json({ ok: true, proximaData });
+      return Response.json({ ok: true, proxima: proximaData ? { data_vencimento: proximaData } : null });
     }
 
     return Response.json({ error: 'Unknown action' }, { status: 400 });
