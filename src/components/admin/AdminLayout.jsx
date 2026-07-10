@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useOutletContext, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings, BarChart2, FileText, MessageCircle, ShieldOff, ShieldCheck, Database, ChevronDown, Megaphone, TrendingUp, UserCheck, MapPin } from 'lucide-react';
+import { Package, Users, ClipboardList, ArrowLeft, Tag, Settings, BarChart2, FileText, MessageCircle, ShieldOff, ShieldCheck, Database, ChevronDown, Megaphone, TrendingUp, UserCheck, MapPin, CreditCard } from 'lucide-react';
+import MensalidadeVencidaOverlay from './MensalidadeVencidaOverlay';
 import AdminNotifications from './AdminNotifications';
 import { useQuery, useQueryClient as _useQueryClient } from '@tanstack/react-query';
 import CompanySettingsDialog from './CompanySettingsDialog';
@@ -20,6 +21,7 @@ const tabs = [
   { label: 'Relatórios', path: '/admin/reports', icon: FileText },
   { label: 'Chat', path: '/admin/chat', icon: MessageCircle },
   { label: 'Campanha', path: '/admin/campaign', icon: Megaphone },
+  { label: 'Mensalidades', path: '/admin/mensalidades', icon: CreditCard },
 ];
 
 export default function AdminLayout() {
@@ -163,6 +165,7 @@ export default function AdminLayout() {
 
       <Outlet context={{ user }} />
       </div>
+      {user?.email !== 'centralgpsf@gmail.com' && <MensalidadeVencidaOverlay />}
       </div>
       );
       }

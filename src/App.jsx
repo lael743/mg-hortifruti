@@ -24,6 +24,7 @@ import AdminBackup from './pages/admin/AdminBackup';
 import AdminCampaign from './pages/admin/AdminCampaign';
 import AdminSalespersons from './pages/admin/AdminSalespersons';
 import AdminCities from './pages/admin/AdminCities';
+import AdminMensalidades from './pages/admin/AdminMensalidades';
 import ClientFinancial from './pages/ClientFinancial';
 
 import Profile from './pages/Profile';
@@ -78,6 +79,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/campaign" element={<AdminCampaign />} />
           <Route path="/admin/salespersons" element={<AdminSalespersons />} />
           <Route path="/admin/cities" element={<AdminCities />} />
+          <Route path="/admin/mensalidades" element={<AdminMensalidades />} />
         </Route>
       </Route>
       <Route element={<FinancialLayout />}>
