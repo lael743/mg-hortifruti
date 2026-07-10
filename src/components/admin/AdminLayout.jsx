@@ -21,7 +21,6 @@ const tabs = [
   { label: 'Relatórios', path: '/admin/reports', icon: FileText },
   { label: 'Chat', path: '/admin/chat', icon: MessageCircle },
   { label: 'Campanha', path: '/admin/campaign', icon: Megaphone },
-  { label: 'Mensalidades', path: '/admin/mensalidades', icon: CreditCard },
 ];
 
 export default function AdminLayout() {
@@ -124,6 +123,12 @@ export default function AdminLayout() {
                 <DropdownMenuItem className="gap-2 cursor-pointer">
                   <UserCheck className="w-4 h-4" />
                   Vendedores
+                </DropdownMenuItem>
+              </RouterLink>
+              <RouterLink to="/admin/mensalidades">
+                <DropdownMenuItem className="gap-2 cursor-pointer">
+                  <CreditCard className="w-4 h-4" />
+                  Mensalidades
                 </DropdownMenuItem>
               </RouterLink>
             </DropdownMenuContent>
