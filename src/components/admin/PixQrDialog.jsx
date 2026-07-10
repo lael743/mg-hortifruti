@@ -10,10 +10,10 @@ export default function PixQrDialog({ mensalidade, onClose }) {
   const [showCode, setShowCode] = useState(false);
 
   const brCode = useMemo(() => generatePixBrCode({
-    key: mensalidade.pix_chave,
-    amount: mensalidade.valor,
-    name: mensalidade.pix_beneficiario,
-    city: mensalidade.pix_cidade,
+    chave: mensalidade.pix_chave,
+    valor: mensalidade.valor,
+    nome: mensalidade.pix_nome_beneficiario,
+    cidade: mensalidade.pix_cidade,
   }), [mensalidade]);
 
   const venc = mensalidade.data_vencimento
