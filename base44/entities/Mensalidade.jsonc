@@ -1,0 +1,110 @@
+{
+  "name": "Mensalidade",
+  "type": "object",
+  "properties": {
+    "descricao": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o da mensalidade"
+    },
+    "valor": {
+      "type": "number",
+      "description": "Valor em R$"
+    },
+    "data_vencimento": {
+      "type": "string",
+      "format": "date",
+      "description": "Data de vencimento"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pendente",
+        "paga",
+        "vencida"
+      ],
+      "default": "pendente"
+    },
+    "tipo_cobranca": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "boleto",
+          "pix",
+          "link"
+        ]
+      },
+      "description": "Formas de cobran\u00e7a dispon\u00edveis",
+      "default": []
+    },
+    "boleto_url": {
+      "type": "string",
+      "description": "URL do PDF do boleto"
+    },
+    "boleto_link": {
+      "type": "string",
+      "description": "Link do boleto online"
+    },
+    "pix_chave": {
+      "type": "string",
+      "description": "Chave PIX"
+    },
+    "pix_nome_beneficiario": {
+      "type": "string",
+      "description": "Nome do benefici\u00e1rio PIX"
+    },
+    "pix_cidade": {
+      "type": "string",
+      "description": "Cidade do benefici\u00e1rio PIX"
+    },
+    "link_pagamento": {
+      "type": "string",
+      "description": "Link de pagamento gen\u00e9rico"
+    },
+    "recorrente": {
+      "type": "boolean",
+      "default": false,
+      "description": "Gerar pr\u00f3xima mensalidade automaticamente ao marcar como paga"
+    },
+    "intervalo_dias": {
+      "type": "number",
+      "default": 30,
+      "description": "Intervalo em dias para a pr\u00f3xima cobran\u00e7a"
+    },
+    "data_pagamento": {
+      "type": "string",
+      "format": "date",
+      "description": "Data em que foi paga"
+    },
+    "notas": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "descricao",
+    "valor",
+    "data_vencimento"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "email": "centralgpsf@gmail.com"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "email": "centralgpsf@gmail.com"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "email": "centralgpsf@gmail.com"
+      }
+    }
+  }
+}
