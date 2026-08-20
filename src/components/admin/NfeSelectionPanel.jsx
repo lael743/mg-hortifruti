@@ -60,6 +60,23 @@ export default function NfeSelectionPanel({
 
   const nfeItems = items.filter(it => !it.is_bonus && it.nfe_included);
 
+  // "Meia nota": todos os itens incluídos têm nfe_value exatamente metade do preço efetivo
+  const effectivePriceOf = (it) => it.final_unit_price ?? it.unit_price ?? 0;
+  const isMeia = nfeItems.length > 0 && nfeItems.every(it =>
+    it.nfe_value != null && Math.abs(it.nfe_value - effectivePriceOf(it) / 2) < 0.01
+  );
+
+  const handleToggleMeia = (checked) => {
+    const newItems = items.map(it => {
+      if (it.is_bonus) return it;
+      const base = effectivePriceOf(it);
+      return checked
+        ? { ...it, nfe_value: +(base / 2).toFixed(2) }
+        : { ...it, nfe_value: null };
+    });
+    onChange({ items: newItems, nfeData });
+  };
+
   return (
     <div className="border-2 border-blue-200 rounded-xl p-4 space-y-4 bg-blue-50/40">
       {/* Toggle principal */}
@@ -120,6 +137,17 @@ export default function NfeSelectionPanel({
               <Badge variant="secondary" className="text-xs">
                 {nfeItems.length} de {items.filter(it => !it.is_bonus).length} selecionados
               </Badge>
+            </div>
+
+            {/* Meia nota — divide todos os valores fiscais pela metade */}
+            <div className="flex items-center justify-between gap-3 mb-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-amber-800">Meia nota</span>
+                <span className="text-[11px] text-amber-700/80">
+                  Ativa para deixar todos os valores da NF-e pela metade
+                </span>
+              </div>
+              <Switch checked={isMeia} onCheckedChange={handleToggleMeia} />
             </div>
 
             <div className="space-y-1.5 max-h-52 overflow-y-auto">
