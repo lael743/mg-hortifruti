@@ -467,7 +467,7 @@ function BoxGroup({ box, rows, startDate, endDate, onItemAdded, onItemDeleted, f
   };
 
   return (
-    <Card className="overflow-hidden border-2 border-primary/15">
+    <Card className="overflow-hidden border-2 border-primary/15 print:break-inside-avoid">
       <div
         className={`bg-primary/8 px-4 py-3 flex items-center justify-between gap-2 ${!forceOpen ? 'hover:bg-primary/12 cursor-pointer' : ''}`}
         onClick={!forceOpen ? () => setOpen(o => !o) : undefined}

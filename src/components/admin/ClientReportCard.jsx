@@ -30,7 +30,7 @@ export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, produ
   }, [rows, productToBox]);
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden print:break-inside-avoid">
       {/* Cabeçalho do cliente — Caminhão, CNPJ e Cliente aparecem só aqui */}
       <div
         className={`w-full flex items-center justify-between gap-3 px-4 py-3 bg-primary/8 ${!forceOpen ? 'hover:bg-primary/12 cursor-pointer' : ''} transition-colors text-left`}
