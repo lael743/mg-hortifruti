@@ -71,6 +71,7 @@ export default function AdminOrders() {
   const [showAdHocModal, setShowAdHocModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [sortBy, setSortBy] = useState('date'); // 'date' | 'alpha'
+  const [nfeOnly, setNfeOnly] = useState(false); // filtra apenas pedidos com NF-e
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['admin-orders'],
@@ -215,7 +216,9 @@ export default function AdminOrders() {
         u?.company_name?.toLowerCase().includes(f.toLowerCase())
       );
 
-    return matchSearch && matchStatus && matchPeriod && matchGroup;
+    const matchNfe = !nfeOnly || o.requires_nfe === true;
+
+    return matchSearch && matchStatus && matchPeriod && matchGroup && matchNfe;
   });
 
   const sorted = sortBy === 'alpha'
@@ -517,7 +520,7 @@ export default function AdminOrders() {
     setTimeout(() => w.print(), 400);
   };
 
-  const hasActiveFilters = cityFilters.length > 0 || statusFilter !== 'Todos' || search || customStart || customEnd;
+  const hasActiveFilters = cityFilters.length > 0 || statusFilter !== 'Todos' || search || customStart || customEnd || nfeOnly;
 
   return (
     <div className="space-y-4">
@@ -534,6 +537,15 @@ export default function AdminOrders() {
           <SelectTrigger className="w-full sm:w-40 border-slate-400"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
         </Select>
+        <Button
+          variant={nfeOnly ? 'default' : 'outline'}
+          onClick={() => setNfeOnly(v => !v)}
+          className="shrink-0 border-slate-400"
+          title="Mostrar apenas pedidos que requerem NF-e"
+        >
+          <FileText className="w-4 h-4 sm:mr-1.5" />
+          <span className="hidden sm:inline">Só NF-e</span>
+        </Button>
       </div>
 
       {/* Period & group filters */}
@@ -612,7 +624,7 @@ export default function AdminOrders() {
           {hasActiveFilters && (
             <p className="text-xs text-muted-foreground mt-3">
               Mostrando <strong>{filtered.length}</strong> de {orders.length} pedidos.
-              {' '}<button onClick={() => { setCityFilters([]); setStatusFilter('Todos'); setSearch(''); setCustomStart(toDateInputValue(subDays(new Date(), 1))); setCustomEnd(toDateInputValue(new Date())); }} className="underline text-primary">Limpar filtros</button>
+              {' '}<button onClick={() => { setCityFilters([]); setStatusFilter('Todos'); setSearch(''); setNfeOnly(false); setCustomStart(toDateInputValue(subDays(new Date(), 1))); setCustomEnd(toDateInputValue(new Date())); }} className="underline text-primary">Limpar filtros</button>
             </p>
           )}
         </div>
@@ -633,6 +645,7 @@ export default function AdminOrders() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-sm">{u.company_name || u.full_name || order.customer_name}</span>
                       <Badge className={`${statusColors[order.status]} border text-xs`}>{order.status}</Badge>
+                      {order.requires_nfe && <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200 border text-xs"><FileText className="w-3 h-3 mr-0.5" />NF-e</Badge>}
                       {u.is_walk_in && <Badge variant="outline" className="text-xs border-amber-400 text-amber-700">Avulso</Badge>}
                     </div>
                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
