@@ -343,6 +343,19 @@ function BoxGroup({ box, rows, startDate, endDate, onItemAdded, onItemDeleted })
 
   const totalQty = rows.reduce((s, r) => s + r.qtde, 0);
 
+  // Agrupa itens por cliente dentro do box
+  const clientGroups = useMemo(() => {
+    const map = new Map();
+    rows.forEach(r => {
+      const key = r.cnpj || r.cliente || '—';
+      if (!map.has(key)) map.set(key, { cliente: r.cliente || '—', cnpj: r.cnpj || '', caminhoes: new Set(), rows: [] });
+      const g = map.get(key);
+      g.rows.push(r);
+      if (r.caminhao) g.caminhoes.add(r.caminhao);
+    });
+    return [...map.values()].sort((a, b) => a.cliente.localeCompare(b.cliente, 'pt-BR'));
+  }, [rows]);
+
   const addMutation = useMutation({
     mutationFn: (data) => base44.entities.CeasaReportItem.create(data),
     onSuccess: () => { onItemAdded(); toast.success('Item adicionado ao Box.'); setNewItem({ product_name: '', quantity: 1, client_name: '' }); setShowAdd(false); },
@@ -393,31 +406,53 @@ function BoxGroup({ box, rows, startDate, endDate, onItemAdded, onItemDeleted })
       )}
 
       <div className="divide-y">
-        {rows.map((r, i) => (
-          <div key={i} className="flex items-center justify-between px-4 py-2 text-sm hover:bg-muted/20">
-            <div className="min-w-0 flex-1">
-              <p className="font-medium truncate">
-                {r.produto}
-                {r.isManual && <Badge variant="outline" className="ml-1.5 text-[10px] text-blue-600 border-blue-300">Manual</Badge>}
-              </p>
-              <p className="text-xs text-muted-foreground truncate">{r.cliente}{r.caminhao && ` • ${r.caminhao}`}</p>
-            </div>
-            <div className="flex items-center gap-3 shrink-0">
-              {r.valorUn > 0 && <span className="text-xs text-muted-foreground">R$ {r.valorUn.toFixed(2)}/un</span>}
-              <span className="font-bold text-primary">{r.qtde}</span>
-              {r.isManual && r.manualId && (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-6 w-6 text-destructive print:hidden"
-                  onClick={() => deleteMutation.mutate(r.manualId)}
-                >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
+        {clientGroups.map((cg, gi) => {
+          const caminhaoLabel = [...cg.caminhoes].filter(Boolean).join(', ');
+          const clientQty = cg.rows.reduce((s, r) => s + r.qtde, 0);
+          const clientValor = cg.rows.reduce((s, r) => s + r.subtotal, 0);
+          return (
+            <div key={gi} className="px-4 py-2">
+              {/* Sub-cabeçalho do cliente dentro do box */}
+              <div className="flex items-start justify-between gap-2 mb-1 pb-1 border-b border-dashed">
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm truncate">{cg.cliente}</p>
+                  {cg.cnpj && <p className="text-xs text-muted-foreground font-mono">CNPJ: {cg.cnpj}</p>}
+                  {caminhaoLabel && <p className="text-xs text-muted-foreground">Caminhão: {caminhaoLabel}</p>}
+                </div>
+                <Badge variant="secondary" className="shrink-0">{clientQty} un.</Badge>
+              </div>
+              <div className="divide-y">
+                {cg.rows.map((r, i) => (
+                  <div key={i} className="flex items-center justify-between py-1.5 text-sm hover:bg-muted/20">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">
+                        {r.produto}
+                        {r.isManual && <Badge variant="outline" className="ml-1.5 text-[10px] text-blue-600 border-blue-300">Manual</Badge>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      {r.valorUn > 0 && <span className="text-xs text-muted-foreground">R$ {r.valorUn.toFixed(2)}/un</span>}
+                      <span className="font-bold text-primary">{r.qtde}</span>
+                      {r.isManual && r.manualId && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 text-destructive print:hidden"
+                          onClick={() => deleteMutation.mutate(r.manualId)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {clientValor > 0 && (
+                <p className="text-right text-xs text-muted-foreground mt-1">Subtotal cliente: R$ {clientValor.toFixed(2)}</p>
               )}
             </div>
-          </div>
-        ))}
+          );
+        })}
         {rows.length === 0 && <p className="text-center text-xs text-muted-foreground py-4">Nenhum item neste Box.</p>}
       </div>
     </Card>
