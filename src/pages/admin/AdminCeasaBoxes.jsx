@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
@@ -63,13 +63,28 @@ export default function AdminCeasaBoxes() {
   };
 
   const toggleProduct = (pid) => {
-    setForm(f => ({
-      ...f,
-      product_ids: f.product_ids.includes(pid)
-        ? f.product_ids.filter(p => p !== pid)
-        : [...f.product_ids, pid],
-    }));
+    setForm(f => {
+      if (f.product_ids.includes(pid)) {
+        return { ...f, product_ids: f.product_ids.filter(p => p !== pid) };
+      }
+      // Bloqueia associação duplicada: produto já vinculado a outro Box
+      if (otherBoxOwner[pid]) {
+        toast.error(`"${getProductName(pid)}" já está associado ao ${otherBoxOwner[pid]}.`);
+        return f;
+      }
+      return { ...f, product_ids: [...f.product_ids, pid] };
+    });
   };
+
+  // Mapa produto -> nome do Box que já o possui (ignora o próprio box em edição)
+  const otherBoxOwner = useMemo(() => {
+    const map = {};
+    boxes.forEach(b => {
+      if (editing && b.id === editing.id) return;
+      (b.product_ids || []).forEach(pid => { map[pid] = b.name; });
+    });
+    return map;
+  }, [boxes, editing]);
 
   const filteredProducts = productSearch.length > 0
     ? activeProducts.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
@@ -189,17 +204,27 @@ export default function AdminCeasaBoxes() {
                 <div className="border rounded-lg max-h-56 overflow-y-auto divide-y">
                   {filteredProducts.map(p => {
                     const checked = (form.product_ids || []).includes(p.id);
+                    const ownedBy = otherBoxOwner[p.id];
+                    const blocked = !checked && !!ownedBy;
                     return (
-                      <label key={p.id} className="flex items-center gap-2 px-3 py-2 hover:bg-muted/50 cursor-pointer">
+                      <label
+                        key={p.id}
+                        className={`flex items-center gap-2 px-3 py-2 ${blocked ? 'opacity-60 cursor-not-allowed' : 'hover:bg-muted/50 cursor-pointer'}`}
+                        onClick={blocked ? (e) => { e.preventDefault(); toggleProduct(p.id); } : undefined}
+                      >
                         <input
                           type="checkbox"
                           checked={checked}
+                          disabled={blocked}
                           onChange={() => toggleProduct(p.id)}
                           className="w-4 h-4 accent-primary"
                         />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{p.name}</p>
-                          <p className="text-xs text-muted-foreground">{p.category} • {p.packaging_type}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {p.category} • {p.packaging_type}
+                            {ownedBy && <span className="text-amber-600 font-medium"> • já em {ownedBy}</span>}
+                          </p>
                         </div>
                       </label>
                     );
