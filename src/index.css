@@ -86,3 +86,11 @@
     @apply bg-background text-foreground font-inter;
   }
 }
+
+/* Impressão isolada do relatório Ceasa: mostra só o portal, esconde o restante da página */
+.ceasa-print-root { display: none; }
+@media print {
+  body.ceasa-printing > *:not(.ceasa-print-root) { display: none !important; }
+  body.ceasa-printing .ceasa-print-root { display: block !important; }
+  body.ceasa-printing { background: #fff; }
+}

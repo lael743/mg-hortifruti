@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Printer, Plus, Trash2, Package } from 'lucide-react';
+import { Download, Printer, Plus, Trash2, Package, ChevronDown, ChevronRight } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import ClientReportCard from '@/components/admin/ClientReportCard';
 
 const LOCAL_TZ = 'America/Porto_Velho';
@@ -32,6 +33,21 @@ export default function AdminCeasaReport() {
   const [startDate, setStartDate] = useState(todayStr());
   const [endDate, setEndDate] = useState(todayStr());
   const [activeTab, setActiveTab] = useState('lista');
+  const [printTarget, setPrintTarget] = useState(null); // null | 'all' | { type:'client'|'box', id }
+
+  const doPrint = (target) => {
+    setPrintTarget(target || 'all');
+    document.body.classList.add('ceasa-printing');
+    const cleanup = () => {
+      document.body.classList.remove('ceasa-printing');
+      setPrintTarget(null);
+      window.removeEventListener('afterprint', cleanup);
+      clearTimeout(fallback);
+    };
+    const fallback = setTimeout(cleanup, 8000);
+    window.addEventListener('afterprint', cleanup);
+    setTimeout(() => window.print(), 200);
+  };
 
   const { data: allOrders = [] } = useQuery({
     queryKey: ['orders'],
@@ -187,11 +203,6 @@ export default function AdminCeasaReport() {
     toast.success('CSV exportado!');
   };
 
-  // === Impressão ===
-  const handlePrint = () => {
-    window.print();
-  };
-
   const productName = (pid) => products.find(p => p.id === pid)?.name || '—';
 
   return (
@@ -205,8 +216,8 @@ export default function AdminCeasaReport() {
           <Button variant="outline" size="sm" className="gap-1" onClick={exportCsv} disabled={totalRows === 0}>
             <Download className="w-4 h-4" /> Exportar CSV
           </Button>
-          <Button variant="outline" size="sm" className="gap-1" onClick={handlePrint}>
-            <Printer className="w-4 h-4" /> Imprimir
+          <Button variant="outline" size="sm" className="gap-1" onClick={() => doPrint('all')} disabled={totalRows === 0 && groupedByBox.groups.length === 0}>
+            <Printer className="w-4 h-4" /> Imprimir tudo
           </Button>
         </div>
       </div>
@@ -267,6 +278,7 @@ export default function AdminCeasaReport() {
                   caminhoes={[...g.caminhoes]}
                   rows={g.rows}
                   productToBox={productToBox}
+                  onPrint={() => doPrint({ type: 'client', id: g.cnpj || g.cliente })}
                 />
               ))}
             </div>
@@ -309,6 +321,7 @@ export default function AdminCeasaReport() {
                   endDate={endDate}
                   onItemAdded={() => queryClient.invalidateQueries({ queryKey: ['ceasa-report-items'] })}
                   onItemDeleted={() => queryClient.invalidateQueries({ queryKey: ['ceasa-report-items'] })}
+                  onPrint={() => doPrint({ type: 'box', id: box.id })}
                 />
               ))}
 
@@ -332,14 +345,66 @@ export default function AdminCeasaReport() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* === Portal de impressão — só aparece no print, isolado do restante da página === */}
+      {printTarget && createPortal(
+        <div className="ceasa-print-root">
+          <div style={{ textAlign: 'center', marginBottom: 16 }}>
+            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Relação de Vendas e Boxes Ceasa</h1>
+            <p style={{ fontSize: 14, margin: '4px 0 0' }}>{fmtDate(startDate)} até {fmtDate(endDate)}</p>
+          </div>
+
+          {(printTarget === 'all' || printTarget.type === 'client') && (
+            <div style={{ marginBottom: 24 }}>
+              {printTarget === 'all' && <h2 style={{ fontSize: 16, fontWeight: 700, borderBottom: '2px solid hsl(var(--primary))', paddingBottom: 4, marginBottom: 8 }}>Lista por Cliente</h2>}
+              {groupedByClient
+                .filter(g => printTarget === 'all' || printTarget.id === (g.cnpj || g.cliente))
+                .map((g, i) => (
+                  <ClientReportCard
+                    key={i}
+                    cliente={g.cliente}
+                    cnpj={g.cnpj}
+                    caminhoes={[...g.caminhoes]}
+                    rows={g.rows}
+                    productToBox={productToBox}
+                    forceOpen
+                  />
+                ))}
+            </div>
+          )}
+
+          {(printTarget === 'all' || printTarget.type === 'box') && (
+            <div>
+              {printTarget === 'all' && <h2 style={{ fontSize: 16, fontWeight: 700, borderBottom: '2px solid hsl(var(--primary))', paddingBottom: 4, marginBottom: 8 }}>Agrupado por Box</h2>}
+              {groupedByBox.groups
+                .filter(({ box }) => printTarget === 'all' || printTarget.id === box.id)
+                .map(({ box, rows }) => (
+                  <BoxGroup
+                    key={box.id}
+                    box={box}
+                    rows={rows}
+                    startDate={startDate}
+                    endDate={endDate}
+                    onItemAdded={() => {}}
+                    onItemDeleted={() => {}}
+                    forceOpen
+                  />
+                ))}
+            </div>
+          )}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
 
 // === Subcomponente: Grupo por Box com adição de itens manuais ===
-function BoxGroup({ box, rows, startDate, endDate, onItemAdded, onItemDeleted }) {
+function BoxGroup({ box, rows, startDate, endDate, onItemAdded, onItemDeleted, forceOpen, onPrint }) {
   const [showAdd, setShowAdd] = useState(false);
+  const [open, setOpen] = useState(false);
   const [newItem, setNewItem] = useState({ product_name: '', quantity: 1, client_name: '' });
+  const expanded = forceOpen || open;
 
   const totalQty = rows.reduce((s, r) => s + r.qtde, 0);
 
@@ -381,16 +446,37 @@ function BoxGroup({ box, rows, startDate, endDate, onItemAdded, onItemDeleted })
 
   return (
     <Card className="overflow-hidden border-2 border-primary/15">
-      <div className="bg-primary/8 px-4 py-3 flex items-center justify-between gap-2">
+      <div
+        className={`bg-primary/8 px-4 py-3 flex items-center justify-between gap-2 ${!forceOpen ? 'hover:bg-primary/12 cursor-pointer' : ''}`}
+        onClick={!forceOpen ? () => setOpen(o => !o) : undefined}
+      >
         <div>
           <p className="font-bold text-primary">{box.name}</p>
           {box.cnpj && <p className="text-xs text-muted-foreground">CNPJ: {box.cnpj}</p>}
         </div>
         <div className="flex items-center gap-2">
           <Badge className="bg-primary text-primary-foreground">{totalQty} un. total</Badge>
-          <Button size="sm" variant="outline" className="h-7 gap-1 print:hidden" onClick={() => setShowAdd(!showAdd)}>
-            <Plus className="w-3.5 h-3.5" /> Adicionar item
-          </Button>
+          {onPrint && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 print:hidden"
+              title="Imprimir este Box"
+              onClick={(e) => { e.stopPropagation(); onPrint(); }}
+            >
+              <Printer className="w-4 h-4" />
+            </Button>
+          )}
+          {!forceOpen && (
+            <Button size="icon" variant="ghost" className="h-7 w-7 print:hidden" onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}>
+              {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </Button>
+          )}
+          {!forceOpen && (
+            <Button size="sm" variant="outline" className="h-7 gap-1 print:hidden" onClick={(e) => { e.stopPropagation(); setShowAdd(!showAdd); }}>
+              <Plus className="w-3.5 h-3.5" /> Adicionar item
+            </Button>
+          )}
         </div>
       </div>
 
@@ -405,6 +491,7 @@ function BoxGroup({ box, rows, startDate, endDate, onItemAdded, onItemDeleted })
         </div>
       )}
 
+      {expanded && (
       <div className="divide-y">
         {clientGroups.map((cg, gi) => {
           const caminhaoLabel = [...cg.caminhoes].filter(Boolean).join(', ');
@@ -423,7 +510,7 @@ function BoxGroup({ box, rows, startDate, endDate, onItemAdded, onItemDeleted })
               </div>
               <div className="divide-y">
                 {cg.rows.map((r, i) => (
-                  <div key={i} className="flex items-center justify-between py-1.5 text-sm hover:bg-muted/20">
+                  <div key={i} className="flex items-center justify-between py-1.5 text-sm">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium truncate">
                         {r.produto}
@@ -455,6 +542,7 @@ function BoxGroup({ box, rows, startDate, endDate, onItemAdded, onItemDeleted })
         })}
         {rows.length === 0 && <p className="text-center text-xs text-muted-foreground py-4">Nenhum item neste Box.</p>}
       </div>
+      )}
     </Card>
   );
 }

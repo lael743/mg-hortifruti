@@ -2,10 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronRight, Truck, Building2, Package } from 'lucide-react';
+import { ChevronDown, ChevronRight, Truck, Building2, Package, Printer } from 'lucide-react';
 
-export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, productToBox }) {
-  const [open, setOpen] = useState(true);
+export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, productToBox, forceOpen, onPrint }) {
+  const [open, setOpen] = useState(false);
+  const expanded = forceOpen || open;
 
   const totalQty = rows.reduce((s, r) => s + r.qtde, 0);
   const totalValor = rows.reduce((s, r) => s + r.subtotal, 0);
@@ -30,10 +31,9 @@ export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, produ
   return (
     <Card className="overflow-hidden">
       {/* Cabeçalho do cliente — Caminhão, CNPJ e Cliente aparecem só aqui */}
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-primary/8 hover:bg-primary/12 transition-colors text-left"
+      <div
+        className={`w-full flex items-center justify-between gap-3 px-4 py-3 bg-primary/8 ${!forceOpen ? 'hover:bg-primary/12 cursor-pointer' : ''} transition-colors text-left`}
+        onClick={!forceOpen ? () => setOpen(o => !o) : undefined}
       >
         <div className="min-w-0 flex-1">
           <p className="font-bold text-primary truncate flex items-center gap-1.5">
@@ -51,14 +51,27 @@ export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, produ
         <div className="flex items-center gap-2 shrink-0">
           <Badge className="bg-primary text-primary-foreground">{totalQty} un.</Badge>
           <Badge variant="secondary">R$ {totalValor.toFixed(2)}</Badge>
-          <Button size="icon" variant="ghost" className="h-7 w-7">
-            {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </Button>
+          {onPrint && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 print:hidden"
+              title="Imprimir este cliente"
+              onClick={(e) => { e.stopPropagation(); onPrint(); }}
+            >
+              <Printer className="w-4 h-4" />
+            </Button>
+          )}
+          {!forceOpen && (
+            <Button size="icon" variant="ghost" className="h-7 w-7 print:hidden" onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}>
+              {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </Button>
+          )}
         </div>
-      </button>
+      </div>
 
       {/* Lista expansível — itens agrupados por box */}
-      {open && (
+      {expanded && (
         <div className="divide-y">
           {boxGroups.map(({ box, rows: bRows }) => (
             <div key={box.id} className="px-4 py-2">
@@ -68,7 +81,7 @@ export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, produ
               </p>
               <div className="divide-y">
                 {bRows.map((r, i) => (
-                  <div key={i} className="flex items-center justify-between py-1.5 text-sm hover:bg-muted/20">
+                  <div key={i} className="flex items-center justify-between py-1.5 text-sm">
                     <span className="font-medium truncate flex-1">{r.produto}</span>
                     <div className="flex items-center gap-4 shrink-0">
                       <span className="text-xs text-muted-foreground">R$ {r.valorUn.toFixed(2)}/un</span>
