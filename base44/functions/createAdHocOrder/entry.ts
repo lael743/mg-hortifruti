@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Acesso restrito a administradores' }, { status: 403 });
         }
 
-        const { walk_in_client_id, client_type, client_data, items, total, notes } = await req.json();
+        const { walk_in_client_id, client_type, client_data, items, total, notes, requires_nfe, nfe_cnpj, nfe_company_name, caminhao } = await req.json();
 
         if (!client_data?.full_name) {
             return Response.json({ error: 'Nome do cliente é obrigatório' }, { status: 400 });
@@ -83,6 +83,10 @@ Deno.serve(async (req) => {
             total: total,
             status: 'Confirmado',
             notes: notes || '',
+            requires_nfe: requires_nfe || false,
+            nfe_cnpj: nfe_cnpj || '',
+            nfe_company_name: nfe_company_name || '',
+            caminhao: caminhao || '',
         });
 
         // Criar registro de conta a receber

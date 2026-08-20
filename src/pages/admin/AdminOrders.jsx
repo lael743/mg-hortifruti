@@ -172,8 +172,8 @@ export default function AdminOrders() {
   });
 
   const updateOrderItemsMutation = useMutation({
-    mutationFn: ({ id, items, total, subtotal, discount_type, discount_value, discount_amount }) =>
-      base44.entities.Order.update(id, { items, total, subtotal, discount_type, discount_value, discount_amount }),
+    mutationFn: ({ id, items, total, subtotal, discount_type, discount_value, discount_amount, requires_nfe, nfe_cnpj, nfe_company_name, caminhao }) =>
+      base44.entities.Order.update(id, { items, total, subtotal, discount_type, discount_value, discount_amount, requires_nfe, nfe_cnpj, nfe_company_name, caminhao }),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['admin-orders'] });
       toast.success('Pedido atualizado com sucesso');

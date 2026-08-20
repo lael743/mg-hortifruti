@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Pencil, Check, X, Trash2, ArrowLeftRight, PackagePlus, Minus, Plus, Gift, Tag } from 'lucide-react';
 import AddOrderItemModal from './AddOrderItemModal';
 import BonusItemModal from './BonusItemModal';
+import NfeSelectionPanel from './NfeSelectionPanel';
 
 export default function OrderEditDialog({ order, onSave, onClose }) {
   const [items, setItems] = useState(
@@ -25,6 +26,12 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
   const [discountInput, setDiscountInput] = useState(
     order.discount_value != null && order.discount_value > 0 ? String(order.discount_value) : ''
   );
+  const [nfeData, setNfeData] = useState({
+    requires_nfe: !!order.requires_nfe,
+    nfe_cnpj: order.nfe_cnpj || '',
+    nfe_company_name: order.nfe_company_name || '',
+    caminhao: order.caminhao || '',
+  });
 
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
@@ -121,9 +128,15 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
     if (items.length !== originalItems.length) return true;
     const discountChanged = discountAmount !== (order.discount_amount ?? 0);
     if (discountChanged) return true;
+    const nfeChanged =
+      nfeData.requires_nfe !== !!order.requires_nfe ||
+      nfeData.nfe_cnpj !== (order.nfe_cnpj || '') ||
+      nfeData.nfe_company_name !== (order.nfe_company_name || '') ||
+      nfeData.caminhao !== (order.caminhao || '');
+    if (nfeChanged) return true;
     return items.some((item, i) => {
       const orig = originalItems[i];
-      return !orig || item.quantity !== orig.quantity || item.final_unit_price !== (orig.final_unit_price ?? orig.unit_price) || item.product_id !== orig.product_id;
+      return !orig || item.quantity !== orig.quantity || item.final_unit_price !== (orig.final_unit_price ?? orig.unit_price) || item.product_id !== orig.product_id || !!item.nfe_included !== !!orig.nfe_included || item.nfe_value !== orig.nfe_value;
     });
   })();
 
@@ -135,6 +148,10 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
       discount_value: discountAmount > 0 ? discountInputNum : 0,
       discount_amount: discountAmount,
       total: newTotal,
+      requires_nfe: nfeData.requires_nfe,
+      nfe_cnpj: nfeData.nfe_cnpj,
+      nfe_company_name: nfeData.nfe_company_name,
+      caminhao: nfeData.caminhao,
     });
   };
 
@@ -351,6 +368,18 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
             )}
           </div>
         </div>
+
+        {/* NF-e */}
+        <NfeSelectionPanel
+          items={items}
+          nfeData={nfeData}
+          defaultCnpj={order.nfe_cnpj || ''}
+          defaultCompanyName={order.nfe_company_name || order.customer_display_name || order.customer_name || ''}
+          onChange={({ items: newItems, nfeData: newNfeData }) => {
+            setItems(newItems);
+            setNfeData(newNfeData);
+          }}
+        />
 
         {/* Totals summary */}
         <div className="mt-3 pt-3 border-t space-y-1 text-sm">

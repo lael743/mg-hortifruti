@@ -1,0 +1,62 @@
+{
+  "name": "CeasaReportItem",
+  "type": "object",
+  "properties": {
+    "box_id": {
+      "type": "string",
+      "description": "ID do CeasaBox"
+    },
+    "box_name": {
+      "type": "string",
+      "description": "Nome do Box (desnormalizado)"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Nome do produto adicionado manualmente"
+    },
+    "quantity": {
+      "type": "number",
+      "description": "Quantidade"
+    },
+    "client_name": {
+      "type": "string",
+      "description": "Nome do cliente (opcional)"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do relat\u00f3rio"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "box_id",
+    "product_name",
+    "quantity",
+    "date"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

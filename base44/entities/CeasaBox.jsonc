@@ -1,0 +1,52 @@
+{
+  "name": "CeasaBox",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome do Box do Ceasa (ex: Box 1, Box 03 Irm\u00e3os)"
+    },
+    "cnpj": {
+      "type": "string",
+      "description": "CNPJ do Box"
+    },
+    "product_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs dos produtos fornecidos por este Box",
+      "default": []
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Box ativo"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

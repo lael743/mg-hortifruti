@@ -19,6 +19,7 @@ const tabs = [
   { label: 'Clientes', path: '/admin/clients', icon: Users },
   { label: 'Tabelas', path: '/admin/price-groups', icon: Tag },
   { label: 'Relatórios', path: '/admin/reports', icon: FileText },
+  { label: 'Ceasa', path: '/admin/ceasa-report', icon: Package },
   { label: 'Chat', path: '/admin/chat', icon: MessageCircle },
   { label: 'Campanha', path: '/admin/campaign', icon: Megaphone },
 ];
@@ -129,6 +130,12 @@ export default function AdminLayout() {
                 <DropdownMenuItem className="gap-2 cursor-pointer">
                   <CreditCard className="w-4 h-4" />
                   Mensalidades
+                </DropdownMenuItem>
+              </RouterLink>
+              <RouterLink to="/admin/ceasa-boxes">
+                <DropdownMenuItem className="gap-2 cursor-pointer">
+                  <Package className="w-4 h-4" />
+                  Boxes Ceasa
                 </DropdownMenuItem>
               </RouterLink>
             </DropdownMenuContent>
