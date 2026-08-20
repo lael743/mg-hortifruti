@@ -86,9 +86,10 @@ export default function AdminCeasaBoxes() {
     return map;
   }, [boxes, editing]);
 
-  const filteredProducts = productSearch.length > 0
-    ? activeProducts.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
-    : activeProducts;
+  const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const filteredProducts = activeProducts
+    .filter(p => productSearch.length === 0 || norm(p.name).includes(norm(productSearch)))
+    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
 
   const getProductName = (pid) => products.find(p => p.id === pid)?.name || '—';
 
