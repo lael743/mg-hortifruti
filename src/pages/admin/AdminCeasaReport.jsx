@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, Printer, Plus, Trash2, Package } from 'lucide-react';
+import ClientReportCard from '@/components/admin/ClientReportCard';
 
 const LOCAL_TZ = 'America/Porto_Velho';
 
@@ -137,6 +138,19 @@ export default function AdminCeasaReport() {
   const totalValor = flatRows.reduce((s, r) => s + r.subtotal, 0);
   const totalClientes = new Set(nfeOrders.map(o => o.nfe_cnpj || o.customer_email)).size;
 
+  // Agrupamento por cliente para a Lista por Cliente
+  const groupedByClient = useMemo(() => {
+    const map = new Map();
+    flatRows.forEach(r => {
+      const key = r.cnpj || r.cliente || '—';
+      if (!map.has(key)) map.set(key, { cliente: r.cliente, cnpj: r.cnpj, caminhoes: new Set(), rows: [] });
+      const g = map.get(key);
+      g.rows.push(r);
+      if (r.caminhao) g.caminhoes.add(r.caminhao);
+    });
+    return [...map.values()].sort((a, b) => a.cliente.localeCompare(b.cliente, 'pt-BR'));
+  }, [flatRows]);
+
   // === Exportação CSV ===
   const exportCsv = () => {
     const headers = ['Caminhão', 'CNPJ', 'Cliente', 'Produto', 'Qtde', 'Valor Un.'];
@@ -236,48 +250,26 @@ export default function AdminCeasaReport() {
               <p className="text-muted-foreground">Nenhum pedido com NF-e no período selecionado.</p>
             </Card>
           ) : (
-            <Card className="overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50 text-xs uppercase">
-                    <tr>
-                      <th className="text-left px-3 py-2 font-semibold">Caminhão</th>
-                      <th className="text-left px-3 py-2 font-semibold">CNPJ</th>
-                      <th className="text-left px-3 py-2 font-semibold">Cliente</th>
-                      <th className="text-left px-3 py-2 font-semibold">Produto</th>
-                      <th className="text-center px-3 py-2 font-semibold">Qtde</th>
-                      <th className="text-right px-3 py-2 font-semibold">Valor Un.</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {flatRows.map((r, i) => {
-                      const box = r.productId ? productToBox[r.productId] : null;
-                      return (
-                        <tr key={i} className="hover:bg-muted/30">
-                          <td className="px-3 py-2 text-xs">{r.caminhao || '—'}</td>
-                          <td className="px-3 py-2 text-xs font-mono">{r.cnpj || '—'}</td>
-                          <td className="px-3 py-2">
-                            {r.cliente}
-                            {box && <Badge variant="outline" className="ml-1.5 text-[10px]">{box.name}</Badge>}
-                          </td>
-                          <td className="px-3 py-2">{r.produto}</td>
-                          <td className="px-3 py-2 text-center font-medium">{r.qtde}</td>
-                          <td className="px-3 py-2 text-right">R$ {r.valorUn.toFixed(2)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-primary/5 font-semibold">
-                      <td colSpan={3} className="px-3 py-2 text-right">Total geral:</td>
-                      <td className="px-3 py-2">{flatRows.length} itens</td>
-                      <td className="px-3 py-2 text-center">{flatRows.reduce((s, r) => s + r.qtde, 0)}</td>
-                      <td className="px-3 py-2 text-right text-primary">R$ {totalValor.toFixed(2)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
+            <div className="space-y-3">
+              {/* Total geral */}
+              <div className="flex items-center justify-end gap-3 text-sm">
+                <Badge variant="secondary">{groupedByClient.length} clientes</Badge>
+                <Badge variant="secondary">{flatRows.reduce((s, r) => s + r.qtde, 0)} un.</Badge>
+                <Badge className="bg-primary text-primary-foreground">R$ {totalValor.toFixed(2)}</Badge>
               </div>
-            </Card>
+
+              {/* Cards por cliente, expansíveis */}
+              {groupedByClient.map((g, i) => (
+                <ClientReportCard
+                  key={i}
+                  cliente={g.cliente}
+                  cnpj={g.cnpj}
+                  caminhoes={[...g.caminhoes]}
+                  rows={g.rows}
+                  productToBox={productToBox}
+                />
+              ))}
+            </div>
           )}
 
           {/* Resumo por produto */}
