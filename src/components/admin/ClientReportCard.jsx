@@ -3,8 +3,9 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronRight, Truck, Building2, Package, Printer } from 'lucide-react';
+import ReportRowDeleteButton from '@/components/admin/ReportRowDeleteButton';
 
-export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, productToBox, forceOpen, onPrint }) {
+export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, productToBox, forceOpen, onPrint, onDeleteRow }) {
   const [open, setOpen] = useState(false);
   const expanded = forceOpen || open;
 
@@ -87,6 +88,7 @@ export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, produ
                       <span className="text-xs text-muted-foreground">R$ {r.valorUn.toFixed(2)}/un</span>
                       <span className="font-bold text-primary text-center w-12">{r.qtde}</span>
                       <span className="text-right w-20">R$ {r.subtotal.toFixed(2)}</span>
+                      {!forceOpen && onDeleteRow && <ReportRowDeleteButton onConfirm={() => onDeleteRow(r)} />}
                     </div>
                   </div>
                 ))}
@@ -105,6 +107,7 @@ export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, produ
                       <span className="text-xs text-muted-foreground">R$ {r.valorUn.toFixed(2)}/un</span>
                       <span className="font-bold text-primary text-center w-12">{r.qtde}</span>
                       <span className="text-right w-20">R$ {r.subtotal.toFixed(2)}</span>
+                      {!forceOpen && onDeleteRow && <ReportRowDeleteButton onConfirm={() => onDeleteRow(r)} />}
                     </div>
                   </div>
                 ))}

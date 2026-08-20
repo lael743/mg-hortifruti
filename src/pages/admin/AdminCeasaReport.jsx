@@ -8,9 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Printer, Plus, Trash2, Package, ChevronDown, ChevronRight } from 'lucide-react';
+import { Download, Printer, Plus, Package, ChevronDown, ChevronRight } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import ClientReportCard from '@/components/admin/ClientReportCard';
+import ReportRowDeleteButton from '@/components/admin/ReportRowDeleteButton';
 
 const LOCAL_TZ = 'America/Porto_Velho';
 
@@ -84,12 +85,13 @@ export default function AdminCeasaReport() {
   const flatRows = useMemo(() => {
     const rows = [];
     nfeOrders.forEach(o => {
-      (o.items || []).forEach(it => {
+      (o.items || []).forEach((it, idx) => {
         if (it.is_bonus) return;
         if (!it.nfe_included) return;
         rows.push({
           orderId: o.id,
           orderNumber: o.order_number,
+          itemIndex: idx,
           caminhao: o.caminhao || '',
           cnpj: o.nfe_cnpj || '',
           cliente: o.nfe_company_name || o.customer_display_name || o.customer_name || '',
@@ -205,6 +207,26 @@ export default function AdminCeasaReport() {
 
   const productName = (pid) => products.find(p => p.id === pid)?.name || '—';
 
+  // === Excluir lançamento do relatório (item de pedido ou item manual) ===
+  const deleteRowMutation = useMutation({
+    mutationFn: async (row) => {
+      if (row.isManual) {
+        return base44.entities.CeasaReportItem.delete(row.manualId);
+      }
+      const order = await base44.entities.Order.get(row.orderId);
+      const items = (order.items || []).map((it, idx) =>
+        idx === row.itemIndex ? { ...it, nfe_included: false } : it
+      );
+      return base44.entities.Order.update(row.orderId, { items });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['ceasa-report-items'] });
+      toast.success('Lançamento removido do relatório.');
+    },
+    onError: () => toast.error('Erro ao remover lançamento.'),
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2 print:hidden">
@@ -216,8 +238,11 @@ export default function AdminCeasaReport() {
           <Button variant="outline" size="sm" className="gap-1" onClick={exportCsv} disabled={totalRows === 0}>
             <Download className="w-4 h-4" /> Exportar CSV
           </Button>
-          <Button variant="outline" size="sm" className="gap-1" onClick={() => doPrint('all')} disabled={totalRows === 0 && groupedByBox.groups.length === 0}>
-            <Printer className="w-4 h-4" /> Imprimir tudo
+          <Button variant="outline" size="sm" className="gap-1" onClick={() => doPrint('allClient')} disabled={totalRows === 0}>
+            <Printer className="w-4 h-4" /> Imprimir Lista por Cliente
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1" onClick={() => doPrint('allBox')} disabled={groupedByBox.groups.length === 0}>
+            <Printer className="w-4 h-4" /> Imprimir Agrupado por Box
           </Button>
         </div>
       </div>
@@ -279,6 +304,7 @@ export default function AdminCeasaReport() {
                   rows={g.rows}
                   productToBox={productToBox}
                   onPrint={() => doPrint({ type: 'client', id: g.cnpj || g.cliente })}
+                  onDeleteRow={(r) => deleteRowMutation.mutate(r)}
                 />
               ))}
             </div>
@@ -322,6 +348,7 @@ export default function AdminCeasaReport() {
                   onItemAdded={() => queryClient.invalidateQueries({ queryKey: ['ceasa-report-items'] })}
                   onItemDeleted={() => queryClient.invalidateQueries({ queryKey: ['ceasa-report-items'] })}
                   onPrint={() => doPrint({ type: 'box', id: box.id })}
+                  onDeleteRow={(r) => deleteRowMutation.mutate(r)}
                 />
               ))}
 
@@ -354,11 +381,11 @@ export default function AdminCeasaReport() {
             <p style={{ fontSize: 14, margin: '4px 0 0' }}>{fmtDate(startDate)} até {fmtDate(endDate)}</p>
           </div>
 
-          {(printTarget === 'all' || printTarget.type === 'client') && (
+          {(printTarget === 'allClient' || (printTarget && printTarget.type === 'client')) && (
             <div style={{ marginBottom: 24 }}>
-              {printTarget === 'all' && <h2 style={{ fontSize: 16, fontWeight: 700, borderBottom: '2px solid hsl(var(--primary))', paddingBottom: 4, marginBottom: 8 }}>Lista por Cliente</h2>}
+              {printTarget === 'allClient' && <h2 style={{ fontSize: 16, fontWeight: 700, borderBottom: '2px solid hsl(var(--primary))', paddingBottom: 4, marginBottom: 8 }}>Lista por Cliente</h2>}
               {groupedByClient
-                .filter(g => printTarget === 'all' || printTarget.id === (g.cnpj || g.cliente))
+                .filter(g => printTarget === 'allClient' || printTarget.id === (g.cnpj || g.cliente))
                 .map((g, i) => (
                   <ClientReportCard
                     key={i}
@@ -373,11 +400,11 @@ export default function AdminCeasaReport() {
             </div>
           )}
 
-          {(printTarget === 'all' || printTarget.type === 'box') && (
+          {(printTarget === 'allBox' || (printTarget && printTarget.type === 'box')) && (
             <div>
-              {printTarget === 'all' && <h2 style={{ fontSize: 16, fontWeight: 700, borderBottom: '2px solid hsl(var(--primary))', paddingBottom: 4, marginBottom: 8 }}>Agrupado por Box</h2>}
+              {printTarget === 'allBox' && <h2 style={{ fontSize: 16, fontWeight: 700, borderBottom: '2px solid hsl(var(--primary))', paddingBottom: 4, marginBottom: 8 }}>Agrupado por Box</h2>}
               {groupedByBox.groups
-                .filter(({ box }) => printTarget === 'all' || printTarget.id === box.id)
+                .filter(({ box }) => printTarget === 'allBox' || printTarget.id === box.id)
                 .map(({ box, rows }) => (
                   <BoxGroup
                     key={box.id}
@@ -400,7 +427,7 @@ export default function AdminCeasaReport() {
 }
 
 // === Subcomponente: Grupo por Box com adição de itens manuais ===
-function BoxGroup({ box, rows, startDate, endDate, onItemAdded, onItemDeleted, forceOpen, onPrint }) {
+function BoxGroup({ box, rows, startDate, endDate, onItemAdded, onItemDeleted, forceOpen, onPrint, onDeleteRow }) {
   const [showAdd, setShowAdd] = useState(false);
   const [open, setOpen] = useState(false);
   const [newItem, setNewItem] = useState({ product_name: '', quantity: 1, client_name: '' });
@@ -425,11 +452,6 @@ function BoxGroup({ box, rows, startDate, endDate, onItemAdded, onItemDeleted, f
     mutationFn: (data) => base44.entities.CeasaReportItem.create(data),
     onSuccess: () => { onItemAdded(); toast.success('Item adicionado ao Box.'); setNewItem({ product_name: '', quantity: 1, client_name: '' }); setShowAdd(false); },
     onError: () => toast.error('Erro ao adicionar item.'),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.CeasaReportItem.delete(id),
-    onSuccess: () => { onItemDeleted(); toast.success('Item removido.'); },
   });
 
   const handleAdd = () => {
@@ -520,15 +542,13 @@ function BoxGroup({ box, rows, startDate, endDate, onItemAdded, onItemDeleted, f
                     <div className="flex items-center gap-3 shrink-0">
                       {r.valorUn > 0 && <span className="text-xs text-muted-foreground">R$ {r.valorUn.toFixed(2)}/un</span>}
                       <span className="font-bold text-primary">{r.qtde}</span>
-                      {r.isManual && r.manualId && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6 text-destructive print:hidden"
-                          onClick={() => deleteMutation.mutate(r.manualId)}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
+                      {!forceOpen && onDeleteRow && (
+                        <ReportRowDeleteButton
+                          onConfirm={() => onDeleteRow(r)}
+                          description={r.isManual
+                            ? 'Este item manual será removido do Box.'
+                            : 'Este item será removido do relatório fiscal (NF-e). O pedido permanece, apenas sai da relação.'}
+                        />
                       )}
                     </div>
                   </div>
