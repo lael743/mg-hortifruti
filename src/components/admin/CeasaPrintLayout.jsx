@@ -81,22 +81,10 @@ export default function CeasaPrintLayout({
     </div>
   );
 
-  // Cabeçalho fixo que se repete no topo de cada página impressa
-  const renderPrintFixedHeader = () => (
-    <div className="ceasa-print-header">
-      <div style={{ fontSize: 13, fontWeight: 700 }}>{companyName}</div>
-      <div style={{ fontSize: 10, color: '#475569' }}>
-        {companyCnpj && <>CNPJ: {companyCnpj} &nbsp;|&nbsp; </>}
-        {companyWhats && <>WhatsApp: {companyWhats}</>}
-      </div>
-    </div>
-  );
-
   // === Modo Cliente ===
   if (mode === 'client') {
     return (
       <div>
-        {renderPrintFixedHeader()}
         {groupedByClient.map((g, i) => {
           const caminhaoLabel = [...g.caminhoes].filter(Boolean).join(', ') || '—';
           const totalQty = g.rows.reduce((s, r) => s + r.qtde, 0);
@@ -116,7 +104,8 @@ export default function CeasaPrintLayout({
           const boxGroups = [...boxMap.values()].sort((a, b) => a.box.name.localeCompare(b.box.name, 'pt-BR'));
           return (
             <div key={i} className="ceasa-box-page" style={pageStyle(i)}>
-              <div style={{ marginBottom: 6, borderBottom: '1px solid #cbd5e1', paddingBottom: 4 }}>
+              {renderCompanyHeader()}
+              <div style={{ marginTop: 10, marginBottom: 6, borderBottom: '1px solid #cbd5e1', paddingBottom: 4 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#1d4ed8' }}>Cliente: {g.cliente || '—'}</div>
                 <div style={{ fontSize: 10, color: '#475569' }}>
                   CNPJ: {g.cnpj || '—'} &nbsp;|&nbsp; Caminhão: {caminhaoLabel}
@@ -196,7 +185,6 @@ export default function CeasaPrintLayout({
   // === Modo Box ===
   return (
     <div>
-      {renderPrintFixedHeader()}
       {groupedByBox.groups.map(({ box, rows }, i) => {
         const totalQty = rows.reduce((s, r) => s + r.qtde, 0);
         // agrupa por cliente dentro do box
@@ -211,7 +199,8 @@ export default function CeasaPrintLayout({
         const clientGroups = [...clientMap.values()].sort((a, b) => a.cliente.localeCompare(b.cliente, 'pt-BR'));
         return (
           <div key={box.id} className="ceasa-box-page" style={pageStyle(i)}>
-            <div style={{ marginBottom: 6, borderBottom: '1px solid #cbd5e1', paddingBottom: 4 }}>
+            {renderCompanyHeader()}
+            <div style={{ marginTop: 10, marginBottom: 6, borderBottom: '1px solid #cbd5e1', paddingBottom: 4 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#1d4ed8' }}>Box: {box.name}</div>
               {box.cnpj && <div style={{ fontSize: 10, color: '#475569' }}>CNPJ: {box.cnpj}</div>}
             </div>
