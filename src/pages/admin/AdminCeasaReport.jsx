@@ -12,6 +12,7 @@ import { Download, Printer, Plus, Package, ChevronDown, ChevronRight } from 'luc
 import { createPortal } from 'react-dom';
 import ClientReportCard from '@/components/admin/ClientReportCard';
 import ReportRowDeleteButton from '@/components/admin/ReportRowDeleteButton';
+import CeasaPrintLayout from '@/components/admin/CeasaPrintLayout';
 
 const LOCAL_TZ = 'America/Porto_Velho';
 
@@ -68,6 +69,11 @@ export default function AdminCeasaReport() {
   const { data: reportItems = [] } = useQuery({
     queryKey: ['ceasa-report-items'],
     queryFn: () => base44.entities.CeasaReportItem.list('-created_date', 500),
+  });
+
+  const { data: company } = useQuery({
+    queryKey: ['company-settings'],
+    queryFn: () => base44.entities.CompanySettings.list().then(r => r[0]),
   });
 
   // Filtra pedidos por data e que requerem NF-e
@@ -373,51 +379,30 @@ export default function AdminCeasaReport() {
         </TabsContent>
       </Tabs>
 
-      {/* === Portal de impressão — só aparece no print, isolado do restante da página === */}
+      {/* === Portal de impressão — layout compacto, um cliente/box por página === */}
       {printTarget && createPortal(
-        <div className="ceasa-print-root">
-          <div style={{ textAlign: 'center', marginBottom: 16 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Relação de Vendas e Boxes Ceasa</h1>
-            <p style={{ fontSize: 14, margin: '4px 0 0' }}>{fmtDate(startDate)} até {fmtDate(endDate)}</p>
-          </div>
-
+        <div className="ceasa-print-root" style={{ padding: '8px 12px' }}>
           {(printTarget === 'allClient' || (printTarget && printTarget.type === 'client')) && (
-            <div style={{ marginBottom: 24 }}>
-              {printTarget === 'allClient' && <h2 style={{ fontSize: 16, fontWeight: 700, borderBottom: '2px solid hsl(var(--primary))', paddingBottom: 4, marginBottom: 8 }}>Lista por Cliente</h2>}
-              {groupedByClient
-                .filter(g => printTarget === 'allClient' || printTarget.id === (g.cnpj || g.cliente))
-                .map((g, i) => (
-                  <ClientReportCard
-                    key={i}
-                    cliente={g.cliente}
-                    cnpj={g.cnpj}
-                    caminhoes={[...g.caminhoes]}
-                    rows={g.rows}
-                    productToBox={productToBox}
-                    forceOpen
-                  />
-                ))}
-            </div>
+            <CeasaPrintLayout
+              mode="client"
+              groupedByClient={groupedByClient.filter(g => printTarget === 'allClient' || printTarget.id === (g.cnpj || g.cliente))}
+              productToBox={productToBox}
+              company={company}
+              startDate={startDate}
+              endDate={endDate}
+              fmtDate={fmtDate}
+            />
           )}
-
           {(printTarget === 'allBox' || (printTarget && printTarget.type === 'box')) && (
-            <div>
-              {printTarget === 'allBox' && <h2 style={{ fontSize: 16, fontWeight: 700, borderBottom: '2px solid hsl(var(--primary))', paddingBottom: 4, marginBottom: 8 }}>Agrupado por Box</h2>}
-              {groupedByBox.groups
-                .filter(({ box }) => printTarget === 'allBox' || printTarget.id === box.id)
-                .map(({ box, rows }) => (
-                  <BoxGroup
-                    key={box.id}
-                    box={box}
-                    rows={rows}
-                    startDate={startDate}
-                    endDate={endDate}
-                    onItemAdded={() => {}}
-                    onItemDeleted={() => {}}
-                    forceOpen
-                  />
-                ))}
-            </div>
+            <CeasaPrintLayout
+              mode="box"
+              groupedByBox={{ groups: groupedByBox.groups.filter(({ box }) => printTarget === 'allBox' || printTarget.id === box.id), noBox: [] }}
+              productToBox={productToBox}
+              company={company}
+              startDate={startDate}
+              endDate={endDate}
+              fmtDate={fmtDate}
+            />
           )}
         </div>,
         document.body

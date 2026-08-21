@@ -90,7 +90,10 @@
 /* Impressão isolada do relatório Ceasa: mostra só o portal, esconde o restante da página */
 .ceasa-print-root { display: none; }
 @media print {
+  @page { margin: 10mm 10mm; }
   body.ceasa-printing > *:not(.ceasa-print-root) { display: none !important; }
   body.ceasa-printing .ceasa-print-root { display: block !important; }
   body.ceasa-printing { background: #fff; }
+  body.ceasa-printing .ceasa-print-root table { font-size: 11px; }
+  body.ceasa-printing .ceasa-print-root tr { page-break-inside: avoid; }
 }
