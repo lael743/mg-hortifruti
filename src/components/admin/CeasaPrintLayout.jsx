@@ -107,50 +107,74 @@ export default function CeasaPrintLayout({
           return (
             <div key={i} style={pageStyle(i)}>
               {renderCompanyHeader()}
-              <div style={{ marginBottom: 6 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#1d4ed8' }}>{g.cliente || '—'}</div>
+              <div style={{ marginBottom: 6, borderBottom: '1px solid #cbd5e1', paddingBottom: 4 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#1d4ed8' }}>Cliente: {g.cliente || '—'}</div>
                 <div style={{ fontSize: 10, color: '#475569' }}>
                   CNPJ: {g.cnpj || '—'} &nbsp;|&nbsp; Caminhão: {caminhaoLabel}
                 </div>
               </div>
-              <table style={tableStyle}>
-                <thead>
-                  <tr>
-                    <th style={thStyle}>Produto</th>
-                    <th style={{ ...thStyle, width: 50, textAlign: 'center' }}>Qtde</th>
-                    <th style={{ ...thStyle, width: 70, textAlign: 'right' }}>Valor Un.</th>
-                    <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {boxGroups.map(({ box, rows: bRows }) => (
-                    <React.Fragment key={box.id}>
+              {boxGroups.map(({ box, rows: bRows }) => {
+                const boxQty = bRows.reduce((s, r) => s + r.qtde, 0);
+                const boxValor = bRows.reduce((s, r) => s + r.subtotal, 0);
+                return (
+                  <div key={box.id} style={{ marginTop: 6, pageBreakInside: 'avoid' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#1d4ed8', background: '#eff6ff', padding: '2px 6px', borderRadius: 3, marginBottom: 2 }}>
+                      Box ({box.name}) — {boxQty} un.
+                    </div>
+                    <table style={tableStyle}>
+                      <thead>
+                        <tr>
+                          <th style={thStyle}>Produto</th>
+                          <th style={{ ...thStyle, width: 70, textAlign: 'right' }}>Valor Un.</th>
+                          <th style={{ ...thStyle, width: 50, textAlign: 'center' }}>Qtde</th>
+                          <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Subtotal</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bRows.map((r, j) => (
+                          <tr key={j}>
+                            <td style={tdStyle}>{r.produto}</td>
+                            <td style={{ ...tdStyle, textAlign: 'right' }}>R$ {money(r.valorUn)}</td>
+                            <td style={{ ...tdStyle, textAlign: 'center' }}>{r.qtde}</td>
+                            <td style={{ ...tdStyle, textAlign: 'right' }}>R$ {money(r.subtotal)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {boxValor > 0 && (
+                      <div style={{ fontSize: 10, textAlign: 'right', color: '#475569', marginTop: 1 }}>Subtotal Box: R$ {money(boxValor)}</div>
+                    )}
+                  </div>
+                );
+              })}
+              {noBox.length > 0 && (
+                <div style={{ marginTop: 6, pageBreakInside: 'avoid' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#b45309', background: '#fffbeb', padding: '2px 6px', borderRadius: 3, marginBottom: 2 }}>
+                    Sem Box associado
+                  </div>
+                  <table style={tableStyle}>
+                    <thead>
                       <tr>
-                        <td colSpan={4} style={{ ...tdStyle, fontWeight: 600, color: '#1d4ed8', fontSize: 10, paddingTop: 4 }}>
-                          {box.name}
-                        </td>
+                        <th style={thStyle}>Produto</th>
+                        <th style={{ ...thStyle, width: 70, textAlign: 'right' }}>Valor Un.</th>
+                        <th style={{ ...thStyle, width: 50, textAlign: 'center' }}>Qtde</th>
+                        <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Subtotal</th>
                       </tr>
-                      {bRows.map((r, j) => (
+                    </thead>
+                    <tbody>
+                      {noBox.map((r, j) => (
                         <tr key={j}>
                           <td style={tdStyle}>{r.produto}</td>
-                          <td style={{ ...tdStyle, textAlign: 'center' }}>{r.qtde}</td>
                           <td style={{ ...tdStyle, textAlign: 'right' }}>R$ {money(r.valorUn)}</td>
+                          <td style={{ ...tdStyle, textAlign: 'center' }}>{r.qtde}</td>
                           <td style={{ ...tdStyle, textAlign: 'right' }}>R$ {money(r.subtotal)}</td>
                         </tr>
                       ))}
-                    </React.Fragment>
-                  ))}
-                  {noBox.map((r, j) => (
-                    <tr key={`nb${j}`}>
-                      <td style={tdStyle}>{r.produto} <span style={{ color: '#b45309', fontSize: 9 }}>(sem box)</span></td>
-                      <td style={{ ...tdStyle, textAlign: 'center' }}>{r.qtde}</td>
-                      <td style={{ ...tdStyle, textAlign: 'right' }}>R$ {money(r.valorUn)}</td>
-                      <td style={{ ...tdStyle, textAlign: 'right' }}>R$ {money(r.subtotal)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div style={{ marginTop: 4, fontSize: 11, fontWeight: 600, textAlign: 'right' }}>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, textAlign: 'right', borderTop: '1px solid #1d4ed8', paddingTop: 4 }}>
                 Total: {totalQty} un. — R$ {money(totalValor)}
               </div>
             </div>
@@ -178,41 +202,48 @@ export default function CeasaPrintLayout({
         return (
           <div key={box.id} style={pageStyle(i)}>
             {renderCompanyHeader()}
-            <div style={{ marginBottom: 6 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#1d4ed8' }}>{box.name}</div>
+            <div style={{ marginBottom: 6, borderBottom: '1px solid #cbd5e1', paddingBottom: 4 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1d4ed8' }}>Box: {box.name}</div>
               {box.cnpj && <div style={{ fontSize: 10, color: '#475569' }}>CNPJ: {box.cnpj}</div>}
             </div>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Cliente / Produto</th>
-                  <th style={{ ...thStyle, width: 50, textAlign: 'center' }}>Qtde</th>
-                  <th style={{ ...thStyle, width: 70, textAlign: 'right' }}>Valor Un.</th>
-                  <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Subtotal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clientGroups.map((cg, j) => (
-                  <React.Fragment key={j}>
-                    <tr>
-                      <td colSpan={4} style={{ ...tdStyle, fontWeight: 600, color: '#334155', fontSize: 10, paddingTop: 4 }}>
-                        {cg.cliente} {cg.cnpj && <span style={{ color: '#64748b', fontWeight: 400 }}>({cg.cnpj})</span>}
-                        {[...cg.caminhoes].filter(Boolean).length > 0 && <span style={{ color: '#64748b', fontWeight: 400 }}> — Caminhão: {[...cg.caminhoes].join(', ')}</span>}
-                      </td>
-                    </tr>
-                    {cg.rows.map((r, k) => (
-                      <tr key={k}>
-                        <td style={{ ...tdStyle, paddingLeft: 14 }}>{r.produto}</td>
-                        <td style={{ ...tdStyle, textAlign: 'center' }}>{r.qtde}</td>
-                        <td style={{ ...tdStyle, textAlign: 'right' }}>{r.valorUn > 0 ? `R$ ${money(r.valorUn)}` : '—'}</td>
-                        <td style={{ ...tdStyle, textAlign: 'right' }}>{r.subtotal > 0 ? `R$ ${money(r.subtotal)}` : '—'}</td>
+            {clientGroups.map((cg, j) => {
+              const caminhaoLabel = [...cg.caminhoes].filter(Boolean).join(', ');
+              const clientQty = cg.rows.reduce((s, r) => s + r.qtde, 0);
+              const clientValor = cg.rows.reduce((s, r) => s + r.subtotal, 0);
+              return (
+                <div key={j} style={{ marginTop: 6, pageBreakInside: 'avoid' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#334155', background: '#f8fafc', padding: '2px 6px', borderRadius: 3, marginBottom: 2 }}>
+                    {cg.cliente}
+                    {cg.cnpj && <span style={{ color: '#64748b', fontWeight: 400 }}> — CNPJ: {cg.cnpj}</span>}
+                    {caminhaoLabel && <span style={{ color: '#64748b', fontWeight: 400 }}> — Caminhão: {caminhaoLabel}</span>}
+                  </div>
+                  <table style={tableStyle}>
+                    <thead>
+                      <tr>
+                        <th style={thStyle}>Produto</th>
+                        <th style={{ ...thStyle, width: 70, textAlign: 'right' }}>Valor Un.</th>
+                        <th style={{ ...thStyle, width: 50, textAlign: 'center' }}>Qtde</th>
+                        <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Subtotal</th>
                       </tr>
-                    ))}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-            <div style={{ marginTop: 4, fontSize: 11, fontWeight: 600, textAlign: 'right' }}>
+                    </thead>
+                    <tbody>
+                      {cg.rows.map((r, k) => (
+                        <tr key={k}>
+                          <td style={tdStyle}>{r.produto}</td>
+                          <td style={{ ...tdStyle, textAlign: 'right' }}>{r.valorUn > 0 ? `R$ ${money(r.valorUn)}` : '—'}</td>
+                          <td style={{ ...tdStyle, textAlign: 'center' }}>{r.qtde}</td>
+                          <td style={{ ...tdStyle, textAlign: 'right' }}>{r.subtotal > 0 ? `R$ ${money(r.subtotal)}` : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {clientValor > 0 && (
+                    <div style={{ fontSize: 10, textAlign: 'right', color: '#475569', marginTop: 1 }}>Subtotal: R$ {money(clientValor)}</div>
+                  )}
+                </div>
+              );
+            })}
+            <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, textAlign: 'right', borderTop: '1px solid #1d4ed8', paddingTop: 4 }}>
               Total do Box: {totalQty} un.
             </div>
           </div>
