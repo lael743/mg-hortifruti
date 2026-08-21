@@ -77,6 +77,13 @@ export default function NfeSelectionPanel({
     onChange({ items: newItems, nfeData });
   };
 
+  const nonBonusItems = items.filter(it => !it.is_bonus);
+  const allIncluded = nonBonusItems.length > 0 && nonBonusItems.every(it => it.nfe_included);
+  const handleToggleAll = (checked) => {
+    const newItems = items.map(it => it.is_bonus ? it : { ...it, nfe_included: checked });
+    onChange({ items: newItems, nfeData });
+  };
+
   return (
     <div className="border-2 border-blue-200 rounded-xl p-4 space-y-4 bg-blue-50/40">
       {/* Toggle principal */}
@@ -139,15 +146,26 @@ export default function NfeSelectionPanel({
               </Badge>
             </div>
 
-            {/* Meia nota — divide todos os valores fiscais pela metade */}
-            <div className="flex items-center justify-between gap-3 mb-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-amber-800">Meia nota</span>
-                <span className="text-[11px] text-amber-700/80">
-                  Ativa para deixar todos os valores da NF-e pela metade
-                </span>
+            {/* Meia nota + Marcar/desmarcar todos */}
+            <div className="flex flex-col sm:flex-row gap-2 mb-2">
+              <div className="flex items-center justify-between gap-3 flex-1 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-amber-800">Meia nota</span>
+                  <span className="text-[11px] text-amber-700/80">
+                    Deixa todos os valores da NF-e pela metade
+                  </span>
+                </div>
+                <Switch checked={isMeia} onCheckedChange={handleToggleMeia} />
               </div>
-              <Switch checked={isMeia} onCheckedChange={handleToggleMeia} />
+              <div className="flex items-center justify-between gap-3 flex-1 rounded-lg border border-blue-300 bg-blue-50 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-blue-800">Todos os itens</span>
+                  <span className="text-[11px] text-blue-700/80">
+                    Marcar ou desmarcar todos de uma vez
+                  </span>
+                </div>
+                <Switch checked={allIncluded} onCheckedChange={handleToggleAll} />
+              </div>
             </div>
 
             <div className="space-y-1.5 max-h-52 overflow-y-auto">
