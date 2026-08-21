@@ -81,10 +81,22 @@ export default function CeasaPrintLayout({
     </div>
   );
 
+  // Cabeçalho fixo que se repete no topo de cada página impressa
+  const renderPrintFixedHeader = () => (
+    <div className="ceasa-print-header">
+      <div style={{ fontSize: 13, fontWeight: 700 }}>{companyName}</div>
+      <div style={{ fontSize: 10, color: '#475569' }}>
+        {companyCnpj && <>CNPJ: {companyCnpj} &nbsp;|&nbsp; </>}
+        {companyWhats && <>WhatsApp: {companyWhats}</>}
+      </div>
+    </div>
+  );
+
   // === Modo Cliente ===
   if (mode === 'client') {
     return (
       <div>
+        {renderPrintFixedHeader()}
         {groupedByClient.map((g, i) => {
           const caminhaoLabel = [...g.caminhoes].filter(Boolean).join(', ') || '—';
           const totalQty = g.rows.reduce((s, r) => s + r.qtde, 0);
@@ -185,6 +197,7 @@ export default function CeasaPrintLayout({
   // === Modo Box ===
   return (
     <div>
+      {renderPrintFixedHeader()}
       {groupedByBox.groups.map(({ box, rows }, i) => {
         const totalQty = rows.reduce((s, r) => s + r.qtde, 0);
         // agrupa por cliente dentro do box

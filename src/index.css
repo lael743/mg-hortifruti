@@ -99,4 +99,17 @@
   body.ceasa-printing .ceasa-print-root .ceasa-page { page-break-inside: avoid; break-inside: avoid; }
   body.ceasa-printing .ceasa-print-root .ceasa-box-page { page-break-before: always; break-before: page; }
   body.ceasa-printing .ceasa-print-root .ceasa-box-page:first-child { page-break-before: auto; break-before: auto; }
+  body.ceasa-printing .ceasa-print-root .ceasa-print-header {
+    display: block !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    border-bottom: 2px solid #1d4ed8;
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  body.ceasa-printing .ceasa-print-root { padding-top: 50px; }
 }
+.ceasa-print-header { display: none; }
