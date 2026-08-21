@@ -96,4 +96,7 @@
   body.ceasa-printing { background: #fff; }
   body.ceasa-printing .ceasa-print-root table { font-size: 11px; }
   body.ceasa-printing .ceasa-print-root tr { page-break-inside: avoid; }
+  body.ceasa-printing .ceasa-print-root .ceasa-page { page-break-inside: avoid; break-inside: avoid; }
+  body.ceasa-printing .ceasa-print-root .ceasa-box-page { page-break-before: always; break-before: page; }
+  body.ceasa-printing .ceasa-print-root .ceasa-box-page:first-child { page-break-before: auto; break-before: auto; }
 }
