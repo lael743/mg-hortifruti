@@ -125,6 +125,8 @@ export default function AdminCeasaReport() {
           produto: it.product_name,
           qtde: it.quantity,
           valorUn: getEffectiveNfeValue(it),
+          // Valor inicial da operação CEASA: preço final do item (sem fallback para nfe_value)
+          valorCeasaBase: it.final_unit_price ?? 0,
           subtotal: getEffectiveNfeValue(it) * it.quantity,
           operation,
           box: operation?.box_id ? (boxById[operation.box_id] || null) : null,
@@ -224,24 +226,19 @@ export default function AdminCeasaReport() {
 
   const productName = (pid) => products.find(p => p.id === pid)?.name || '—';
 
-  // === Excluir lançamento do relatório (item de pedido ou item manual) ===
+  // === Excluir a operação CEASA de um item (ou item manual) ===
+  // Remove somente o CeasaReportItem. O pedido e seus itens nunca são alterados.
   const deleteRowMutation = useMutation({
     mutationFn: async (row) => {
-      if (row.isManual) {
-        return base44.entities.CeasaReportItem.delete(row.manualId);
-      }
-      const order = await base44.entities.Order.get(row.orderId);
-      const items = (order.items || []).map((it, idx) =>
-        idx === row.itemIndex ? { ...it, nfe_included: false } : it
-      );
-      return base44.entities.Order.update(row.orderId, { items });
+      const reportItemId = row.manualId || row.operation?.id;
+      if (!reportItemId) return null;
+      return base44.entities.CeasaReportItem.delete(reportItemId);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['ceasa-report-items'] });
-      toast.success('Lançamento removido do relatório.');
+      toast.success('Operação CEASA removida.');
     },
-    onError: () => toast.error('Erro ao remover lançamento.'),
+    onError: () => toast.error('Erro ao remover a operação CEASA.'),
   });
 
   return (
@@ -537,12 +534,12 @@ function BoxGroup({ box, rows, startDate, endDate, onItemAdded, onItemDeleted, f
                     <div className="flex items-center gap-3 shrink-0">
                       {r.valorUn > 0 && <span className="text-xs text-muted-foreground">R$ {r.valorUn.toFixed(2)}/un</span>}
                       <span className="font-bold text-primary">{r.qtde}</span>
-                      {!forceOpen && onDeleteRow && (
+                      {!forceOpen && onDeleteRow && (r.operation || r.isManual) && (
                         <ReportRowDeleteButton
                           onConfirm={() => onDeleteRow(r)}
                           description={r.isManual
                             ? 'Este item manual será removido do Box.'
-                            : 'Este item será removido do relatório fiscal (NF-e). O pedido permanece, apenas sai da relação.'}
+                            : 'A operação CEASA deste item será removida. O pedido e seus itens permanecem intactos.'}
                         />
                       )}
                     </div>

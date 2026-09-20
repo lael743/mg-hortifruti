@@ -20,17 +20,17 @@ export default function CeasaOperationItemRow({ row, boxes = [], startDate, onDe
   const operation = row.operation;
 
   const [boxId, setBoxId] = useState(operation?.box_id || '');
-  const [ceasaValue, setCeasaValue] = useState(operation?.ceasa_value ?? row.valorUn);
+  const [ceasaValue, setCeasaValue] = useState(operation?.ceasa_value ?? row.valorCeasaBase);
   const [caminhao, setCaminhao] = useState(operation?.caminhao || '');
   const [notes, setNotes] = useState(operation?.notes || '');
 
   // Recarrega os campos quando a operação vinculada muda
   useEffect(() => {
     setBoxId(operation?.box_id || '');
-    setCeasaValue(operation?.ceasa_value ?? row.valorUn);
+    setCeasaValue(operation?.ceasa_value ?? row.valorCeasaBase);
     setCaminhao(operation?.caminhao || '');
     setNotes(operation?.notes || '');
-  }, [operation?.id, operation?.updated_date, row.itemKey, row.valorUn]);
+  }, [operation?.id, operation?.updated_date, row.itemKey, row.valorCeasaBase]);
 
   // Boxes ativos; mantém o Box da operação mesmo se estiver inativo
   const boxOptions = useMemo(() => {
@@ -105,10 +105,10 @@ export default function CeasaOperationItemRow({ row, boxes = [], startDate, onDe
               Sem operação
             </Badge>
           )}
-          {onDeleteRow && (
+          {onDeleteRow && operation && (
             <ReportRowDeleteButton
               onConfirm={() => onDeleteRow(row)}
-              description="Este item será removido do relatório fiscal (NF-e). O pedido permanece, apenas sai da relação."
+              description="A operação CEASA deste item será removida. O pedido e seus itens permanecem intactos."
             />
           )}
         </div>
