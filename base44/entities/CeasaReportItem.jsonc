@@ -2,6 +2,34 @@
   "name": "CeasaReportItem",
   "type": "object",
   "properties": {
+    "order_id": {
+      "type": "string",
+      "description": "ID do pedido de origem. Nulo para lan\u00e7amentos manuais."
+    },
+    "item_key": {
+      "type": "string",
+      "description": "Identificador da linha do pedido no formato \"order_id:indice\". Nulo para lan\u00e7amentos manuais."
+    },
+    "product_id": {
+      "type": "string",
+      "description": "ID do produto do item do pedido (refer\u00eancia)"
+    },
+    "ceasa_value": {
+      "type": "number",
+      "description": "Valor da opera\u00e7\u00e3o CEASA, independente do pre\u00e7o comercial do pedido. N\u00e3o altera o pedido original."
+    },
+    "caminhao": {
+      "type": "string",
+      "description": "Caminh\u00e3o espec\u00edfico da opera\u00e7\u00e3o CEASA (n\u00e3o substitui o caminh\u00e3o do pedido)"
+    },
+    "nfe_company_name": {
+      "type": "string",
+      "description": "Nome da empresa da NF-e (snapshot do pedido)"
+    },
+    "nfe_cnpj": {
+      "type": "string",
+      "description": "CNPJ da NF-e (snapshot do pedido)"
+    },
     "box_id": {
       "type": "string",
       "description": "ID do CeasaBox"
@@ -12,7 +40,7 @@
     },
     "product_name": {
       "type": "string",
-      "description": "Nome do produto adicionado manualmente"
+      "description": "Nome do produto"
     },
     "quantity": {
       "type": "number",
@@ -20,7 +48,7 @@
     },
     "client_name": {
       "type": "string",
-      "description": "Nome do cliente (opcional)"
+      "description": "Nome do cliente"
     },
     "date": {
       "type": "string",
@@ -28,7 +56,8 @@
       "description": "Data do relat\u00f3rio"
     },
     "notes": {
-      "type": "string"
+      "type": "string",
+      "description": "Observa\u00e7\u00e3o da opera\u00e7\u00e3o CEASA"
     }
   },
   "required": [

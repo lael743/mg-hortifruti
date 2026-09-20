@@ -10,18 +10,18 @@
       "type": "string",
       "description": "CNPJ do Box"
     },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Box ativo"
+    },
     "product_ids": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "description": "IDs dos produtos fornecidos por este Box",
-      "default": []
-    },
-    "active": {
-      "type": "boolean",
-      "default": true,
-      "description": "Box ativo"
+      "default": [],
+      "description": "LEGADO/obsoleto: v\u00ednculo de produtos n\u00e3o \u00e9 mais utilizado pela opera\u00e7\u00e3o CEASA. O Box passa a ser definido por item na Gest\u00e3o CEASA. Campo mantido apenas para preservar os dados existentes."
     }
   },
   "required": [
