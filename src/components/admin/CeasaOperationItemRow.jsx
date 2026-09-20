@@ -1,18 +1,16 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Save, Check } from 'lucide-react';
 import ReportRowDeleteButton from '@/components/admin/ReportRowDeleteButton';
 import TruckCombobox from '@/components/admin/TruckCombobox';
+import BoxCombobox from '@/components/admin/BoxCombobox';
 
 /**
- * Operação CEASA de um item de pedido.
+ * Linha da tabela operacional de um item de pedido (operação CEASA).
  * Persiste um CeasaReportItem independente do pedido comercial, identificado por
  * order_id + item_key ("order_id:indice"). Nunca escreve no pedido.
  */
@@ -32,16 +30,6 @@ export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], st
     setCaminhao(operation?.caminhao || '');
     setNotes(operation?.notes || '');
   }, [operation?.id, operation?.updated_date, row.itemKey, row.valorCeasaBase]);
-
-  // Boxes ativos; mantém o Box da operação mesmo se estiver inativo
-  const boxOptions = useMemo(() => {
-    const active = boxes.filter(b => b.active !== false);
-    if (boxId && !active.some(b => b.id === boxId)) {
-      const current = boxes.find(b => b.id === boxId);
-      if (current) return [current, ...active];
-    }
-    return active;
-  }, [boxes, boxId]);
 
   // Upsert: localiza a operação por order_id + item_key e atualiza em vez de duplicar
   const saveMutation = useMutation({
@@ -88,24 +76,84 @@ export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], st
   };
 
   return (
-    <div className="px-4 py-3">
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="min-w-0">
-          <p className="font-medium text-sm truncate">{row.produto}</p>
-          <p className="text-xs text-muted-foreground">
-            {row.qtde} un. • Pedido: R$ {row.valorUn.toFixed(2)}/un
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
+    <tr className="border-b last:border-0 hover:bg-muted/20">
+      <td className="px-2 py-1 align-middle">
+        <span className="block max-w-[220px] truncate font-medium" title={row.produto}>
+          {row.produto}
+        </span>
+      </td>
+
+      <td className="px-2 py-1 align-middle text-right whitespace-nowrap">{row.qtde}</td>
+
+      <td className="px-2 py-1 align-middle text-right whitespace-nowrap text-muted-foreground">
+        R$ {row.valorUn.toFixed(2)}<span className="text-[10px]">/un</span>
+      </td>
+
+      <td className="px-2 py-1 align-middle">
+        <BoxCombobox
+          boxes={boxes}
+          value={boxId}
+          onChange={setBoxId}
+          className="h-7 min-w-[130px] px-2 text-xs"
+        />
+      </td>
+
+      <td className="px-2 py-1 align-middle">
+        <Input
+          type="number"
+          step="0.01"
+          min="0"
+          aria-label="Valor CEASA unitário"
+          className="h-7 w-[88px] px-2 text-right text-xs"
+          value={ceasaValue}
+          onChange={e => setCeasaValue(e.target.value)}
+        />
+      </td>
+
+      <td className="px-2 py-1 align-middle">
+        <TruckCombobox
+          trucks={trucks}
+          value={caminhao}
+          onChange={setCaminhao}
+          className="h-7 min-w-[130px] px-2 text-xs"
+        />
+      </td>
+
+      <td className="px-2 py-1 align-middle">
+        <Input
+          aria-label="Observação da operação"
+          className="h-7 min-w-[140px] px-2 text-xs"
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          placeholder="Opcional"
+        />
+      </td>
+
+      <td className="px-2 py-1 align-middle">
+        <div className="flex items-center justify-end gap-1">
           {operation ? (
-            <Badge variant="outline" className="text-[10px] text-green-700 border-green-300 gap-1">
-              <Check className="w-3 h-3" /> Operação salva
-            </Badge>
+            <Check
+              className="w-3.5 h-3.5 shrink-0 text-green-600"
+              aria-label="Operação salva"
+              title="Operação salva"
+            />
           ) : (
-            <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300">
-              Sem operação
-            </Badge>
+            <span
+              className="w-2 h-2 shrink-0 rounded-full bg-amber-400"
+              title="Sem operação salva"
+            />
           )}
+
+          <Button
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            title={operation ? 'Atualizar operação' : 'Salvar operação'}
+            onClick={handleSave}
+            disabled={saveMutation.isPending}
+          >
+            <Save className="w-3.5 h-3.5" />
+          </Button>
+
           {onDeleteRow && operation && (
             <ReportRowDeleteButton
               onConfirm={() => onDeleteRow(row)}
@@ -113,54 +161,7 @@ export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], st
             />
           )}
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-        <div>
-          <Label className="text-[11px] text-muted-foreground">Box *</Label>
-          <Select value={boxId} onValueChange={setBoxId}>
-            <SelectTrigger className="h-8 text-sm">
-              <SelectValue placeholder="Selecionar Box" />
-            </SelectTrigger>
-            <SelectContent>
-              {boxOptions.map(b => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className="text-[11px] text-muted-foreground">Valor CEASA (un.)</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            className="h-8 text-sm"
-            value={ceasaValue}
-            onChange={e => setCeasaValue(e.target.value)}
-          />
-        </div>
-        <div>
-          <Label className="text-[11px] text-muted-foreground">Caminhão</Label>
-          <TruckCombobox trucks={trucks} value={caminhao} onChange={setCaminhao} />
-        </div>
-        <div>
-          <Label className="text-[11px] text-muted-foreground">Observação</Label>
-          <Input
-            className="h-8 text-sm"
-            value={notes}
-            onChange={e => setNotes(e.target.value)}
-            placeholder="Opcional"
-          />
-        </div>
-      </div>
-
-      <div className="flex justify-end mt-2">
-        <Button size="sm" className="gap-1 h-8" onClick={handleSave} disabled={saveMutation.isPending}>
-          <Save className="w-3.5 h-3.5" />
-          {operation ? 'Atualizar operação' : 'Salvar operação'}
-        </Button>
-      </div>
-    </div>
+      </td>
+    </tr>
   );
 }
