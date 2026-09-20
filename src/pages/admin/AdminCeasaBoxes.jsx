@@ -9,7 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Trash2, Pencil, Package, X, Search } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Trash2, Pencil, Package, Search, Truck } from 'lucide-react';
+import CeasaTrucksManager from '@/components/admin/CeasaTrucksManager';
 
 const EMPTY = { name: '', cnpj: '', product_ids: [], active: true };
 
@@ -19,6 +21,7 @@ export default function AdminCeasaBoxes() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [productSearch, setProductSearch] = useState('');
+  const [tab, setTab] = useState('boxes');
 
   const { data: boxes = [], isLoading } = useQuery({
     queryKey: ['ceasa-boxes'],
@@ -95,15 +98,29 @@ export default function AdminCeasaBoxes() {
 
   return (
     <div className="space-y-4">
+      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h2 className="text-lg font-bold">Boxes do Ceasa</h2>
-          <p className="text-sm text-muted-foreground">Cadastre os Boxes e associe os produtos que cada um fornece.</p>
+          <h2 className="text-lg font-bold">Cadastro do Ceasa</h2>
+          <p className="text-sm text-muted-foreground">Configure os Boxes e a logística (caminhões) usados na Gestão Ceasa.</p>
         </div>
-        <Button onClick={openNew} className="gap-1">
-          <Plus className="w-4 h-4" /> Novo Box
-        </Button>
+        {tab === 'boxes' && (
+          <Button onClick={openNew} className="gap-1">
+            <Plus className="w-4 h-4" /> Novo Box
+          </Button>
+        )}
       </div>
+
+      <TabsList>
+        <TabsTrigger value="boxes" className="gap-1">
+          <Package className="w-3.5 h-3.5" /> Boxes
+        </TabsTrigger>
+        <TabsTrigger value="trucks" className="gap-1">
+          <Truck className="w-3.5 h-3.5" /> Logística / Caminhões
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="boxes" className="space-y-4">
 
       {isLoading ? (
         <div className="text-center py-10 text-muted-foreground">Carregando...</div>
@@ -161,6 +178,12 @@ export default function AdminCeasaBoxes() {
           ))}
         </div>
       )}
+      </TabsContent>
+
+      <TabsContent value="trucks">
+        <CeasaTrucksManager />
+      </TabsContent>
+      </Tabs>
 
       {/* Formulário */}
       {showForm && (

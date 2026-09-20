@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronRight, Truck, Building2, Printer } from 'lucide-react';
 import CeasaOrderSection from '@/components/admin/CeasaOrderSection';
 
-export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, boxes = [], startDate, forceOpen, onPrint, onDeleteRow }) {
+export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, boxes = [], trucks = [], startDate, forceOpen, onPrint, onDeleteRow }) {
   const [open, setOpen] = useState(false);
   const expanded = forceOpen || open;
 
@@ -75,6 +75,7 @@ export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, boxes
               key={o.orderId}
               order={o}
               boxes={boxes}
+              trucks={trucks}
               startDate={startDate}
               onDeleteRow={onDeleteRow}
             />

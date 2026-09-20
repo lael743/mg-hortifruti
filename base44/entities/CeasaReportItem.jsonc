@@ -20,7 +20,7 @@
     },
     "caminhao": {
       "type": "string",
-      "description": "Caminh\u00e3o espec\u00edfico da opera\u00e7\u00e3o CEASA (n\u00e3o substitui o caminh\u00e3o do pedido)"
+      "description": "Caminh\u00e3o da opera\u00e7\u00e3o CEASA (nome do CeasaTruck). N\u00e3o substitui o caminh\u00e3o do pedido."
     },
     "nfe_company_name": {
       "type": "string",
@@ -32,7 +32,7 @@
     },
     "box_id": {
       "type": "string",
-      "description": "ID do CeasaBox"
+      "description": "ID do CeasaBox. Opcional: a opera\u00e7\u00e3o pode existir apenas com o caminh\u00e3o atribu\u00eddo."
     },
     "box_name": {
       "type": "string",
@@ -61,7 +61,6 @@
     }
   },
   "required": [
-    "box_id",
     "product_name",
     "quantity",
     "date"

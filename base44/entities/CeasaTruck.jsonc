@@ -1,0 +1,44 @@
+{
+  "name": "CeasaTruck",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Nome/identifica\u00e7\u00e3o do caminh\u00e3o (ex: Caminh\u00e3o 1 - Jo\u00e3o). Valor persistido em CeasaReportItem.caminhao."
+    },
+    "plate": {
+      "type": "string",
+      "description": "Placa do ve\u00edculo"
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Caminh\u00e3o ativo \u2014 somente ativos aparecem na sele\u00e7\u00e3o das opera\u00e7\u00f5es CEASA"
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

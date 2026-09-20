@@ -61,6 +61,11 @@ export default function AdminCeasaReport() {
     queryFn: () => base44.entities.CeasaBox.list(),
   });
 
+  const { data: trucks = [] } = useQuery({
+    queryKey: ['ceasa-trucks'],
+    queryFn: () => base44.entities.CeasaTruck.list('-created_date', 200),
+  });
+
   const { data: products = [] } = useQuery({
     queryKey: ['products'],
     queryFn: () => base44.entities.Product.list(),
@@ -149,8 +154,10 @@ export default function AdminCeasaReport() {
         noBox.push(row);
       }
     });
-    // Adiciona itens manuais (CeasaReportItem)
+    // Adiciona itens manuais (CeasaReportItem sem item_key).
+    // Operações de itens de pedido já entram pelo flatRows — evita duplicidade.
     reportItems.forEach(ri => {
+      if (ri.item_key) return;
       if (ri.date < startDate || ri.date > endDate) return;
       const box = boxes.find(b => b.id === ri.box_id);
       if (!box) return;
@@ -317,6 +324,7 @@ export default function AdminCeasaReport() {
                   caminhoes={[...g.caminhoes]}
                   rows={g.rows}
                   boxes={boxes}
+                  trucks={trucks}
                   startDate={startDate}
                   onPrint={() => doPrint({ type: 'client', id: g.cnpj || g.cliente })}
                   onDeleteRow={(r) => deleteRowMutation.mutate(r)}

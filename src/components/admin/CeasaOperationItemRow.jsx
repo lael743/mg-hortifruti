@@ -9,13 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Save, Check } from 'lucide-react';
 import ReportRowDeleteButton from '@/components/admin/ReportRowDeleteButton';
+import TruckCombobox from '@/components/admin/TruckCombobox';
 
 /**
  * Operação CEASA de um item de pedido.
  * Persiste um CeasaReportItem independente do pedido comercial, identificado por
  * order_id + item_key ("order_id:indice"). Nunca escreve no pedido.
  */
-export default function CeasaOperationItemRow({ row, boxes = [], startDate, onDeleteRow }) {
+export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], startDate, onDeleteRow }) {
   const queryClient = useQueryClient();
   const operation = row.operation;
 
@@ -141,12 +142,7 @@ export default function CeasaOperationItemRow({ row, boxes = [], startDate, onDe
         </div>
         <div>
           <Label className="text-[11px] text-muted-foreground">Caminhão</Label>
-          <Input
-            className="h-8 text-sm"
-            value={caminhao}
-            onChange={e => setCaminhao(e.target.value)}
-            placeholder="Opcional"
-          />
+          <TruckCombobox trucks={trucks} value={caminhao} onChange={setCaminhao} />
         </div>
         <div>
           <Label className="text-[11px] text-muted-foreground">Observação</Label>
