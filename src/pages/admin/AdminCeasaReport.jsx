@@ -87,6 +87,21 @@ export default function AdminCeasaReport() {
     });
   }, [allOrders, startDate, endDate]);
 
+  // Operações CEASA existentes, indexadas por order_id + item_key
+  const operationByKey = useMemo(() => {
+    const map = {};
+    reportItems.forEach(ri => {
+      if (ri.order_id && ri.item_key && !map[ri.item_key]) map[ri.item_key] = ri;
+    });
+    return map;
+  }, [reportItems]);
+
+  const boxById = useMemo(() => {
+    const map = {};
+    boxes.forEach(b => { map[b.id] = b; });
+    return map;
+  }, [boxes]);
+
   // Achata itens: somente os marcados como nfe_included (não bônus)
   const flatRows = useMemo(() => {
     const rows = [];
@@ -94,41 +109,37 @@ export default function AdminCeasaReport() {
       (o.items || []).forEach((it, idx) => {
         if (it.is_bonus) return;
         if (!it.nfe_included) return;
+        const itemKey = `${o.id}:${idx}`;
+        const operation = operationByKey[itemKey] || null;
         rows.push({
           orderId: o.id,
           orderNumber: o.order_number,
           itemIndex: idx,
+          itemKey,
+          orderDate: new Date(o.created_date).toLocaleDateString('en-CA', { timeZone: LOCAL_TZ }),
           caminhao: o.caminhao || '',
           cnpj: o.nfe_cnpj || '',
+          nfeCompanyName: o.nfe_company_name || '',
           cliente: o.nfe_company_name || o.customer_display_name || o.customer_name || '',
           productId: it.product_id,
           produto: it.product_name,
           qtde: it.quantity,
           valorUn: getEffectiveNfeValue(it),
           subtotal: getEffectiveNfeValue(it) * it.quantity,
+          operation,
+          box: operation?.box_id ? (boxById[operation.box_id] || null) : null,
         });
       });
     });
     return rows;
-  }, [nfeOrders]);
+  }, [nfeOrders, operationByKey, boxById]);
 
-  // Mapa produto -> box
-  const productToBox = useMemo(() => {
-    const map = {};
-    boxes.forEach(b => {
-      (b.product_ids || []).forEach(pid => {
-        if (!map[pid]) map[pid] = b;
-      });
-    });
-    return map;
-  }, [boxes]);
-
-  // Agrupamento por Box
+  // Agrupamento por Box — definido pela operação CEASA de cada item
   const groupedByBox = useMemo(() => {
     const groups = {};
     const noBox = [];
     flatRows.forEach(row => {
-      const box = row.productId ? productToBox[row.productId] : null;
+      const box = row.box;
       if (box) {
         if (!groups[box.id]) groups[box.id] = { box, rows: [] };
         groups[box.id].rows.push(row);
@@ -155,7 +166,7 @@ export default function AdminCeasaReport() {
       });
     });
     return { groups: Object.values(groups), noBox };
-  }, [flatRows, productToBox, boxes, reportItems, startDate, endDate]);
+  }, [flatRows, boxes, reportItems, startDate, endDate]);
 
   // Totais
   const totalRows = flatRows.length;
@@ -308,7 +319,8 @@ export default function AdminCeasaReport() {
                   cnpj={g.cnpj}
                   caminhoes={[...g.caminhoes]}
                   rows={g.rows}
-                  productToBox={productToBox}
+                  boxes={boxes}
+                  startDate={startDate}
                   onPrint={() => doPrint({ type: 'client', id: g.cnpj || g.cliente })}
                   onDeleteRow={(r) => deleteRowMutation.mutate(r)}
                 />
@@ -370,7 +382,7 @@ export default function AdminCeasaReport() {
                     ))}
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Associe estes produtos a um Box no cadastro de Boxes para que apareçam agrupados.
+                    Defina o Box da operação de cada item na aba "Lista por Cliente" para que apareçam agrupados.
                   </p>
                 </Card>
               )}
@@ -386,7 +398,6 @@ export default function AdminCeasaReport() {
             <CeasaPrintLayout
               mode="client"
               groupedByClient={groupedByClient.filter(g => printTarget === 'allClient' || printTarget.id === (g.cnpj || g.cliente))}
-              productToBox={productToBox}
               company={company}
               startDate={startDate}
               endDate={endDate}
@@ -397,7 +408,6 @@ export default function AdminCeasaReport() {
             <CeasaPrintLayout
               mode="box"
               groupedByBox={{ groups: groupedByBox.groups.filter(({ box }) => printTarget === 'allBox' || printTarget.id === box.id), noBox: [] }}
-              productToBox={productToBox}
               company={company}
               startDate={startDate}
               endDate={endDate}

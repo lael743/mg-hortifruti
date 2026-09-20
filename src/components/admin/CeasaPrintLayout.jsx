@@ -9,7 +9,6 @@ import React from 'react';
  *  - mode: 'client' | 'box'
  *  - groupedByClient: [{ cliente, cnpj, caminhoes:Set, rows:[] }]
  *  - groupedByBox: { groups: [{ box, rows:[] }], noBox: [] }
- *  - productToBox: mapa productId -> box
  *  - company: CompanySettings
  *  - startDate, endDate (ISO date strings)
  *  - fmtDate: (str) => string formatada
@@ -18,7 +17,6 @@ export default function CeasaPrintLayout({
   mode,
   groupedByClient = [],
   groupedByBox = { groups: [], noBox: [] },
-  productToBox = {},
   company,
   startDate,
   endDate,
@@ -93,7 +91,7 @@ export default function CeasaPrintLayout({
           const boxMap = new Map();
           const noBox = [];
           g.rows.forEach(r => {
-            const box = r.productId ? productToBox[r.productId] : null;
+            const box = r.box || null;
             if (box) {
               if (!boxMap.has(box.id)) boxMap.set(box.id, { box, rows: [] });
               boxMap.get(box.id).rows.push(r);

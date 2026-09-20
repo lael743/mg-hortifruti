@@ -2,10 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronRight, Truck, Building2, Package, Printer } from 'lucide-react';
-import ReportRowDeleteButton from '@/components/admin/ReportRowDeleteButton';
+import { ChevronDown, ChevronRight, Truck, Building2, Printer } from 'lucide-react';
+import CeasaOrderSection from '@/components/admin/CeasaOrderSection';
 
-export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, productToBox, forceOpen, onPrint, onDeleteRow }) {
+export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, boxes = [], startDate, forceOpen, onPrint, onDeleteRow }) {
   const [open, setOpen] = useState(false);
   const expanded = forceOpen || open;
 
@@ -13,21 +13,17 @@ export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, produ
   const totalValor = rows.reduce((s, r) => s + r.subtotal, 0);
   const caminhaoLabel = caminhoes.filter(Boolean).join(', ') || '—';
 
-  // Agrupa itens por box dentro do cliente
-  const { boxGroups, noBoxRows } = useMemo(() => {
+  // Agrupa os itens por pedido — a operação CEASA é feita item a item
+  const orders = useMemo(() => {
     const map = new Map();
-    const noBox = [];
     rows.forEach(r => {
-      const box = r.productId ? productToBox[r.productId] : null;
-      if (box) {
-        if (!map.has(box.id)) map.set(box.id, { box, rows: [] });
-        map.get(box.id).rows.push(r);
-      } else {
-        noBox.push(r);
+      if (!map.has(r.orderId)) {
+        map.set(r.orderId, { orderId: r.orderId, orderNumber: r.orderNumber, caminhao: r.caminhao, rows: [] });
       }
+      map.get(r.orderId).rows.push(r);
     });
-    return { boxGroups: [...map.values()].sort((a, b) => a.box.name.localeCompare(b.box.name, 'pt-BR')), noBoxRows: noBox };
-  }, [rows, productToBox]);
+    return [...map.values()].sort((a, b) => (a.orderNumber || 0) - (b.orderNumber || 0));
+  }, [rows]);
 
   return (
     <Card className="overflow-hidden print:break-inside-avoid">
@@ -71,50 +67,18 @@ export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, produ
         </div>
       </div>
 
-      {/* Lista expansível — itens agrupados por box */}
+      {/* Lista expansível — pedidos do cliente e seus itens */}
       {expanded && (
         <div className="divide-y">
-          {boxGroups.map(({ box, rows: bRows }) => (
-            <div key={box.id} className="px-4 py-2">
-              <p className="text-xs font-semibold text-primary/80 uppercase tracking-wide mb-1 flex items-center gap-1.5">
-                <Package className="w-3.5 h-3.5" /> {box.name}
-                <Badge variant="outline" className="text-[10px] ml-1">{bRows.reduce((s, r) => s + r.qtde, 0)} un.</Badge>
-              </p>
-              <div className="divide-y">
-                {bRows.map((r, i) => (
-                  <div key={i} className="flex items-center justify-between py-1.5 text-sm">
-                    <span className="font-medium truncate flex-1">{r.produto}</span>
-                    <div className="flex items-center gap-4 shrink-0">
-                      <span className="text-xs text-muted-foreground">R$ {r.valorUn.toFixed(2)}/un</span>
-                      <span className="font-bold text-primary text-center w-12">{r.qtde}</span>
-                      <span className="text-right w-20">R$ {r.subtotal.toFixed(2)}</span>
-                      {!forceOpen && onDeleteRow && <ReportRowDeleteButton onConfirm={() => onDeleteRow(r)} />}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {orders.map(o => (
+            <CeasaOrderSection
+              key={o.orderId}
+              order={o}
+              boxes={boxes}
+              startDate={startDate}
+              onDeleteRow={onDeleteRow}
+            />
           ))}
-
-          {noBoxRows.length > 0 && (
-            <div className="px-4 py-2 border-amber-200 bg-amber-50/40">
-              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Sem Box associado</p>
-              <div className="divide-y">
-                {noBoxRows.map((r, i) => (
-                  <div key={i} className="flex items-center justify-between py-1.5 text-sm">
-                    <span className="font-medium truncate flex-1">{r.produto}</span>
-                    <div className="flex items-center gap-4 shrink-0">
-                      <span className="text-xs text-muted-foreground">R$ {r.valorUn.toFixed(2)}/un</span>
-                      <span className="font-bold text-primary text-center w-12">{r.qtde}</span>
-                      <span className="text-right w-20">R$ {r.subtotal.toFixed(2)}</span>
-                      {!forceOpen && onDeleteRow && <ReportRowDeleteButton onConfirm={() => onDeleteRow(r)} />}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {rows.length === 0 && <p className="text-center text-xs text-muted-foreground py-4">Nenhum item.</p>}
         </div>
       )}
