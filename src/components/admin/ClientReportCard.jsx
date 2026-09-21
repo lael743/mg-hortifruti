@@ -2,10 +2,10 @@ import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronRight, Truck, Building2, Printer } from 'lucide-react';
+import { ChevronDown, ChevronRight, Truck, Building2 } from 'lucide-react';
 import CeasaOrderSection from '@/components/admin/CeasaOrderSection';
 
-export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, boxes = [], trucks = [], startDate, forceOpen, onPrint, onDeleteRow }) {
+export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, boxes = [], trucks = [], startDate, forceOpen, onDeleteRow }) {
   const [open, setOpen] = useState(false);
   const expanded = forceOpen || open;
 
@@ -48,17 +48,6 @@ export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, boxes
         <div className="flex items-center gap-2 shrink-0">
           <Badge className="bg-primary text-primary-foreground">{totalQty} un.</Badge>
           <Badge variant="secondary">R$ {totalValor.toFixed(2)}</Badge>
-          {onPrint && (
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7 print:hidden"
-              title="Imprimir este cliente"
-              onClick={(e) => { e.stopPropagation(); onPrint(); }}
-            >
-              <Printer className="w-4 h-4" />
-            </Button>
-          )}
           {!forceOpen && (
             <Button size="icon" variant="ghost" className="h-7 w-7 print:hidden" onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}>
               {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}

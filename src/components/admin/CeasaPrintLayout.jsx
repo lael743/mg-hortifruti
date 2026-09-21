@@ -1,265 +1,148 @@
 import React from 'react';
 
 /**
- * Layout de impressão compacto para relatórios Ceasa.
- * Cada cliente (ou box) sai em página separada, com cabeçalho da empresa
- * e linhas curtas para caber muitos produtos por página.
+ * Impressão única da "Relação de Vendas e Boxes CEASA".
+ * Um Box por página, clientes agrupados dentro do Box.
+ * Usa exclusivamente os dados da operação CEASA (CeasaReportItem).
+ * Itens sem Box não são impressos.
  *
  * Props:
- *  - mode: 'client' | 'box'
- *  - groupedByClient: [{ cliente, cnpj, caminhoes:Set, rows:[] }]
- *  - groupedByBox: { groups: [{ box, rows:[] }], noBox: [] }
+ *  - groups: [{ box, rows: [] }]
  *  - company: CompanySettings
  *  - startDate, endDate (ISO date strings)
  *  - fmtDate: (str) => string formatada
  */
-export default function CeasaPrintLayout({
-  mode,
-  groupedByClient = [],
-  groupedByBox = { groups: [], noBox: [] },
-  company,
-  startDate,
-  endDate,
-  fmtDate,
-}) {
+
+const money = (n) => (n != null && !isNaN(n)) ? Number(n).toFixed(2).replace('.', ',') : '0,00';
+
+const tableStyle = { width: '100%', borderCollapse: 'collapse', fontSize: 11 };
+
+const thStyle = {
+  textAlign: 'left',
+  borderBottom: '1px solid #94a3b8',
+  background: '#e2e8f0',
+  padding: '3px 5px',
+  fontWeight: 700,
+  fontSize: 10,
+  textTransform: 'uppercase',
+  color: '#1e293b',
+  whiteSpace: 'nowrap',
+};
+
+const tdStyle = {
+  borderBottom: '1px solid #e2e8f0',
+  padding: '2px 5px',
+  lineHeight: '1.2',
+  verticalAlign: 'top',
+};
+
+export default function CeasaPrintLayout({ groups = [], company, startDate, endDate, fmtDate }) {
   const companyName = company?.company_name || '—';
-  const companyCnpj = company?.cnpj || '';
-  const companyAddress = [company?.address, company?.city, company?.state].filter(Boolean).join(' - ');
-  const companyWhats = company?.whatsapp || '';
+  const logoUrl = company?.logo_url || '';
   const period = `${fmtDate(startDate)} até ${fmtDate(endDate)}`;
-
-  const headerStyle = {
-    borderBottom: '2px solid #1d4ed8',
-    paddingBottom: 6,
-    marginBottom: 8,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-  };
-
-  const pageStyle = () => ({
-    marginBottom: 8,
+  const emission = new Date().toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
   });
+  const totalPages = groups.length;
 
-  const tableStyle = {
-    width: '100%',
-    borderCollapse: 'collapse',
-    fontSize: 11,
-  };
-  const thStyle = {
-    textAlign: 'left',
-    borderBottom: '1px solid #cbd5e1',
-    padding: '2px 4px',
-    fontWeight: 600,
-    fontSize: 10,
-    textTransform: 'uppercase',
-    color: '#475569',
-  };
-  const tdStyle = {
-    borderBottom: '1px solid #f1f5f9',
-    padding: '1px 4px',
-    lineHeight: '1.15',
-  };
-
-  const money = (n) => (n != null && !isNaN(n)) ? Number(n).toFixed(2).replace('.', ',') : '0,00';
-
-  const renderCompanyHeader = () => (
-    <div style={headerStyle}>
-      <div>
-        <div style={{ fontSize: 15, fontWeight: 700 }}>{companyName}</div>
-        {companyCnpj && <div style={{ fontSize: 10, color: '#475569' }}>CNPJ: {companyCnpj}</div>}
-        {companyAddress && <div style={{ fontSize: 10, color: '#475569' }}>{companyAddress}</div>}
-      </div>
-      <div style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: 13, fontWeight: 700 }}>Relação de Vendas Ceasa</div>
-        <div style={{ fontSize: 10, color: '#475569' }}>{period}</div>
-        {companyWhats && <div style={{ fontSize: 10, color: '#475569' }}>WhatsApp: {companyWhats}</div>}
-      </div>
-    </div>
-  );
-
-  // === Modo Cliente ===
-  if (mode === 'client') {
-    return (
-      <div>
-        {groupedByClient.map((g, i) => {
-          const caminhaoLabel = [...g.caminhoes].filter(Boolean).join(', ') || '—';
-          const totalQty = g.rows.reduce((s, r) => s + r.qtde, 0);
-          const totalValor = g.rows.reduce((s, r) => s + r.subtotal, 0);
-          // agrupa por box
-          const boxMap = new Map();
-          const noBox = [];
-          g.rows.forEach(r => {
-            const box = r.box || null;
-            if (box) {
-              if (!boxMap.has(box.id)) boxMap.set(box.id, { box, rows: [] });
-              boxMap.get(box.id).rows.push(r);
-            } else {
-              noBox.push(r);
-            }
-          });
-          const boxGroups = [...boxMap.values()].sort((a, b) => a.box.name.localeCompare(b.box.name, 'pt-BR'));
-          const noBoxShowNotes = noBox.some(r => r.obs);
-          return (
-            <div key={i} className="ceasa-box-page" style={pageStyle()}>
-              {renderCompanyHeader()}
-              <div style={{ marginTop: 10, marginBottom: 6, borderBottom: '1px solid #cbd5e1', paddingBottom: 4 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#1d4ed8' }}>Cliente: {g.cliente || '—'}</div>
-                <div style={{ fontSize: 10, color: '#475569' }}>
-                  CNPJ: {g.cnpj || '—'} &nbsp;|&nbsp; Caminhão: {caminhaoLabel}
-                </div>
-              </div>
-              {boxGroups.map(({ box, rows: bRows }) => {
-                const boxQty = bRows.reduce((s, r) => s + r.qtde, 0);
-                const boxValor = bRows.reduce((s, r) => s + r.subtotal, 0);
-                const showNotes = bRows.some(r => r.obs);
-                return (
-                  <div key={box.id} style={{ marginTop: 6, pageBreakInside: 'avoid' }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#1d4ed8', background: '#eff6ff', padding: '2px 6px', borderRadius: 3, marginBottom: 2 }}>
-                      Box ({box.name}) — {boxQty} un.
-                    </div>
-                    <table style={tableStyle}>
-                      <thead>
-                        <tr>
-                          <th style={thStyle}>Produto</th>
-                          <th style={{ ...thStyle, width: 50, textAlign: 'center' }}>Qtde</th>
-                          <th style={{ ...thStyle, width: 70, textAlign: 'right' }}>Valor CEASA</th>
-                          <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Subtotal</th>
-                          <th style={{ ...thStyle, width: 90 }}>Caminhão</th>
-                          {showNotes && <th style={{ ...thStyle, width: 120 }}>Observação</th>}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {bRows.map((r, j) => (
-                          <tr key={j}>
-                            <td style={tdStyle}>{r.produto}</td>
-                            <td style={{ ...tdStyle, textAlign: 'center' }}>{r.qtde}</td>
-                            <td style={{ ...tdStyle, textAlign: 'right' }}>{r.valorCeasa > 0 ? `R$ ${money(r.valorCeasa)}` : '—'}</td>
-                            <td style={{ ...tdStyle, textAlign: 'right' }}>{r.subtotal > 0 ? `R$ ${money(r.subtotal)}` : '—'}</td>
-                            <td style={tdStyle}>{r.caminhao || '—'}</td>
-                            {showNotes && <td style={tdStyle}>{r.obs || ''}</td>}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {boxValor > 0 && (
-                      <div style={{ fontSize: 10, textAlign: 'right', color: '#475569', marginTop: 1 }}>Subtotal Box: R$ {money(boxValor)}</div>
-                    )}
-                  </div>
-                );
-              })}
-              {noBox.length > 0 && (
-                <div style={{ marginTop: 6, pageBreakInside: 'avoid' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#b45309', background: '#fffbeb', padding: '2px 6px', borderRadius: 3, marginBottom: 2 }}>
-                    Sem Box associado
-                  </div>
-                  <table style={tableStyle}>
-                    <thead>
-                      <tr>
-                        <th style={thStyle}>Produto</th>
-                        <th style={{ ...thStyle, width: 50, textAlign: 'center' }}>Qtde</th>
-                        <th style={{ ...thStyle, width: 70, textAlign: 'right' }}>Valor CEASA</th>
-                        <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Subtotal</th>
-                        <th style={{ ...thStyle, width: 90 }}>Caminhão</th>
-                        {noBoxShowNotes && <th style={{ ...thStyle, width: 120 }}>Observação</th>}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {noBox.map((r, j) => (
-                        <tr key={j}>
-                          <td style={tdStyle}>{r.produto}</td>
-                          <td style={{ ...tdStyle, textAlign: 'center' }}>{r.qtde}</td>
-                          <td style={{ ...tdStyle, textAlign: 'right' }}>{r.valorCeasa > 0 ? `R$ ${money(r.valorCeasa)}` : '—'}</td>
-                          <td style={{ ...tdStyle, textAlign: 'right' }}>{r.subtotal > 0 ? `R$ ${money(r.subtotal)}` : '—'}</td>
-                          <td style={tdStyle}>{r.caminhao || '—'}</td>
-                          {noBoxShowNotes && <td style={tdStyle}>{r.obs || ''}</td>}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, textAlign: 'right', borderTop: '1px solid #1d4ed8', paddingTop: 4 }}>
-                Total: {totalQty} un. — R$ {money(totalValor)}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  // === Modo Box ===
   return (
     <div>
-      {groupedByBox.groups.map(({ box, rows }) => {
-        const totalQty = rows.reduce((s, r) => s + r.qtde, 0);
-        const totalValor = rows.reduce((s, r) => s + r.subtotal, 0);
-        // agrupa por cliente dentro do box
+      {groups.map(({ box, rows }, pageIdx) => {
+        // Clientes agrupados dentro do Box
         const clientMap = new Map();
         rows.forEach(r => {
           const key = r.cnpj || r.cliente || '—';
-          if (!clientMap.has(key)) clientMap.set(key, { cliente: r.cliente || '—', cnpj: r.cnpj || '', caminhoes: new Set(), rows: [] });
-          const cg = clientMap.get(key);
-          cg.rows.push(r);
-          if (r.caminhao) cg.caminhoes.add(r.caminhao);
+          if (!clientMap.has(key)) clientMap.set(key, { cliente: r.cliente || '—', cnpj: r.cnpj || '', rows: [] });
+          clientMap.get(key).rows.push(r);
         });
         const clientGroups = [...clientMap.values()].sort((a, b) => a.cliente.localeCompare(b.cliente, 'pt-BR'));
+
+        const boxQty = rows.reduce((s, r) => s + r.qtde, 0);
+        const boxValor = rows.reduce((s, r) => s + r.subtotal, 0);
+
         return (
-          <div key={box.id} className="ceasa-box-page" style={pageStyle()}>
-            {renderCompanyHeader()}
-            <div style={{ marginTop: 10, marginBottom: 6, borderBottom: '1px solid #cbd5e1', paddingBottom: 4 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#1d4ed8' }}>Box: {box.name}</div>
-              {box.cnpj && <div style={{ fontSize: 10, color: '#475569' }}>CNPJ: {box.cnpj}</div>}
+          <div key={box.id} className="ceasa-box-page">
+            {/* Cabeçalho */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, borderBottom: '2px solid #1d4ed8', paddingBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {logoUrl && <img src={logoUrl} alt="" style={{ height: 34, width: 'auto', objectFit: 'contain' }} />}
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700 }}>{companyName}</div>
+                  {company?.cnpj && <div style={{ fontSize: 10, color: '#475569' }}>CNPJ: {company.cnpj}</div>}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 13, fontWeight: 700 }}>Relação de Vendas e Boxes CEASA</div>
+                <div style={{ fontSize: 10, color: '#475569' }}>Período: {period}</div>
+                <div style={{ fontSize: 10, color: '#475569' }}>Emissão: {emission}</div>
+                <div style={{ fontSize: 10, color: '#475569' }}>Página {pageIdx + 1} de {totalPages}</div>
+              </div>
             </div>
-            {clientGroups.map((cg, j) => {
-              const caminhaoLabel = [...cg.caminhoes].filter(Boolean).join(', ');
-              const clientQty = cg.rows.reduce((s, r) => s + r.qtde, 0);
-              const clientValor = cg.rows.reduce((s, r) => s + r.subtotal, 0);
-              const showNotes = cg.rows.some(r => r.obs);
-              return (
-                <div key={j} style={{ marginTop: 6, pageBreakInside: 'avoid' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#334155', background: '#f8fafc', padding: '2px 6px', borderRadius: 3, marginBottom: 2 }}>
-                    {cg.cliente}
-                    {cg.cnpj && <span style={{ color: '#64748b', fontWeight: 400 }}> — CNPJ: {cg.cnpj}</span>}
-                    {caminhaoLabel && <span style={{ color: '#64748b', fontWeight: 400 }}> — Caminhão: {caminhaoLabel}</span>}
-                  </div>
-                  <table style={tableStyle}>
-                    <thead>
+
+            {/* Barra de contexto do Box */}
+            <div style={{ marginTop: 8, marginBottom: 6, background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 3, padding: '4px 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>Box: {box.name}</div>
+              <div style={{ fontSize: 10, color: '#475569' }}>CNPJ: {box.cnpj || '—'}</div>
+            </div>
+
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={{ ...thStyle, width: 78 }}>Caminhão</th>
+                  <th style={{ ...thStyle, width: 92 }}>CNPJ</th>
+                  <th style={thStyle}>Cliente</th>
+                  <th style={thStyle}>Produto</th>
+                  <th style={{ ...thStyle, width: 42, textAlign: 'center' }}>Qtde</th>
+                  <th style={{ ...thStyle, width: 68, textAlign: 'right' }}>Valor Un.</th>
+                  <th style={{ ...thStyle, width: 78, textAlign: 'right' }}>Valor Total</th>
+                  <th style={{ ...thStyle, width: 100 }}>Observação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {clientGroups.map((cg, ci) => {
+                  const cQty = cg.rows.reduce((s, r) => s + r.qtde, 0);
+                  const cValor = cg.rows.reduce((s, r) => s + r.subtotal, 0);
+                  return (
+                    <React.Fragment key={ci}>
                       <tr>
-                        <th style={thStyle}>Produto</th>
-                        <th style={{ ...thStyle, width: 50, textAlign: 'center' }}>Qtde</th>
-                        <th style={{ ...thStyle, width: 70, textAlign: 'right' }}>Valor CEASA</th>
-                        <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Subtotal</th>
-                        <th style={{ ...thStyle, width: 90 }}>Caminhão</th>
-                        {showNotes && <th style={{ ...thStyle, width: 120 }}>Observação</th>}
+                        <td colSpan={8} style={{ ...tdStyle, background: '#f8fafc', fontWeight: 700, fontSize: 11 }}>
+                          {cg.cliente}
+                          {cg.cnpj ? <span style={{ fontWeight: 400, color: '#64748b' }}> — CNPJ: {cg.cnpj}</span> : null}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {cg.rows.map((r, k) => (
-                        <tr key={k}>
+                      {cg.rows.map((r, ri) => (
+                        <tr key={ri}>
+                          <td style={tdStyle}>{r.caminhao || '—'}</td>
+                          <td style={tdStyle}>{r.cnpj || '—'}</td>
+                          <td style={tdStyle}>{r.cliente || '—'}</td>
                           <td style={tdStyle}>{r.produto}</td>
                           <td style={{ ...tdStyle, textAlign: 'center' }}>{r.qtde}</td>
-                          <td style={{ ...tdStyle, textAlign: 'right' }}>{r.valorCeasa > 0 ? `R$ ${money(r.valorCeasa)}` : '—'}</td>
-                          <td style={{ ...tdStyle, textAlign: 'right' }}>{r.subtotal > 0 ? `R$ ${money(r.subtotal)}` : '—'}</td>
-                          <td style={tdStyle}>{r.caminhao || '—'}</td>
-                          {showNotes && <td style={tdStyle}>{r.obs || ''}</td>}
+                          <td style={{ ...tdStyle, textAlign: 'right' }}>R$ {money(r.valorCeasa)}</td>
+                          <td style={{ ...tdStyle, textAlign: 'right' }}>R$ {money(r.subtotal)}</td>
+                          <td style={tdStyle}>{r.obs || '-'}</td>
                         </tr>
                       ))}
-                    </tbody>
-                  </table>
-                  {(clientQty > 0 || clientValor > 0) && (
-                    <div style={{ fontSize: 10, textAlign: 'right', color: '#475569', marginTop: 1 }}>
-                      Total cliente: {clientQty} un. — R$ {money(clientValor)}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, textAlign: 'right', borderTop: '1px solid #1d4ed8', paddingTop: 4 }}>
-              Total do Box: {totalQty} un. — R$ {money(totalValor)}
-            </div>
+                      <tr>
+                        <td colSpan={4} style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, background: '#f8fafc' }}>Total do Cliente</td>
+                        <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700, background: '#f8fafc' }}>{cQty}</td>
+                        <td style={{ ...tdStyle, background: '#f8fafc' }} />
+                        <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, background: '#f8fafc' }}>R$ {money(cValor)}</td>
+                        <td style={{ ...tdStyle, background: '#f8fafc' }} />
+                      </tr>
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={4} style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, fontSize: 12, background: '#e2e8f0', borderTop: '2px solid #1d4ed8' }}>TOTAL GERAL DO BOX</td>
+                  <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700, fontSize: 12, background: '#e2e8f0', borderTop: '2px solid #1d4ed8' }}>{boxQty}</td>
+                  <td style={{ ...tdStyle, background: '#e2e8f0', borderTop: '2px solid #1d4ed8' }} />
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, fontSize: 12, background: '#e2e8f0', borderTop: '2px solid #1d4ed8' }}>R$ {money(boxValor)}</td>
+                  <td style={{ ...tdStyle, background: '#e2e8f0', borderTop: '2px solid #1d4ed8' }} />
+                </tr>
+              </tfoot>
+            </table>
           </div>
         );
       })}

@@ -8,10 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Printer, Plus, Package, ChevronDown, ChevronRight } from 'lucide-react';
+import { Download, Printer, Package } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import ClientReportCard from '@/components/admin/ClientReportCard';
-import ReportRowDeleteButton from '@/components/admin/ReportRowDeleteButton';
+import CeasaProductGroup from '@/components/admin/CeasaProductGroup';
 import CeasaPrintLayout from '@/components/admin/CeasaPrintLayout';
 
 const LOCAL_TZ = 'America/Porto_Velho';
@@ -35,14 +35,15 @@ export default function AdminCeasaReport() {
   const [startDate, setStartDate] = useState(todayStr());
   const [endDate, setEndDate] = useState(todayStr());
   const [activeTab, setActiveTab] = useState('lista');
-  const [printTarget, setPrintTarget] = useState(null); // null | 'all' | { type:'client'|'box', id }
+  const [printing, setPrinting] = useState(false);
 
-  const doPrint = (target) => {
-    setPrintTarget(target || 'all');
+  // === Impressão única: Relação CEASA ===
+  const doPrint = () => {
+    setPrinting(true);
     document.body.classList.add('ceasa-printing');
     const cleanup = () => {
       document.body.classList.remove('ceasa-printing');
-      setPrintTarget(null);
+      setPrinting(false);
       window.removeEventListener('afterprint', cleanup);
       clearTimeout(fallback);
     };
@@ -76,7 +77,8 @@ export default function AdminCeasaReport() {
     queryFn: () => base44.entities.CompanySettings.list().then(r => r[0]),
   });
 
-  // Filtra pedidos por data e que requerem NF-e
+  // Filtra pedidos por data e que requerem NF-e.
+  // requires_nfe = true → TODOS os itens do pedido participam da Gestão CEASA.
   const nfeOrders = useMemo(() => {
     const start = new Date(startDate + 'T00:00:00');
     const end = new Date(endDate + 'T23:59:59');
@@ -102,13 +104,13 @@ export default function AdminCeasaReport() {
     return map;
   }, [boxes]);
 
-  // Achata itens: somente os marcados como nfe_included (não bônus)
+  // Achata os itens dos pedidos NF-e. O campo nfe_included NÃO é usado aqui:
+  // o pedido inteiro entra na Gestão CEASA. Itens de bônus (brinde) ficam fora.
   const flatRows = useMemo(() => {
     const rows = [];
     nfeOrders.forEach(o => {
       (o.items || []).forEach((it, idx) => {
         if (it.is_bonus) return;
-        if (!it.nfe_included) return;
         const itemKey = `${o.id}:${idx}`;
         const operation = operationByKey[itemKey] || null;
         // O relatório usa os dados da operação CEASA, não os valores fiscais do pedido
@@ -145,48 +147,32 @@ export default function AdminCeasaReport() {
     return rows;
   }, [nfeOrders, operationByKey, boxById]);
 
-  // Agrupamento por Box — definido pela operação CEASA de cada item
-  const groupedByBox = useMemo(() => {
+  // Agrupamento por Box — usado exclusivamente na impressão.
+  // Itens sem Box não são impressos.
+  const printGroups = useMemo(() => {
     const groups = {};
-    const noBox = [];
     flatRows.forEach(row => {
-      const box = row.box;
-      if (box) {
-        if (!groups[box.id]) groups[box.id] = { box, rows: [] };
-        groups[box.id].rows.push(row);
-      } else {
-        noBox.push(row);
-      }
+      if (!row.box) return;
+      if (!groups[row.box.id]) groups[row.box.id] = { box: row.box, rows: [] };
+      groups[row.box.id].rows.push(row);
     });
-    // Adiciona itens manuais (CeasaReportItem sem item_key).
-    // Operações de itens de pedido já entram pelo flatRows — evita duplicidade.
-    reportItems.forEach(ri => {
-      if (ri.item_key) return;
-      if (ri.date < startDate || ri.date > endDate) return;
-      const box = boxes.find(b => b.id === ri.box_id);
-      if (!box) return;
-      if (!groups[box.id]) groups[box.id] = { box, rows: [] };
-      const qtde = ri.quantity || 0;
-      const valorCeasa = ri.ceasa_value ?? 0;
-      groups[box.id].rows.push({
-        caminhao: ri.caminhao || '',
-        cnpj: '',
-        cliente: ri.client_name || '—',
-        produto: ri.product_name,
-        qtde,
-        valorUn: 0,
-        valorCeasa,
-        subtotal: valorCeasa * qtde,
-        obs: ri.notes || '',
-        isManual: true,
-        manualId: ri.id,
-      });
+    return Object.values(groups).sort((a, b) => a.box.name.localeCompare(b.box.name, 'pt-BR'));
+  }, [flatRows]);
+
+  // Agrupamento por produto — aba "Itens Agrupado" (operação em massa por produto)
+  const groupedByProduct = useMemo(() => {
+    const map = new Map();
+    flatRows.forEach(r => {
+      const key = r.produto || '—';
+      if (!map.has(key)) map.set(key, { produto: key, rows: [] });
+      map.get(key).rows.push(r);
     });
-    return { groups: Object.values(groups), noBox };
-  }, [flatRows, boxes, reportItems, startDate, endDate]);
+    return [...map.values()].sort((a, b) => a.produto.localeCompare(b.produto, 'pt-BR'));
+  }, [flatRows]);
 
   // Totais
   const totalRows = flatRows.length;
+  const totalQty = flatRows.reduce((s, r) => s + r.qtde, 0);
   const totalValor = flatRows.reduce((s, r) => s + r.subtotal, 0);
   const totalClientes = new Set(nfeOrders.map(o => o.nfe_cnpj || o.customer_email)).size;
 
@@ -203,7 +189,7 @@ export default function AdminCeasaReport() {
     return [...map.values()].sort((a, b) => a.cliente.localeCompare(b.cliente, 'pt-BR'));
   }, [flatRows]);
 
-  // === Exportação CSV ===
+  // === Exportação CSV (dados da operação CEASA) ===
   const exportCsv = () => {
     const headers = ['Box', 'Cliente', 'Pedido', 'Produto', 'Quantidade', 'Valor CEASA', 'Subtotal', 'Caminhão', 'Observação'];
     const lines = [headers.join(';')];
@@ -220,33 +206,22 @@ export default function AdminCeasaReport() {
         r.obs || '',
       ].join(';'));
     });
-    // Resumo por produto
-    lines.push('');
-    lines.push('RESUMO POR PRODUTO');
-    const prodSummary = {};
-    flatRows.forEach(r => {
-      if (!prodSummary[r.produto]) prodSummary[r.produto] = 0;
-      prodSummary[r.produto] += r.qtde;
-    });
-    Object.entries(prodSummary).forEach(([p, q]) => {
-      lines.push([p, q].join(';'));
-    });
     const csv = '\uFEFF' + lines.join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `relatorio-ceasa-${startDate}_a_${endDate}.csv`;
+    a.download = `relacao-ceasa-${startDate}_a_${endDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success('CSV exportado!');
   };
 
-  // === Excluir a operação CEASA de um item (ou item manual) ===
+  // === Excluir a operação CEASA de um item ===
   // Remove somente o CeasaReportItem. O pedido e seus itens nunca são alterados.
   const deleteRowMutation = useMutation({
     mutationFn: async (row) => {
-      const reportItemId = row.manualId || row.operation?.id;
+      const reportItemId = row.operation?.id;
       if (!reportItemId) return null;
       return base44.entities.CeasaReportItem.delete(reportItemId);
     },
@@ -268,11 +243,14 @@ export default function AdminCeasaReport() {
           <Button variant="outline" size="sm" className="gap-1" onClick={exportCsv} disabled={totalRows === 0}>
             <Download className="w-4 h-4" /> Exportar CSV
           </Button>
-          <Button variant="outline" size="sm" className="gap-1" onClick={() => doPrint('allClient')} disabled={totalRows === 0}>
-            <Printer className="w-4 h-4" /> Imprimir Lista por Cliente
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1" onClick={() => doPrint('allBox')} disabled={groupedByBox.groups.length === 0}>
-            <Printer className="w-4 h-4" /> Imprimir Agrupado por Box
+          <Button
+            size="sm"
+            className="gap-1"
+            onClick={doPrint}
+            disabled={printGroups.length === 0}
+            title={printGroups.length === 0 ? 'Nenhum item com Box definido' : 'Imprimir a Relação CEASA'}
+          >
+            <Printer className="w-4 h-4" /> Imprimir Relação CEASA
           </Button>
         </div>
       </div>
@@ -296,19 +274,13 @@ export default function AdminCeasaReport() {
         </div>
       </Card>
 
-      {/* Cabeçalho de impressão */}
-      <div className="hidden print:block text-center mb-4">
-        <h1 className="text-xl font-bold">Relação de Vendas e Boxes Ceasa</h1>
-        <p className="text-sm">{fmtDate(startDate)} até {fmtDate(endDate)}</p>
-      </div>
-
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="print:hidden">
           <TabsTrigger value="lista">Lista por Cliente</TabsTrigger>
-          <TabsTrigger value="box">Agrupado por Box</TabsTrigger>
+          <TabsTrigger value="itens">Itens Agrupado</TabsTrigger>
         </TabsList>
 
-        {/* === Formato 1: Lista por Cliente === */}
+        {/* === Aba 1: Lista por Cliente (ajustes individuais) === */}
         <TabsContent value="lista">
           {totalRows === 0 ? (
             <Card className="p-8 text-center">
@@ -317,10 +289,9 @@ export default function AdminCeasaReport() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {/* Total geral */}
               <div className="flex items-center justify-end gap-3 text-sm">
                 <Badge variant="secondary">{groupedByClient.length} clientes</Badge>
-                <Badge variant="secondary">{flatRows.reduce((s, r) => s + r.qtde, 0)} un.</Badge>
+                <Badge variant="secondary">{totalQty} un.</Badge>
                 <Badge className="bg-primary text-primary-foreground">R$ {totalValor.toFixed(2)}</Badge>
               </div>
 
@@ -335,241 +306,53 @@ export default function AdminCeasaReport() {
                   boxes={boxes}
                   trucks={trucks}
                   startDate={startDate}
-                  onPrint={() => doPrint({ type: 'client', id: g.cnpj || g.cliente })}
                   onDeleteRow={(r) => deleteRowMutation.mutate(r)}
                 />
               ))}
             </div>
           )}
-
-          {/* Resumo por produto */}
-          {totalRows > 0 && (
-            <Card className="p-4 mt-3 bg-primary/5">
-              <p className="text-sm font-semibold mb-2">Resumo por produto</p>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(flatRows.reduce((acc, r) => {
-                  if (!acc[r.produto]) acc[r.produto] = 0;
-                  acc[r.produto] += r.qtde;
-                  return acc;
-                }, {})).map(([prod, qty]) => (
-                  <Badge key={prod} className="bg-primary/10 text-primary border border-primary/20">
-                    {qty} {prod}
-                  </Badge>
-                ))}
-              </div>
-            </Card>
-          )}
         </TabsContent>
 
-        {/* === Formato 2: Agrupado por Box === */}
-        <TabsContent value="box">
-          {groupedByBox.groups.length === 0 && groupedByBox.noBox.length === 0 ? (
+        {/* === Aba 2: Itens Agrupado (operação em massa por produto) === */}
+        <TabsContent value="itens">
+          {groupedByProduct.length === 0 ? (
             <Card className="p-8 text-center">
               <Package className="w-10 h-10 mx-auto text-muted-foreground/40 mb-2" />
-              <p className="text-muted-foreground">Nenhum dado para agrupar no período.</p>
+              <p className="text-muted-foreground">Nenhum item para agrupar no período selecionado.</p>
             </Card>
           ) : (
-            <div className="space-y-4">
-              {groupedByBox.groups.map(({ box, rows }) => (
-                <BoxGroup
-                  key={box.id}
-                  box={box}
-                  rows={rows}
-                  startDate={startDate}
-                  onItemAdded={() => queryClient.invalidateQueries({ queryKey: ['ceasa-report-items'] })}
-                  onPrint={() => doPrint({ type: 'box', id: box.id })}
-                  onDeleteRow={(r) => deleteRowMutation.mutate(r)}
-                />
-              ))}
+            <div className="space-y-3">
+              <div className="flex items-center justify-end gap-3 text-sm">
+                <Badge variant="secondary">{groupedByProduct.length} produtos</Badge>
+                <Badge variant="secondary">{totalRows} itens</Badge>
+                <Badge variant="secondary">{totalQty} un.</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Aplique um Box a todos os itens de um produto de uma só vez. Depois, se um pedido específico
+                precisar de outro Box, ajuste individualmente na aba "Lista por Cliente".
+              </p>
 
-              {groupedByBox.noBox.length > 0 && (
-                <Card className="p-4 border-amber-200 bg-amber-50/40">
-                  <p className="font-semibold text-sm mb-2">Sem Box associado</p>
-                  <div className="space-y-1">
-                    {groupedByBox.noBox.map((r, i) => (
-                      <div key={i} className="flex justify-between text-sm border-b last:border-b-0 py-1">
-                        <span>{r.cliente} — <strong>{r.produto}</strong></span>
-                        <span className="text-muted-foreground">{r.qtde} un.</span>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Defina o Box da operação de cada item na aba "Lista por Cliente" para que apareçam agrupados.
-                  </p>
-                </Card>
-              )}
+              {groupedByProduct.map(g => (
+                <CeasaProductGroup key={g.produto} produto={g.produto} rows={g.rows} boxes={boxes} />
+              ))}
             </div>
           )}
         </TabsContent>
       </Tabs>
 
-      {/* === Portal de impressão — layout compacto, um cliente/box por página === */}
-      {printTarget && createPortal(
+      {/* === Portal de impressão — Relação CEASA, um Box por página === */}
+      {printing && createPortal(
         <div className="ceasa-print-root" style={{ padding: '8px 12px' }}>
-          {(printTarget === 'allClient' || (printTarget && printTarget.type === 'client')) && (
-            <CeasaPrintLayout
-              mode="client"
-              groupedByClient={groupedByClient.filter(g => printTarget === 'allClient' || printTarget.id === (g.cnpj || g.cliente))}
-              company={company}
-              startDate={startDate}
-              endDate={endDate}
-              fmtDate={fmtDate}
-            />
-          )}
-          {(printTarget === 'allBox' || (printTarget && printTarget.type === 'box')) && (
-            <CeasaPrintLayout
-              mode="box"
-              groupedByBox={{ groups: groupedByBox.groups.filter(({ box }) => printTarget === 'allBox' || printTarget.id === box.id), noBox: [] }}
-              company={company}
-              startDate={startDate}
-              endDate={endDate}
-              fmtDate={fmtDate}
-            />
-          )}
+          <CeasaPrintLayout
+            groups={printGroups}
+            company={company}
+            startDate={startDate}
+            endDate={endDate}
+            fmtDate={fmtDate}
+          />
         </div>,
         document.body
       )}
     </div>
-  );
-}
-
-// === Subcomponente: Grupo por Box com adição de itens manuais ===
-function BoxGroup({ box, rows, startDate, onItemAdded, forceOpen, onPrint, onDeleteRow }) {
-  const [showAdd, setShowAdd] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [newItem, setNewItem] = useState({ product_name: '', quantity: 1, client_name: '' });
-  const expanded = forceOpen || open;
-
-  const totalQty = rows.reduce((s, r) => s + r.qtde, 0);
-
-  // Agrupa itens por cliente dentro do box
-  const clientGroups = useMemo(() => {
-    const map = new Map();
-    rows.forEach(r => {
-      const key = r.cnpj || r.cliente || '—';
-      if (!map.has(key)) map.set(key, { cliente: r.cliente || '—', cnpj: r.cnpj || '', caminhoes: new Set(), rows: [] });
-      const g = map.get(key);
-      g.rows.push(r);
-      if (r.caminhao) g.caminhoes.add(r.caminhao);
-    });
-    return [...map.values()].sort((a, b) => a.cliente.localeCompare(b.cliente, 'pt-BR'));
-  }, [rows]);
-
-  const addMutation = useMutation({
-    mutationFn: (data) => base44.entities.CeasaReportItem.create(data),
-    onSuccess: () => { onItemAdded(); toast.success('Item adicionado ao Box.'); setNewItem({ product_name: '', quantity: 1, client_name: '' }); setShowAdd(false); },
-    onError: () => toast.error('Erro ao adicionar item.'),
-  });
-
-  const handleAdd = () => {
-    if (!newItem.product_name.trim()) { toast.error('Informe o produto.'); return; }
-    addMutation.mutate({
-      box_id: box.id,
-      box_name: box.name,
-      product_name: newItem.product_name,
-      quantity: parseInt(newItem.quantity) || 1,
-      client_name: newItem.client_name || '',
-      date: startDate,
-    });
-  };
-
-  return (
-    <Card className="overflow-hidden border-2 border-primary/15 print:break-inside-avoid">
-      <div
-        className={`bg-primary/8 px-4 py-3 flex items-center justify-between gap-2 ${!forceOpen ? 'hover:bg-primary/12 cursor-pointer' : ''}`}
-        onClick={!forceOpen ? () => setOpen(o => !o) : undefined}
-      >
-        <div>
-          <p className="font-bold text-primary">{box.name}</p>
-          {box.cnpj && <p className="text-xs text-muted-foreground">CNPJ: {box.cnpj}</p>}
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge className="bg-primary text-primary-foreground">{totalQty} un. total</Badge>
-          {onPrint && (
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7 print:hidden"
-              title="Imprimir este Box"
-              onClick={(e) => { e.stopPropagation(); onPrint(); }}
-            >
-              <Printer className="w-4 h-4" />
-            </Button>
-          )}
-          {!forceOpen && (
-            <Button size="icon" variant="ghost" className="h-7 w-7 print:hidden" onClick={(e) => { e.stopPropagation(); setOpen(o => !o); }}>
-              {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-            </Button>
-          )}
-          {!forceOpen && (
-            <Button size="sm" variant="outline" className="h-7 gap-1 print:hidden" onClick={(e) => { e.stopPropagation(); setShowAdd(!showAdd); }}>
-              <Plus className="w-3.5 h-3.5" /> Adicionar item
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {showAdd && (
-        <div className="px-4 py-3 border-b bg-muted/30 print:hidden">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-            <Input placeholder="Produto" value={newItem.product_name} onChange={e => setNewItem(p => ({ ...p, product_name: e.target.value }))} />
-            <Input placeholder="Cliente (opcional)" value={newItem.client_name} onChange={e => setNewItem(p => ({ ...p, client_name: e.target.value }))} />
-            <Input type="number" min="1" placeholder="Qtd" value={newItem.quantity} onChange={e => setNewItem(p => ({ ...p, quantity: e.target.value }))} />
-            <Button onClick={handleAdd} disabled={addMutation.isPending}>Adicionar</Button>
-          </div>
-        </div>
-      )}
-
-      {expanded && (
-      <div className="divide-y">
-        {clientGroups.map((cg, gi) => {
-          const caminhaoLabel = [...cg.caminhoes].filter(Boolean).join(', ');
-          const clientQty = cg.rows.reduce((s, r) => s + r.qtde, 0);
-          const clientValor = cg.rows.reduce((s, r) => s + r.subtotal, 0);
-          return (
-            <div key={gi} className="px-4 py-2">
-              {/* Sub-cabeçalho do cliente dentro do box */}
-              <div className="flex items-start justify-between gap-2 mb-1 pb-1 border-b border-dashed">
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm truncate">{cg.cliente}</p>
-                  {cg.cnpj && <p className="text-xs text-muted-foreground font-mono">CNPJ: {cg.cnpj}</p>}
-                  {caminhaoLabel && <p className="text-xs text-muted-foreground">Caminhão: {caminhaoLabel}</p>}
-                </div>
-                <Badge variant="secondary" className="shrink-0">{clientQty} un.</Badge>
-              </div>
-              <div className="divide-y">
-                {cg.rows.map((r, i) => (
-                  <div key={i} className="flex items-center justify-between py-1.5 text-sm">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium truncate">
-                        {r.produto}
-                        {r.isManual && <Badge variant="outline" className="ml-1.5 text-[10px] text-blue-600 border-blue-300">Manual</Badge>}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      {r.valorCeasa > 0 && <span className="text-xs text-muted-foreground">R$ {r.valorCeasa.toFixed(2)}/un</span>}
-                      <span className="font-bold text-primary">{r.qtde}</span>
-                      {!forceOpen && onDeleteRow && (r.operation || r.isManual) && (
-                        <ReportRowDeleteButton
-                          onConfirm={() => onDeleteRow(r)}
-                          description={r.isManual
-                            ? 'Este item manual será removido do Box.'
-                            : 'A operação CEASA deste item será removida. O pedido e seus itens permanecem intactos.'}
-                        />
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {clientValor > 0 && (
-                <p className="text-right text-xs text-muted-foreground mt-1">Subtotal cliente: R$ {clientValor.toFixed(2)}</p>
-              )}
-            </div>
-          );
-        })}
-        {rows.length === 0 && <p className="text-center text-xs text-muted-foreground py-4">Nenhum item neste Box.</p>}
-      </div>
-      )}
-    </Card>
   );
 }
