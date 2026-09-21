@@ -798,10 +798,14 @@ export default function AdminOrders() {
       {editingOrder && (() => {
         // Sempre usa o dado mais recente do query (não o snapshot antigo)
         const freshOrder = orders.find((o) => o.id === editingOrder.id) || editingOrder;
+        // Nome e CNPJ da NF-e puxados do cadastro do cliente (Walk-in ou usuário)
+        const clientInfo = getClientInfo(freshOrder);
         return (
           <OrderEditDialog
             key={freshOrder.id + JSON.stringify(freshOrder.items)}
             order={freshOrder}
+            clientCnpj={clientInfo.cnpj_cpf}
+            clientCompanyName={clientInfo.company_name || clientInfo.full_name}
             onSave={(payload) => updateOrderItemsMutation.mutate({ id: freshOrder.id, ...payload })}
             onClose={() => setEditingOrder(null)} />);
 

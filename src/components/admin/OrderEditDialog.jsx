@@ -9,7 +9,7 @@ import AddOrderItemModal from './AddOrderItemModal';
 import BonusItemModal from './BonusItemModal';
 import NfePanel from './NfePanel';
 
-export default function OrderEditDialog({ order, onSave, onClose }) {
+export default function OrderEditDialog({ order, clientCnpj = '', clientCompanyName = '', onSave, onClose }) {
   const [items, setItems] = useState(
     (order.items || []).map(item => ({
       ...item,
@@ -26,10 +26,11 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
   const [discountInput, setDiscountInput] = useState(
     order.discount_value != null && order.discount_value > 0 ? String(order.discount_value) : ''
   );
+  // Nome e CNPJ vêm do cadastro do cliente; o que já está salvo no pedido prevalece.
   const [nfeData, setNfeData] = useState({
     requires_nfe: !!order.requires_nfe,
-    nfe_cnpj: order.nfe_cnpj || '',
-    nfe_company_name: order.nfe_company_name || '',
+    nfe_cnpj: order.nfe_cnpj || clientCnpj || '',
+    nfe_company_name: order.nfe_company_name || clientCompanyName || order.customer_display_name || order.customer_name || '',
   });
 
   const { data: products = [] } = useQuery({
@@ -369,8 +370,8 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
         {/* NF-e */}
         <NfePanel
           nfeData={nfeData}
-          defaultCnpj={order.nfe_cnpj || ''}
-          defaultCompanyName={order.nfe_company_name || order.customer_display_name || order.customer_name || ''}
+          defaultCnpj={order.nfe_cnpj || clientCnpj}
+          defaultCompanyName={order.nfe_company_name || clientCompanyName || order.customer_display_name || order.customer_name || ''}
           onChange={setNfeData}
         />
 
