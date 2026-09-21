@@ -2,8 +2,16 @@ import React from 'react';
 
 /**
  * Impressão única da "Relação de Vendas e Boxes CEASA".
- * Um Box por página, clientes agrupados dentro do Box.
- * Usa exclusivamente os dados da operação CEASA (CeasaReportItem).
+ *
+ * Estrutura: uma página por Box.
+ *   BOX
+ *     ├── Cliente + CNPJ  (cabeçalho do grupo, aparece UMA vez)
+ *     │     ├── tabela de produtos
+ *     │     └── Total do Cliente
+ *     └── TOTAL GERAL DO BOX
+ *
+ * Cliente e CNPJ NÃO são colunas da tabela — são informações do cabeçalho do
+ * grupo. Usa exclusivamente os dados da operação CEASA (CeasaReportItem).
  * Itens sem Box não são impressos.
  *
  * Props:
@@ -15,7 +23,25 @@ import React from 'react';
 
 const money = (n) => (n != null && !isNaN(n)) ? Number(n).toFixed(2).replace('.', ',') : '0,00';
 
-const tableStyle = { width: '100%', borderCollapse: 'collapse', fontSize: 11 };
+const tableStyle = {
+  width: '100%',
+  borderCollapse: 'collapse',
+  fontSize: 11,
+  tableLayout: 'fixed',
+};
+
+// Larguras fixas das 6 colunas — garantem o alinhamento entre a tabela de cada
+// cliente e a linha de TOTAL GERAL DO BOX.
+const colGroup = (
+  <colgroup>
+    <col style={{ width: 78 }} />
+    <col />
+    <col style={{ width: 45 }} />
+    <col style={{ width: 70 }} />
+    <col style={{ width: 80 }} />
+    <col style={{ width: 100 }} />
+  </colgroup>
+);
 
 const thStyle = {
   textAlign: 'left',
@@ -34,6 +60,21 @@ const tdStyle = {
   padding: '2px 5px',
   lineHeight: '1.2',
   verticalAlign: 'top',
+  overflow: 'hidden',
+};
+
+const totalCellStyle = {
+  ...tdStyle,
+  fontWeight: 700,
+  background: '#f8fafc',
+};
+
+const boxTotalCellStyle = {
+  ...tdStyle,
+  fontWeight: 700,
+  fontSize: 12,
+  background: '#e2e8f0',
+  borderTop: '2px solid #1d4ed8',
 };
 
 export default function CeasaPrintLayout({ groups = [], company, startDate, endDate, fmtDate }) {
@@ -83,36 +124,33 @@ export default function CeasaPrintLayout({ groups = [], company, startDate, endD
               <div style={{ fontSize: 10, color: '#475569' }}>CNPJ: {box.cnpj || '—'}</div>
             </div>
 
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={{ ...thStyle, width: 78 }}>Caminhão</th>
-                  <th style={{ ...thStyle, width: 92 }}>CNPJ</th>
-                  <th style={thStyle}>Cliente</th>
-                  <th style={thStyle}>Produto</th>
-                  <th style={{ ...thStyle, width: 42, textAlign: 'center' }}>Qtde</th>
-                  <th style={{ ...thStyle, width: 68, textAlign: 'right' }}>Valor Un.</th>
-                  <th style={{ ...thStyle, width: 78, textAlign: 'right' }}>Valor Total</th>
-                  <th style={{ ...thStyle, width: 100 }}>Observação</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clientGroups.map((cg, ci) => {
-                  const cQty = cg.rows.reduce((s, r) => s + r.qtde, 0);
-                  const cValor = cg.rows.reduce((s, r) => s + r.subtotal, 0);
-                  return (
-                    <React.Fragment key={ci}>
+            {/* Um bloco por cliente dentro do Box */}
+            {clientGroups.map((cg, ci) => {
+              const cQty = cg.rows.reduce((s, r) => s + r.qtde, 0);
+              const cValor = cg.rows.reduce((s, r) => s + r.subtotal, 0);
+              return (
+                <div key={ci} style={{ marginTop: 6, pageBreakInside: 'avoid' }}>
+                  {/* Cabeçalho do grupo — Cliente e CNPJ aparecem uma única vez */}
+                  <div style={{ fontSize: 11, fontWeight: 700, background: '#eff6ff', borderLeft: '3px solid #1d4ed8', padding: '3px 5px' }}>
+                    Cliente: {cg.cliente} | CNPJ: {cg.cnpj || '—'}
+                  </div>
+
+                  <table style={tableStyle}>
+                    {colGroup}
+                    <thead>
                       <tr>
-                        <td colSpan={8} style={{ ...tdStyle, background: '#f8fafc', fontWeight: 700, fontSize: 11 }}>
-                          {cg.cliente}
-                          {cg.cnpj ? <span style={{ fontWeight: 400, color: '#64748b' }}> — CNPJ: {cg.cnpj}</span> : null}
-                        </td>
+                        <th style={thStyle}>Caminhão</th>
+                        <th style={thStyle}>Produto</th>
+                        <th style={{ ...thStyle, textAlign: 'center' }}>Qtde</th>
+                        <th style={{ ...thStyle, textAlign: 'right' }}>Valor Un.</th>
+                        <th style={{ ...thStyle, textAlign: 'right' }}>Valor Total</th>
+                        <th style={thStyle}>Observação</th>
                       </tr>
+                    </thead>
+                    <tbody>
                       {cg.rows.map((r, ri) => (
                         <tr key={ri}>
                           <td style={tdStyle}>{r.caminhao || '—'}</td>
-                          <td style={tdStyle}>{r.cnpj || '—'}</td>
-                          <td style={tdStyle}>{r.cliente || '—'}</td>
                           <td style={tdStyle}>{r.produto}</td>
                           <td style={{ ...tdStyle, textAlign: 'center' }}>{r.qtde}</td>
                           <td style={{ ...tdStyle, textAlign: 'right' }}>R$ {money(r.valorCeasa)}</td>
@@ -120,26 +158,33 @@ export default function CeasaPrintLayout({ groups = [], company, startDate, endD
                           <td style={tdStyle}>{r.obs || '-'}</td>
                         </tr>
                       ))}
+                    </tbody>
+                    <tfoot>
                       <tr>
-                        <td colSpan={4} style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, background: '#f8fafc' }}>Total do Cliente</td>
-                        <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700, background: '#f8fafc' }}>{cQty}</td>
-                        <td style={{ ...tdStyle, background: '#f8fafc' }} />
-                        <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, background: '#f8fafc' }}>R$ {money(cValor)}</td>
-                        <td style={{ ...tdStyle, background: '#f8fafc' }} />
+                        <td colSpan={2} style={{ ...totalCellStyle, textAlign: 'right' }}>Total do Cliente</td>
+                        <td style={{ ...totalCellStyle, textAlign: 'center' }}>{cQty}</td>
+                        <td style={totalCellStyle} />
+                        <td style={{ ...totalCellStyle, textAlign: 'right' }}>R$ {money(cValor)}</td>
+                        <td style={totalCellStyle} />
                       </tr>
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-              <tfoot>
+                    </tfoot>
+                  </table>
+                </div>
+              );
+            })}
+
+            {/* TOTAL GERAL DO BOX */}
+            <table style={{ ...tableStyle, marginTop: 6 }}>
+              {colGroup}
+              <tbody>
                 <tr>
-                  <td colSpan={4} style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, fontSize: 12, background: '#e2e8f0', borderTop: '2px solid #1d4ed8' }}>TOTAL GERAL DO BOX</td>
-                  <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700, fontSize: 12, background: '#e2e8f0', borderTop: '2px solid #1d4ed8' }}>{boxQty}</td>
-                  <td style={{ ...tdStyle, background: '#e2e8f0', borderTop: '2px solid #1d4ed8' }} />
-                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 700, fontSize: 12, background: '#e2e8f0', borderTop: '2px solid #1d4ed8' }}>R$ {money(boxValor)}</td>
-                  <td style={{ ...tdStyle, background: '#e2e8f0', borderTop: '2px solid #1d4ed8' }} />
+                  <td colSpan={2} style={{ ...boxTotalCellStyle, textAlign: 'right' }}>TOTAL GERAL DO BOX</td>
+                  <td style={{ ...boxTotalCellStyle, textAlign: 'center' }}>{boxQty}</td>
+                  <td style={boxTotalCellStyle} />
+                  <td style={{ ...boxTotalCellStyle, textAlign: 'right' }}>R$ {money(boxValor)}</td>
+                  <td style={boxTotalCellStyle} />
                 </tr>
-              </tfoot>
+              </tbody>
             </table>
           </div>
         );
