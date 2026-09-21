@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Printer, Package } from 'lucide-react';
+import { Download, Printer, Package, Search, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import ClientReportCard from '@/components/admin/ClientReportCard';
 import CeasaProductGroup from '@/components/admin/CeasaProductGroup';
@@ -25,6 +25,17 @@ function fmtDate(d) {
   return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR');
 }
 
+// Normaliza texto para busca: sem acentos e sem pontuação
+function normalize(s) {
+  return (s || '')
+    .toString()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9\s]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 function getEffectiveNfeValue(item) {
   if (item.nfe_value != null) return item.nfe_value;
   return item.final_unit_price ?? item.unit_price ?? 0;
@@ -35,6 +46,7 @@ export default function AdminCeasaReport() {
   const [startDate, setStartDate] = useState(todayStr());
   const [endDate, setEndDate] = useState(todayStr());
   const [activeTab, setActiveTab] = useState('lista');
+  const [search, setSearch] = useState('');
   const [printing, setPrinting] = useState(false);
 
   // === Impressão única: Relação CEASA ===
@@ -104,7 +116,7 @@ export default function AdminCeasaReport() {
     return map;
   }, [boxes]);
 
-  // Achata os itens dos pedidos NF-e. O campo nfe_included NÃO é usado aqui:
+  // Achata os itens dos pedidos NF-e. Não existe seleção individual de itens:
   // o pedido inteiro entra na Gestão CEASA. Itens de bônus (brinde) ficam fora.
   const flatRows = useMemo(() => {
     const rows = [];
@@ -159,27 +171,33 @@ export default function AdminCeasaReport() {
     return Object.values(groups).sort((a, b) => a.box.name.localeCompare(b.box.name, 'pt-BR'));
   }, [flatRows]);
 
+  // Busca por cliente ou produto — ignora acentos e pontuação
+  const searchedRows = useMemo(() => {
+    const q = normalize(search);
+    if (!q) return flatRows;
+    return flatRows.filter(r => normalize(r.cliente).includes(q) || normalize(r.produto).includes(q));
+  }, [flatRows, search]);
+
   // Agrupamento por produto — aba "Itens Agrupado" (operação em massa por produto)
   const groupedByProduct = useMemo(() => {
     const map = new Map();
-    flatRows.forEach(r => {
+    searchedRows.forEach(r => {
       const key = r.produto || '—';
       if (!map.has(key)) map.set(key, { produto: key, rows: [] });
       map.get(key).rows.push(r);
     });
     return [...map.values()].sort((a, b) => a.produto.localeCompare(b.produto, 'pt-BR'));
-  }, [flatRows]);
+  }, [searchedRows]);
 
   // Totais
   const totalRows = flatRows.length;
-  const totalQty = flatRows.reduce((s, r) => s + r.qtde, 0);
   const totalValor = flatRows.reduce((s, r) => s + r.subtotal, 0);
   const totalClientes = new Set(nfeOrders.map(o => o.nfe_cnpj || o.customer_email)).size;
 
   // Agrupamento por cliente para a Lista por Cliente
   const groupedByClient = useMemo(() => {
     const map = new Map();
-    flatRows.forEach(r => {
+    searchedRows.forEach(r => {
       const key = r.cnpj || r.cliente || '—';
       if (!map.has(key)) map.set(key, { cliente: r.cliente, cnpj: r.cnpj, caminhoes: new Set(), rows: [] });
       const g = map.get(key);
@@ -187,7 +205,11 @@ export default function AdminCeasaReport() {
       if (r.caminhao) g.caminhoes.add(r.caminhao);
     });
     return [...map.values()].sort((a, b) => a.cliente.localeCompare(b.cliente, 'pt-BR'));
-  }, [flatRows]);
+  }, [searchedRows]);
+
+  // Totais dos itens exibidos (respeitam a busca)
+  const searchedQty = searchedRows.reduce((s, r) => s + r.qtde, 0);
+  const searchedValor = searchedRows.reduce((s, r) => s + r.subtotal, 0);
 
   // === Exportação CSV (dados da operação CEASA) ===
   const exportCsv = () => {
@@ -275,24 +297,50 @@ export default function AdminCeasaReport() {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="print:hidden">
-          <TabsTrigger value="lista">Lista por Cliente</TabsTrigger>
-          <TabsTrigger value="itens">Itens Agrupado</TabsTrigger>
-        </TabsList>
+        <div className="flex items-center gap-3 flex-wrap print:hidden">
+          <TabsList>
+            <TabsTrigger value="lista">Lista por Cliente</TabsTrigger>
+            <TabsTrigger value="itens">Itens Agrupado</TabsTrigger>
+          </TabsList>
+
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar por cliente ou produto..."
+              className="pl-9 pr-8"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                title="Limpar busca"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* === Aba 1: Lista por Cliente (ajustes individuais) === */}
         <TabsContent value="lista">
-          {totalRows === 0 ? (
+          {searchedRows.length === 0 ? (
             <Card className="p-8 text-center">
               <Package className="w-10 h-10 mx-auto text-muted-foreground/40 mb-2" />
-              <p className="text-muted-foreground">Nenhum pedido com NF-e no período selecionado.</p>
+              <p className="text-muted-foreground">
+                {search
+                  ? 'Nenhum cliente ou produto encontrado para a busca.'
+                  : 'Nenhum pedido com NF-e no período selecionado.'}
+              </p>
             </Card>
           ) : (
             <div className="space-y-3">
               <div className="flex items-center justify-end gap-3 text-sm">
                 <Badge variant="secondary">{groupedByClient.length} clientes</Badge>
-                <Badge variant="secondary">{totalQty} un.</Badge>
-                <Badge className="bg-primary text-primary-foreground">R$ {totalValor.toFixed(2)}</Badge>
+                <Badge variant="secondary">{searchedQty} un.</Badge>
+                <Badge className="bg-primary text-primary-foreground">R$ {searchedValor.toFixed(2)}</Badge>
               </div>
 
               {/* Cards por cliente, expansíveis */}
@@ -318,14 +366,18 @@ export default function AdminCeasaReport() {
           {groupedByProduct.length === 0 ? (
             <Card className="p-8 text-center">
               <Package className="w-10 h-10 mx-auto text-muted-foreground/40 mb-2" />
-              <p className="text-muted-foreground">Nenhum item para agrupar no período selecionado.</p>
+              <p className="text-muted-foreground">
+                {search
+                  ? 'Nenhum produto encontrado para a busca.'
+                  : 'Nenhum item para agrupar no período selecionado.'}
+              </p>
             </Card>
           ) : (
             <div className="space-y-3">
               <div className="flex items-center justify-end gap-3 text-sm">
                 <Badge variant="secondary">{groupedByProduct.length} produtos</Badge>
-                <Badge variant="secondary">{totalRows} itens</Badge>
-                <Badge variant="secondary">{totalQty} un.</Badge>
+                <Badge variant="secondary">{searchedRows.length} itens</Badge>
+                <Badge variant="secondary">{searchedQty} un.</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
                 Aplique um Box a todos os itens de um produto de uma só vez. Depois, se um pedido específico

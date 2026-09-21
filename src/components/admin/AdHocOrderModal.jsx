@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 import { X, Trash2, ShoppingCart, UserPlus, MapPin, Phone, FileText, Store, User } from 'lucide-react';
 import CityAutocomplete from '@/components/common/CityAutocomplete';
-import NfeSelectionPanel from './NfeSelectionPanel';
+import NfePanel from './NfePanel';
 
 const STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
 
@@ -30,7 +30,7 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
   const [clientData, setClientData] = useState({ ...EMPTY_CLIENT });
   const [clientType, setClientType] = useState(null); // 'direct' | 'walk_in'
   const [isNewClient, setIsNewClient] = useState(false);
-  const [nfeData, setNfeData] = useState({ requires_nfe: false, nfe_cnpj: '', nfe_company_name: '', caminhao: '' });
+  const [nfeData, setNfeData] = useState({ requires_nfe: false, nfe_cnpj: '', nfe_company_name: '' });
 
   const { data: allClients = [] } = useQuery({
     queryKey: ['all-clients-adhoc'],
@@ -169,7 +169,6 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
         requires_nfe: nfeData.requires_nfe,
         nfe_cnpj: nfeData.nfe_cnpj,
         nfe_company_name: nfeData.nfe_company_name,
-        caminhao: nfeData.caminhao,
       });
       toast.success('Pedido avulso criado com sucesso!');
       onSaved();
@@ -354,15 +353,11 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
           </div>
 
           {/* NF-e */}
-          <NfeSelectionPanel
-            items={orderItems}
+          <NfePanel
             nfeData={nfeData}
             defaultCnpj={clientData.cnpj_cpf}
             defaultCompanyName={clientData.company_name || clientData.full_name}
-            onChange={({ items: newItems, nfeData: newNfeData }) => {
-              setOrderItems(newItems);
-              setNfeData(newNfeData);
-            }}
+            onChange={setNfeData}
           />
 
           {/* OBSERVAÇÕES */}

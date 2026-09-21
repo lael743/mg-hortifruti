@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Pencil, Check, X, Trash2, ArrowLeftRight, PackagePlus, Minus, Plus, Gift, Tag } from 'lucide-react';
 import AddOrderItemModal from './AddOrderItemModal';
 import BonusItemModal from './BonusItemModal';
-import NfeSelectionPanel from './NfeSelectionPanel';
+import NfePanel from './NfePanel';
 
 export default function OrderEditDialog({ order, onSave, onClose }) {
   const [items, setItems] = useState(
@@ -30,7 +30,6 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
     requires_nfe: !!order.requires_nfe,
     nfe_cnpj: order.nfe_cnpj || '',
     nfe_company_name: order.nfe_company_name || '',
-    caminhao: order.caminhao || '',
   });
 
   const { data: products = [] } = useQuery({
@@ -131,12 +130,11 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
     const nfeChanged =
       nfeData.requires_nfe !== !!order.requires_nfe ||
       nfeData.nfe_cnpj !== (order.nfe_cnpj || '') ||
-      nfeData.nfe_company_name !== (order.nfe_company_name || '') ||
-      nfeData.caminhao !== (order.caminhao || '');
+      nfeData.nfe_company_name !== (order.nfe_company_name || '');
     if (nfeChanged) return true;
     return items.some((item, i) => {
       const orig = originalItems[i];
-      return !orig || item.quantity !== orig.quantity || item.final_unit_price !== (orig.final_unit_price ?? orig.unit_price) || item.product_id !== orig.product_id || !!item.nfe_included !== !!orig.nfe_included || item.nfe_value !== orig.nfe_value;
+      return !orig || item.quantity !== orig.quantity || item.final_unit_price !== (orig.final_unit_price ?? orig.unit_price) || item.product_id !== orig.product_id;
     });
   })();
 
@@ -151,7 +149,6 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
       requires_nfe: nfeData.requires_nfe,
       nfe_cnpj: nfeData.nfe_cnpj,
       nfe_company_name: nfeData.nfe_company_name,
-      caminhao: nfeData.caminhao,
     });
   };
 
@@ -370,15 +367,11 @@ export default function OrderEditDialog({ order, onSave, onClose }) {
         </div>
 
         {/* NF-e */}
-        <NfeSelectionPanel
-          items={items}
+        <NfePanel
           nfeData={nfeData}
           defaultCnpj={order.nfe_cnpj || ''}
           defaultCompanyName={order.nfe_company_name || order.customer_display_name || order.customer_name || ''}
-          onChange={({ items: newItems, nfeData: newNfeData }) => {
-            setItems(newItems);
-            setNfeData(newNfeData);
-          }}
+          onChange={setNfeData}
         />
 
         {/* Totals summary */}

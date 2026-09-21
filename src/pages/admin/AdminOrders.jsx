@@ -11,8 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Printer, Eye, ChevronDown, Building2, MapPin, FileText, ShoppingBasket, X, MessageCircle, Users, Pencil, Plus, Trash2, ArrowDownAZ, ArrowDownUp } from 'lucide-react';
 import OrderEditDialog from '../../components/admin/OrderEditDialog';
 import AdHocOrderModal from '../../components/admin/AdHocOrderModal';
-import { format, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, subDays } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import OrderPurchaseListDialog from '../../components/admin/OrderPurchaseListDialog';
@@ -25,12 +24,6 @@ const statusColors = {
 };
 
 const STATUSES = ['Todos', 'Pendente', 'Confirmado', 'Entregue', 'Cancelado'];
-
-// Parseia string "YYYY-MM-DD" como data LOCAL (evita bug de UTC midnight)
-function parseLocalDate(str) {
-  const [y, m, d] = str.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
 
 function toDateInputValue(date) {
   return format(date, 'yyyy-MM-dd');
@@ -173,8 +166,8 @@ export default function AdminOrders() {
   });
 
   const updateOrderItemsMutation = useMutation({
-    mutationFn: ({ id, items, total, subtotal, discount_type, discount_value, discount_amount, requires_nfe, nfe_cnpj, nfe_company_name, caminhao }) =>
-    base44.entities.Order.update(id, { items, total, subtotal, discount_type, discount_value, discount_amount, requires_nfe, nfe_cnpj, nfe_company_name, caminhao }),
+    mutationFn: ({ id, items, total, subtotal, discount_type, discount_value, discount_amount, requires_nfe, nfe_cnpj, nfe_company_name }) =>
+    base44.entities.Order.update(id, { items, total, subtotal, discount_type, discount_value, discount_amount, requires_nfe, nfe_cnpj, nfe_company_name }),
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['admin-orders'] });
       toast.success('Pedido atualizado com sucesso');
