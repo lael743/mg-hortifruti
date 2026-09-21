@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Download, Printer, Package, Search, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import ClientReportCard from '@/components/admin/ClientReportCard';
@@ -384,9 +385,25 @@ export default function AdminCeasaReport() {
                 precisar de outro Box, ajuste individualmente na aba "Lista por Cliente".
               </p>
 
-              {groupedByProduct.map(g => (
-                <CeasaProductGroup key={g.produto} produto={g.produto} rows={g.rows} boxes={boxes} />
-              ))}
+              <Card className="overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-8 px-2" />
+                      <TableHead>Produto</TableHead>
+                      <TableHead className="text-right">Clientes</TableHead>
+                      <TableHead className="text-right">Itens</TableHead>
+                      <TableHead className="text-right">Qtde</TableHead>
+                      <TableHead className="text-right">Aplicar Box</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {groupedByProduct.map(g => (
+                      <CeasaProductGroup key={g.produto} produto={g.produto} rows={g.rows} boxes={boxes} />
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
             </div>
           )}
         </TabsContent>
