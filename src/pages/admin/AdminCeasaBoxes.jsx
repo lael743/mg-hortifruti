@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
@@ -10,30 +10,22 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Trash2, Pencil, Package, Search, Truck } from 'lucide-react';
+import { Plus, Trash2, Pencil, Package, Truck } from 'lucide-react';
 import CeasaTrucksManager from '@/components/admin/CeasaTrucksManager';
 
-const EMPTY = { name: '', cnpj: '', product_ids: [], active: true };
+const EMPTY = { name: '', cnpj: '', active: true };
 
 export default function AdminCeasaBoxes() {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY);
-  const [productSearch, setProductSearch] = useState('');
   const [tab, setTab] = useState('boxes');
 
   const { data: boxes = [], isLoading } = useQuery({
     queryKey: ['ceasa-boxes'],
     queryFn: () => base44.entities.CeasaBox.list('-created_date', 200),
   });
-
-  const { data: products = [] } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => base44.entities.Product.list(),
-  });
-
-  const activeProducts = products.filter(p => p.active);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.CeasaBox.create(data),
@@ -53,8 +45,9 @@ export default function AdminCeasaBoxes() {
     onError: () => toast.error('Erro ao excluir Box.'),
   });
 
-  const openNew = () => { setForm(EMPTY); setEditing(null); setShowForm(true); setProductSearch(''); };
-  const openEdit = (box) => { setForm({ ...EMPTY, ...box }); setEditing(box); setShowForm(true); setProductSearch(''); };
+  const openNew = () => { setForm(EMPTY); setEditing(null); setShowForm(true); };
+  // Somente os campos do catálogo. O legado product_ids não é lido nem reenviado.
+  const openEdit = (box) => { setForm({ name: box.name || '', cnpj: box.cnpj || '', active: box.active !== false }); setEditing(box); setShowForm(true); };
 
   const handleSave = () => {
     if (!form.name.trim()) { toast.error('Informe o nome do Box.'); return; }
@@ -64,37 +57,6 @@ export default function AdminCeasaBoxes() {
       createMutation.mutate(form);
     }
   };
-
-  const toggleProduct = (pid) => {
-    setForm(f => {
-      if (f.product_ids.includes(pid)) {
-        return { ...f, product_ids: f.product_ids.filter(p => p !== pid) };
-      }
-      // Bloqueia associação duplicada: produto já vinculado a outro Box
-      if (otherBoxOwner[pid]) {
-        toast.error(`"${getProductName(pid)}" já está associado ao ${otherBoxOwner[pid]}.`);
-        return f;
-      }
-      return { ...f, product_ids: [...f.product_ids, pid] };
-    });
-  };
-
-  // Mapa produto -> nome do Box que já o possui (ignora o próprio box em edição)
-  const otherBoxOwner = useMemo(() => {
-    const map = {};
-    boxes.forEach(b => {
-      if (editing && b.id === editing.id) return;
-      (b.product_ids || []).forEach(pid => { map[pid] = b.name; });
-    });
-    return map;
-  }, [boxes, editing]);
-
-  const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-  const filteredProducts = activeProducts
-    .filter(p => productSearch.length === 0 || norm(p.name).includes(norm(productSearch)))
-    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
-
-  const getProductName = (pid) => products.find(p => p.id === pid)?.name || '—';
 
   return (
     <div className="space-y-4">
@@ -153,27 +115,6 @@ export default function AdminCeasaBoxes() {
                   </Button>
                 </div>
               </div>
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">
-                  Produtos ({(box.product_ids || []).length})
-                </p>
-                {(box.product_ids || []).length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {(box.product_ids || []).slice(0, 8).map(pid => (
-                      <Badge key={pid} variant="outline" className="text-[10px] font-normal">
-                        {getProductName(pid)}
-                      </Badge>
-                    ))}
-                    {(box.product_ids || []).length > 8 && (
-                      <Badge variant="outline" className="text-[10px] font-normal">
-                        +{(box.product_ids || []).length - 8}
-                      </Badge>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground italic">Nenhum produto associado</p>
-                )}
-              </div>
             </Card>
           ))}
         </div>
@@ -210,54 +151,6 @@ export default function AdminCeasaBoxes() {
                 <Switch checked={form.active} onCheckedChange={v => setForm(f => ({ ...f, active: v }))} />
               </div>
 
-              {/* Associação de produtos */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm">Produtos fornecidos por este Box</Label>
-                  <Badge variant="secondary" className="text-xs">{(form.product_ids || []).length} selecionados</Badge>
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    value={productSearch}
-                    onChange={e => setProductSearch(e.target.value)}
-                    placeholder="Filtrar produtos..."
-                    className="pl-8"
-                  />
-                </div>
-                <div className="border rounded-lg max-h-56 overflow-y-auto divide-y">
-                  {filteredProducts.map(p => {
-                    const checked = (form.product_ids || []).includes(p.id);
-                    const ownedBy = otherBoxOwner[p.id];
-                    const blocked = !checked && !!ownedBy;
-                    return (
-                      <label
-                        key={p.id}
-                        className={`flex items-center gap-2 px-3 py-2 ${blocked ? 'opacity-60 cursor-not-allowed' : 'hover:bg-muted/50 cursor-pointer'}`}
-                        onClick={blocked ? (e) => { e.preventDefault(); toggleProduct(p.id); } : undefined}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={blocked}
-                          onChange={() => toggleProduct(p.id)}
-                          className="w-4 h-4 accent-primary"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{p.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {p.category} • {p.packaging_type}
-                            {ownedBy && <span className="text-amber-600 font-medium"> • já em {ownedBy}</span>}
-                          </p>
-                        </div>
-                      </label>
-                    );
-                  })}
-                  {filteredProducts.length === 0 && (
-                    <p className="text-center text-xs text-muted-foreground py-4">Nenhum produto encontrado.</p>
-                  )}
-                </div>
-              </div>
             </div>
 
             <DialogFooter>

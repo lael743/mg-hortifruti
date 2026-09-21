@@ -66,11 +66,6 @@ export default function AdminCeasaReport() {
     queryFn: () => base44.entities.CeasaTruck.list('-created_date', 200),
   });
 
-  const { data: products = [] } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => base44.entities.Product.list(),
-  });
-
   const { data: reportItems = [] } = useQuery({
     queryKey: ['ceasa-report-items'],
     queryFn: () => base44.entities.CeasaReportItem.list('-created_date', 500),
@@ -247,8 +242,6 @@ export default function AdminCeasaReport() {
     toast.success('CSV exportado!');
   };
 
-  const productName = (pid) => products.find(p => p.id === pid)?.name || '—';
-
   // === Excluir a operação CEASA de um item (ou item manual) ===
   // Remove somente o CeasaReportItem. O pedido e seus itens nunca são alterados.
   const deleteRowMutation = useMutation({
@@ -383,9 +376,7 @@ export default function AdminCeasaReport() {
                   box={box}
                   rows={rows}
                   startDate={startDate}
-                  endDate={endDate}
                   onItemAdded={() => queryClient.invalidateQueries({ queryKey: ['ceasa-report-items'] })}
-                  onItemDeleted={() => queryClient.invalidateQueries({ queryKey: ['ceasa-report-items'] })}
                   onPrint={() => doPrint({ type: 'box', id: box.id })}
                   onDeleteRow={(r) => deleteRowMutation.mutate(r)}
                 />
@@ -443,7 +434,7 @@ export default function AdminCeasaReport() {
 }
 
 // === Subcomponente: Grupo por Box com adição de itens manuais ===
-function BoxGroup({ box, rows, startDate, endDate, onItemAdded, onItemDeleted, forceOpen, onPrint, onDeleteRow }) {
+function BoxGroup({ box, rows, startDate, onItemAdded, forceOpen, onPrint, onDeleteRow }) {
   const [showAdd, setShowAdd] = useState(false);
   const [open, setOpen] = useState(false);
   const [newItem, setNewItem] = useState({ product_name: '', quantity: 1, client_name: '' });
