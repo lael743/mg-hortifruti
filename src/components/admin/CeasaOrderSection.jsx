@@ -33,6 +33,8 @@ export default function CeasaOrderSection({ order, boxes, trucks = [], startDate
   const totalQty = order.rows.reduce((s, r) => s + r.qtde, 0);
   const totalValor = order.rows.reduce((s, r) => s + r.subtotal, 0);
   const savedCount = order.rows.filter(r => r.operation).length;
+  // Caminhão vem da operação CEASA de cada item — um mesmo pedido pode ter mais de um
+  const orderTrucks = [...new Set(order.rows.map(r => r.caminhao).filter(Boolean))];
 
   // Aplica o caminhão a todos os itens do pedido, criando a operação quando não existir.
   // Nunca altera o Order nem os demais campos da operação (Box, valor CEASA, quantidade, observação).
@@ -96,9 +98,9 @@ export default function CeasaOrderSection({ order, boxes, trucks = [], startDate
             <ChevronRight className="w-4 h-4 shrink-0" />
           )}
           <span className="font-semibold text-sm whitespace-nowrap">Pedido #{order.orderNumber ?? '—'}</span>
-          {order.caminhao && (
+          {orderTrucks.length > 0 && (
             <span className="text-xs text-muted-foreground flex items-center gap-1 truncate">
-              <Truck className="w-3 h-3 shrink-0" /> {order.caminhao}
+              <Truck className="w-3 h-3 shrink-0" /> {orderTrucks.join(', ')}
             </span>
           )}
           <span className="text-xs text-muted-foreground whitespace-nowrap">

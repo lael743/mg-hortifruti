@@ -116,23 +116,32 @@ export default function AdminCeasaReport() {
         if (!it.nfe_included) return;
         const itemKey = `${o.id}:${idx}`;
         const operation = operationByKey[itemKey] || null;
+        // O relatório usa os dados da operação CEASA, não os valores fiscais do pedido
+        const qtde = operation?.quantity ?? it.quantity;
+        const valorCeasa = operation?.ceasa_value ?? it.final_unit_price ?? 0;
         rows.push({
           orderId: o.id,
           orderNumber: o.order_number,
           itemIndex: idx,
           itemKey,
           orderDate: new Date(o.created_date).toLocaleDateString('en-CA', { timeZone: LOCAL_TZ }),
-          caminhao: o.caminhao || '',
+          // Caminhão vem da operação CEASA (nunca de Order.caminhao)
+          caminhao: operation?.caminhao || '',
           cnpj: o.nfe_cnpj || '',
           nfeCompanyName: o.nfe_company_name || '',
           cliente: o.nfe_company_name || o.customer_display_name || o.customer_name || '',
           productId: it.product_id,
-          produto: it.product_name,
-          qtde: it.quantity,
+          produto: operation?.product_name || it.product_name,
+          qtde,
+          // Valor do pedido — usado apenas na coluna "Valor pedido" da Gestão CEASA
           valorUn: getEffectiveNfeValue(it),
+          // Valor CEASA por unidade
+          valorCeasa,
           // Valor inicial da operação CEASA: preço final do item (sem fallback para nfe_value)
           valorCeasaBase: it.final_unit_price ?? 0,
-          subtotal: getEffectiveNfeValue(it) * it.quantity,
+          // Subtotal CEASA = quantidade × valor CEASA
+          subtotal: valorCeasa * qtde,
+          obs: operation?.notes || '',
           operation,
           box: operation?.box_id ? (boxById[operation.box_id] || null) : null,
         });
@@ -162,14 +171,18 @@ export default function AdminCeasaReport() {
       const box = boxes.find(b => b.id === ri.box_id);
       if (!box) return;
       if (!groups[box.id]) groups[box.id] = { box, rows: [] };
+      const qtde = ri.quantity || 0;
+      const valorCeasa = ri.ceasa_value ?? 0;
       groups[box.id].rows.push({
-        caminhao: '',
+        caminhao: ri.caminhao || '',
         cnpj: '',
         cliente: ri.client_name || '—',
         produto: ri.product_name,
-        qtde: ri.quantity,
+        qtde,
         valorUn: 0,
-        subtotal: 0,
+        valorCeasa,
+        subtotal: valorCeasa * qtde,
+        obs: ri.notes || '',
         isManual: true,
         manualId: ri.id,
       });
@@ -197,16 +210,19 @@ export default function AdminCeasaReport() {
 
   // === Exportação CSV ===
   const exportCsv = () => {
-    const headers = ['Caminhão', 'CNPJ', 'Cliente', 'Produto', 'Qtde', 'Valor Un.'];
+    const headers = ['Box', 'Cliente', 'Pedido', 'Produto', 'Quantidade', 'Valor CEASA', 'Subtotal', 'Caminhão', 'Observação'];
     const lines = [headers.join(';')];
     flatRows.forEach(r => {
       lines.push([
-        r.caminhao,
-        r.cnpj,
+        r.box?.name || 'Sem Box',
         r.cliente,
+        r.orderNumber ?? '—',
         r.produto,
         r.qtde,
-        r.valorUn.toFixed(2).replace('.', ','),
+        r.valorCeasa.toFixed(2).replace('.', ','),
+        r.subtotal.toFixed(2).replace('.', ','),
+        r.caminhao,
+        r.obs || '',
       ].join(';'));
     });
     // Resumo por produto
@@ -540,7 +556,7 @@ function BoxGroup({ box, rows, startDate, endDate, onItemAdded, onItemDeleted, f
                       </p>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                      {r.valorUn > 0 && <span className="text-xs text-muted-foreground">R$ {r.valorUn.toFixed(2)}/un</span>}
+                      {r.valorCeasa > 0 && <span className="text-xs text-muted-foreground">R$ {r.valorCeasa.toFixed(2)}/un</span>}
                       <span className="font-bold text-primary">{r.qtde}</span>
                       {!forceOpen && onDeleteRow && (r.operation || r.isManual) && (
                         <ReportRowDeleteButton

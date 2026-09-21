@@ -38,7 +38,7 @@ export default function CeasaPrintLayout({
     gap: 12,
   };
 
-  const pageStyle = (first) => ({
+  const pageStyle = () => ({
     marginBottom: 8,
   });
 
@@ -100,8 +100,9 @@ export default function CeasaPrintLayout({
             }
           });
           const boxGroups = [...boxMap.values()].sort((a, b) => a.box.name.localeCompare(b.box.name, 'pt-BR'));
+          const noBoxShowNotes = noBox.some(r => r.obs);
           return (
-            <div key={i} className="ceasa-box-page" style={pageStyle(i)}>
+            <div key={i} className="ceasa-box-page" style={pageStyle()}>
               {renderCompanyHeader()}
               <div style={{ marginTop: 10, marginBottom: 6, borderBottom: '1px solid #cbd5e1', paddingBottom: 4 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#1d4ed8' }}>Cliente: {g.cliente || '—'}</div>
@@ -112,6 +113,7 @@ export default function CeasaPrintLayout({
               {boxGroups.map(({ box, rows: bRows }) => {
                 const boxQty = bRows.reduce((s, r) => s + r.qtde, 0);
                 const boxValor = bRows.reduce((s, r) => s + r.subtotal, 0);
+                const showNotes = bRows.some(r => r.obs);
                 return (
                   <div key={box.id} style={{ marginTop: 6, pageBreakInside: 'avoid' }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: '#1d4ed8', background: '#eff6ff', padding: '2px 6px', borderRadius: 3, marginBottom: 2 }}>
@@ -121,18 +123,22 @@ export default function CeasaPrintLayout({
                       <thead>
                         <tr>
                           <th style={thStyle}>Produto</th>
-                          <th style={{ ...thStyle, width: 70, textAlign: 'right' }}>Valor Un.</th>
                           <th style={{ ...thStyle, width: 50, textAlign: 'center' }}>Qtde</th>
+                          <th style={{ ...thStyle, width: 70, textAlign: 'right' }}>Valor CEASA</th>
                           <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Subtotal</th>
+                          <th style={{ ...thStyle, width: 90 }}>Caminhão</th>
+                          {showNotes && <th style={{ ...thStyle, width: 120 }}>Observação</th>}
                         </tr>
                       </thead>
                       <tbody>
                         {bRows.map((r, j) => (
                           <tr key={j}>
                             <td style={tdStyle}>{r.produto}</td>
-                            <td style={{ ...tdStyle, textAlign: 'right' }}>R$ {money(r.valorUn)}</td>
                             <td style={{ ...tdStyle, textAlign: 'center' }}>{r.qtde}</td>
-                            <td style={{ ...tdStyle, textAlign: 'right' }}>R$ {money(r.subtotal)}</td>
+                            <td style={{ ...tdStyle, textAlign: 'right' }}>{r.valorCeasa > 0 ? `R$ ${money(r.valorCeasa)}` : '—'}</td>
+                            <td style={{ ...tdStyle, textAlign: 'right' }}>{r.subtotal > 0 ? `R$ ${money(r.subtotal)}` : '—'}</td>
+                            <td style={tdStyle}>{r.caminhao || '—'}</td>
+                            {showNotes && <td style={tdStyle}>{r.obs || ''}</td>}
                           </tr>
                         ))}
                       </tbody>
@@ -152,18 +158,22 @@ export default function CeasaPrintLayout({
                     <thead>
                       <tr>
                         <th style={thStyle}>Produto</th>
-                        <th style={{ ...thStyle, width: 70, textAlign: 'right' }}>Valor Un.</th>
                         <th style={{ ...thStyle, width: 50, textAlign: 'center' }}>Qtde</th>
+                        <th style={{ ...thStyle, width: 70, textAlign: 'right' }}>Valor CEASA</th>
                         <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Subtotal</th>
+                        <th style={{ ...thStyle, width: 90 }}>Caminhão</th>
+                        {noBoxShowNotes && <th style={{ ...thStyle, width: 120 }}>Observação</th>}
                       </tr>
                     </thead>
                     <tbody>
                       {noBox.map((r, j) => (
                         <tr key={j}>
                           <td style={tdStyle}>{r.produto}</td>
-                          <td style={{ ...tdStyle, textAlign: 'right' }}>R$ {money(r.valorUn)}</td>
                           <td style={{ ...tdStyle, textAlign: 'center' }}>{r.qtde}</td>
-                          <td style={{ ...tdStyle, textAlign: 'right' }}>R$ {money(r.subtotal)}</td>
+                          <td style={{ ...tdStyle, textAlign: 'right' }}>{r.valorCeasa > 0 ? `R$ ${money(r.valorCeasa)}` : '—'}</td>
+                          <td style={{ ...tdStyle, textAlign: 'right' }}>{r.subtotal > 0 ? `R$ ${money(r.subtotal)}` : '—'}</td>
+                          <td style={tdStyle}>{r.caminhao || '—'}</td>
+                          {noBoxShowNotes && <td style={tdStyle}>{r.obs || ''}</td>}
                         </tr>
                       ))}
                     </tbody>
@@ -183,8 +193,9 @@ export default function CeasaPrintLayout({
   // === Modo Box ===
   return (
     <div>
-      {groupedByBox.groups.map(({ box, rows }, i) => {
+      {groupedByBox.groups.map(({ box, rows }) => {
         const totalQty = rows.reduce((s, r) => s + r.qtde, 0);
+        const totalValor = rows.reduce((s, r) => s + r.subtotal, 0);
         // agrupa por cliente dentro do box
         const clientMap = new Map();
         rows.forEach(r => {
@@ -196,7 +207,7 @@ export default function CeasaPrintLayout({
         });
         const clientGroups = [...clientMap.values()].sort((a, b) => a.cliente.localeCompare(b.cliente, 'pt-BR'));
         return (
-          <div key={box.id} className="ceasa-box-page" style={pageStyle(i)}>
+          <div key={box.id} className="ceasa-box-page" style={pageStyle()}>
             {renderCompanyHeader()}
             <div style={{ marginTop: 10, marginBottom: 6, borderBottom: '1px solid #cbd5e1', paddingBottom: 4 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#1d4ed8' }}>Box: {box.name}</div>
@@ -206,6 +217,7 @@ export default function CeasaPrintLayout({
               const caminhaoLabel = [...cg.caminhoes].filter(Boolean).join(', ');
               const clientQty = cg.rows.reduce((s, r) => s + r.qtde, 0);
               const clientValor = cg.rows.reduce((s, r) => s + r.subtotal, 0);
+              const showNotes = cg.rows.some(r => r.obs);
               return (
                 <div key={j} style={{ marginTop: 6, pageBreakInside: 'avoid' }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#334155', background: '#f8fafc', padding: '2px 6px', borderRadius: 3, marginBottom: 2 }}>
@@ -217,30 +229,36 @@ export default function CeasaPrintLayout({
                     <thead>
                       <tr>
                         <th style={thStyle}>Produto</th>
-                        <th style={{ ...thStyle, width: 70, textAlign: 'right' }}>Valor Un.</th>
                         <th style={{ ...thStyle, width: 50, textAlign: 'center' }}>Qtde</th>
+                        <th style={{ ...thStyle, width: 70, textAlign: 'right' }}>Valor CEASA</th>
                         <th style={{ ...thStyle, width: 80, textAlign: 'right' }}>Subtotal</th>
+                        <th style={{ ...thStyle, width: 90 }}>Caminhão</th>
+                        {showNotes && <th style={{ ...thStyle, width: 120 }}>Observação</th>}
                       </tr>
                     </thead>
                     <tbody>
                       {cg.rows.map((r, k) => (
                         <tr key={k}>
                           <td style={tdStyle}>{r.produto}</td>
-                          <td style={{ ...tdStyle, textAlign: 'right' }}>{r.valorUn > 0 ? `R$ ${money(r.valorUn)}` : '—'}</td>
                           <td style={{ ...tdStyle, textAlign: 'center' }}>{r.qtde}</td>
+                          <td style={{ ...tdStyle, textAlign: 'right' }}>{r.valorCeasa > 0 ? `R$ ${money(r.valorCeasa)}` : '—'}</td>
                           <td style={{ ...tdStyle, textAlign: 'right' }}>{r.subtotal > 0 ? `R$ ${money(r.subtotal)}` : '—'}</td>
+                          <td style={tdStyle}>{r.caminhao || '—'}</td>
+                          {showNotes && <td style={tdStyle}>{r.obs || ''}</td>}
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  {clientValor > 0 && (
-                    <div style={{ fontSize: 10, textAlign: 'right', color: '#475569', marginTop: 1 }}>Subtotal: R$ {money(clientValor)}</div>
+                  {(clientQty > 0 || clientValor > 0) && (
+                    <div style={{ fontSize: 10, textAlign: 'right', color: '#475569', marginTop: 1 }}>
+                      Total cliente: {clientQty} un. — R$ {money(clientValor)}
+                    </div>
                   )}
                 </div>
               );
             })}
             <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, textAlign: 'right', borderTop: '1px solid #1d4ed8', paddingTop: 4 }}>
-              Total do Box: {totalQty} un.
+              Total do Box: {totalQty} un. — R$ {money(totalValor)}
             </div>
           </div>
         );

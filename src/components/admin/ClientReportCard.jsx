@@ -18,7 +18,7 @@ export default function ClientReportCard({ cliente, cnpj, caminhoes, rows, boxes
     const map = new Map();
     rows.forEach(r => {
       if (!map.has(r.orderId)) {
-        map.set(r.orderId, { orderId: r.orderId, orderNumber: r.orderNumber, caminhao: r.caminhao, rows: [] });
+        map.set(r.orderId, { orderId: r.orderId, orderNumber: r.orderNumber, rows: [] });
       }
       map.get(r.orderId).rows.push(r);
     });
