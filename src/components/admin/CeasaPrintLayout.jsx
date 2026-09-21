@@ -63,24 +63,22 @@ export default function CeasaPrintLayout({ groups = [], company, startDate, endD
         return (
           <div key={box.id} className="ceasa-box-page">
             {/* Cabeçalho */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, borderBottom: '2px solid #1d4ed8', paddingBottom: 6 }}>
+            <div style={{ borderBottom: '2px solid #1d4ed8', paddingBottom: 6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {logoUrl && <img src={logoUrl} alt="" style={{ height: 34, width: 'auto', objectFit: 'contain' }} />}
+                {logoUrl && <img src={logoUrl} alt="" style={{ height: 32, width: 'auto', objectFit: 'contain' }} />}
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 700 }}>{companyName}</div>
                   {company?.cnpj && <div style={{ fontSize: 10, color: '#475569' }}>CNPJ: {company.cnpj}</div>}
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 13, fontWeight: 700 }}>Relação de Vendas e Boxes CEASA</div>
-                <div style={{ fontSize: 10, color: '#475569' }}>Período: {period}</div>
-                <div style={{ fontSize: 10, color: '#475569' }}>Emissão: {emission}</div>
-                <div style={{ fontSize: 10, color: '#475569' }}>Página {pageIdx + 1} de {totalPages}</div>
-              </div>
+              <div style={{ marginTop: 6, fontSize: 13, fontWeight: 700 }}>Relação de Vendas e Boxes CEASA</div>
+              <div style={{ fontSize: 10, color: '#475569' }}>Período: {period}</div>
+              <div style={{ fontSize: 10, color: '#475569' }}>Emissão: {emission}</div>
+              <div style={{ fontSize: 10, color: '#475569' }}>Página {pageIdx + 1} de {totalPages}</div>
             </div>
 
-            {/* Barra de contexto do Box */}
-            <div style={{ marginTop: 8, marginBottom: 6, background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 3, padding: '4px 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            {/* Box */}
+            <div style={{ marginTop: 8, marginBottom: 6, background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: 3, padding: '4px 6px' }}>
               <div style={{ fontSize: 13, fontWeight: 700 }}>Box: {box.name}</div>
               <div style={{ fontSize: 10, color: '#475569' }}>CNPJ: {box.cnpj || '—'}</div>
             </div>
