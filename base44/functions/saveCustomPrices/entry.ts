@@ -39,17 +39,29 @@ Deno.serve(async (req) => {
 
     for (const item of prices) {
       const existingEntry = existing.find(e => e.product_id === item.product_id);
-      if (item.custom_price === null || item.custom_price === undefined) {
+      const hasPrice = item.custom_price !== null && item.custom_price !== undefined;
+
+      // Sem preço definido não existe relação PriceGroup + Product (nem promoção)
+      if (!hasPrice) {
         if (existingEntry) toDelete.push(existingEntry.id);
+        continue;
+      }
+
+      const isPromotion = item.is_promotion === true;
+
+      if (existingEntry) {
+        // Idempotente: só grava o que realmente mudou
+        const patch = {};
+        if (existingEntry.custom_price !== item.custom_price) patch.custom_price = item.custom_price;
+        if ((existingEntry.is_promotion === true) !== isPromotion) patch.is_promotion = isPromotion;
+        if (Object.keys(patch).length > 0) toUpdate.push({ id: existingEntry.id, patch });
       } else {
-        if (existingEntry) {
-          // Only update if value actually changed
-          if (existingEntry.custom_price !== item.custom_price) {
-            toUpdate.push({ id: existingEntry.id, custom_price: item.custom_price });
-          }
-        } else {
-          toCreate.push({ price_group_id, product_id: item.product_id, custom_price: item.custom_price });
-        }
+        toCreate.push({
+          price_group_id,
+          product_id: item.product_id,
+          custom_price: item.custom_price,
+          is_promotion: isPromotion
+        });
       }
     }
 
@@ -60,7 +72,7 @@ Deno.serve(async (req) => {
     }
 
     for (const d of toUpdate) {
-      await withRetry(() => base44.asServiceRole.entities.CustomPrice.update(d.id, { custom_price: d.custom_price }));
+      await withRetry(() => base44.asServiceRole.entities.CustomPrice.update(d.id, d.patch));
       await delay(500);
     }
 

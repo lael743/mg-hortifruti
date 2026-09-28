@@ -5,9 +5,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, Package, Save } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Search, Package, Save, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 
+/**
+ * Definição dos preços por produto de uma tabela (PriceGroup tipo "custom").
+ * Cada linha representa a relação PriceGroup + Product: preço + flag de promoção.
+ */
 export default function CustomPriceModal({ priceGroup, onClose }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -28,7 +33,13 @@ export default function CustomPriceModal({ priceGroup, onClose }) {
   useEffect(() => {
     if (isLoading) return;
     const map = {};
-    existingPrices.forEach(cp => { map[cp.product_id] = { id: cp.id, value: String(cp.custom_price) }; });
+    existingPrices.forEach(cp => {
+      map[cp.product_id] = {
+        id: cp.id,
+        value: String(cp.custom_price),
+        is_promotion: cp.is_promotion === true,
+      };
+    });
     setPrices(map);
   }, [existingPrices, isLoading]);
 
@@ -47,16 +58,27 @@ export default function CustomPriceModal({ priceGroup, onClose }) {
     }));
   };
 
+  const handlePromotionToggle = (productId, value) => {
+    setPrices(prev => ({
+      ...prev,
+      [productId]: { ...prev[productId], is_promotion: value },
+    }));
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
       const activeProductsList = products.filter(p => p.active !== false);
       const pricesPayload = activeProductsList.map(product => {
         const entry = prices[product.id];
-        const val = entry?.value !== undefined && entry?.value !== '' ? Number(entry.value) : null;
+        const raw = entry?.value;
+        const val = raw !== undefined && raw !== '' ? Number(raw) : null;
+        const hasPrice = val !== null && !isNaN(val);
         return {
           product_id: product.id,
-          custom_price: (!isNaN(val) && val !== null) ? val : null,
+          custom_price: hasPrice ? val : null,
+          // A promoção pertence à relação: sem preço definido não existe promoção
+          is_promotion: hasPrice ? entry?.is_promotion === true : false,
         };
       });
 
@@ -73,6 +95,7 @@ export default function CustomPriceModal({ priceGroup, onClose }) {
       queryClient.invalidateQueries({ queryKey: ['custom-prices', priceGroup.id] });
       queryClient.invalidateQueries({ queryKey: ['custom-prices'] });
       queryClient.invalidateQueries({ queryKey: ['custom-prices-catalog'] });
+      queryClient.invalidateQueries({ queryKey: ['custom-prices-template'] });
       toast.success(`Preços salvos! (${res.data.created} criados, ${res.data.updated} atualizados, ${res.data.deleted} removidos)`);
       onClose();
     } catch (err) {
@@ -84,21 +107,24 @@ export default function CustomPriceModal({ priceGroup, onClose }) {
   };
 
   const customCount = Object.values(prices).filter(p => p?.value !== '' && p?.value !== undefined).length;
+  const promotionCount = Object.values(prices).filter(p => p?.is_promotion && p?.value !== '' && p?.value !== undefined).length;
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-xl max-h-[90vh] flex flex-col">
+      <DialogContent className="w-[96vw] max-w-6xl h-[92vh] max-h-[92vh] flex flex-col p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Preços Customizados
             <Badge variant="secondary">{priceGroup.name}</Badge>
           </DialogTitle>
           <p className="text-xs text-muted-foreground">
-            Deixe em branco para usar o preço base do produto. {customCount > 0 && <strong>{customCount} produto(s) com preço customizado.</strong>}
+            Deixe em branco para o produto não participar desta tabela.{' '}
+            {customCount > 0 && <strong>{customCount} produto(s) com preço definido.</strong>}{' '}
+            {promotionCount > 0 && <strong className="text-accent">{promotionCount} em promoção.</strong>}
           </p>
         </DialogHeader>
 
-        <div className="relative mb-2">
+        <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Buscar produto..."
@@ -108,50 +134,65 @@ export default function CustomPriceModal({ priceGroup, onClose }) {
           />
         </div>
 
-        <div className="overflow-y-auto flex-1 space-y-2 pr-1">
+        <div className="overflow-y-auto flex-1 pr-1">
           {isLoading ? (
             <p className="text-center text-muted-foreground py-8 text-sm">Carregando produtos...</p>
           ) : activeProducts.length === 0 ? (
             <p className="text-center text-muted-foreground py-8 text-sm">Nenhum produto encontrado.</p>
-          ) : activeProducts.map(product => {
-            const entry = prices[product.id];
-            const hasCustom = entry?.value !== '' && entry?.value !== undefined;
-            return (
-              <div
-                key={product.id}
-                className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${hasCustom ? 'border-primary/30 bg-primary/5' : 'border-border bg-card'}`}
-              >
-                <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
-                  {product.image_url
-                    ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                    : <Package className="w-4 h-4 text-muted-foreground" />
-                  }
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{product.name}</p>
-                  <p className="text-xs text-muted-foreground">{product.packaging_type}{product.weight ? ` · ${product.weight}` : ''}</p>
-                </div>
-                <div className="text-right text-xs text-muted-foreground mr-2 flex-shrink-0">
-                  <p>Base</p>
-                  <p className="font-semibold">R$ {(product.price || 0).toFixed(2)}</p>
-                </div>
-                <div className="w-28 flex-shrink-0">
-                  <div className="relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder={`${(product.price || 0).toFixed(2)}`}
-                      value={entry?.value ?? ''}
-                      onChange={e => handlePriceChange(product.id, e.target.value)}
-                      className="pl-7 text-sm h-8"
-                    />
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
+              {activeProducts.map(product => {
+                const entry = prices[product.id];
+                const hasCustom = entry?.value !== '' && entry?.value !== undefined;
+                const isPromotion = hasCustom && entry?.is_promotion === true;
+                return (
+                  <div
+                    key={product.id}
+                    className={`flex items-center gap-3 p-2.5 rounded-xl border transition-colors ${isPromotion ? 'border-accent/50 bg-accent/5' : hasCustom ? 'border-primary/30 bg-primary/5' : 'border-border bg-card'}`}
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {product.image_url
+                        ? <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                        : <Package className="w-4 h-4 text-muted-foreground" />
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{product.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{product.packaging_type}{product.weight ? ` · ${product.weight}` : ''}</p>
+                    </div>
+                    <div className="text-right text-xs text-muted-foreground flex-shrink-0">
+                      <p>Base</p>
+                      <p className="font-semibold">R$ {(product.price || 0).toFixed(2)}</p>
+                    </div>
+                    <div className="w-32 flex-shrink-0">
+                      <div className="relative">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder={`${(product.price || 0).toFixed(2)}`}
+                          value={entry?.value ?? ''}
+                          onChange={e => handlePriceChange(product.id, e.target.value)}
+                          className="pl-7 text-sm h-8"
+                        />
+                      </div>
+                    </div>
+                    <div className="w-16 flex-shrink-0 flex flex-col items-center gap-1">
+                      <Switch
+                        checked={isPromotion}
+                        disabled={!hasCustom}
+                        onCheckedChange={v => handlePromotionToggle(product.id, v)}
+                      />
+                      <span className={`text-[10px] font-semibold flex items-center gap-0.5 ${isPromotion ? 'text-accent' : 'text-muted-foreground'}`}>
+                        <Tag className="w-3 h-3" />Promo
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 pt-3 border-t mt-2">

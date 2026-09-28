@@ -10,6 +10,7 @@ import ProductRecommendations from '../components/catalog/ProductRecommendations
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { printPriceTable } from '../lib/printPriceTable';
+import { buildCustomPriceMap, isAvailableInPriceGroup } from '../lib/priceEngine';
 
 export default function Catalog() {
   const { user } = useOutletContext();
@@ -60,9 +61,9 @@ export default function Catalog() {
     enabled: !!userPriceGroup && userPriceGroup.type === 'custom',
   });
 
-  // Build a map: product_id -> custom_price for fast lookup
+  // Build a map: product_id -> registro da relação PriceGroup + Product (preço + promoção)
   const customPriceMap = userPriceGroup?.type === 'custom'
-    ? Object.fromEntries(customPrices.map(cp => [cp.product_id, cp.custom_price]))
+    ? buildCustomPriceMap(customPrices)
     : {};
 
   const { data: myOrders = [] } = useQuery({
@@ -122,11 +123,13 @@ export default function Catalog() {
 
   const isAdmin = user?.role === 'admin';
   const activeProducts = products.filter(p => p.active !== false && (isAdmin || (p.price || 0) > 0));
-  const maxPrice = Math.max(0, ...activeProducts.map(p => p.promo_active && p.promo_price ? p.promo_price : p.price || 0));
+  // Tabela por produto: só aparece o produto com preço definido nela (sem fallback)
+  const catalogProducts = activeProducts.filter(p => isAvailableInPriceGroup(userPriceGroup, customPriceMap[p.id]));
+  const maxPrice = Math.max(0, ...catalogProducts.map(p => p.promo_active && p.promo_price ? p.promo_price : p.price || 0));
 
   const normalizeStr = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
-  const filtered = activeProducts.filter(p => {
+  const filtered = catalogProducts.filter(p => {
     const matchSearch = !search || normalizeStr(p.name).includes(normalizeStr(search));
     const matchCategory = category === 'Todas' || p.category === category;
     const productPrice = p.promo_active && p.promo_price ? p.promo_price : p.price || 0;
@@ -211,7 +214,7 @@ export default function Catalog() {
 
       {user && myOrders.length > 0 && (
         <ProductRecommendations
-          allProducts={products}
+          allProducts={catalogProducts}
           myOrders={myOrders}
           allOrders={allOrders}
           isLoggedIn={!!user}

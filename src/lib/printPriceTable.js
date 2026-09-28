@@ -1,15 +1,28 @@
+import { buildCustomPriceMap, isAvailableInPriceGroup, resolvePrice } from './priceEngine.js';
+
 /**
  * Utilitário reutilizável para imprimir a tabela de preços no mesmo formato do catálogo.
- * Usado tanto pelo cliente (Catalog.jsx) quanto pelo admin (ClientCard.jsx).
+ * Usado pelo cliente (Catalog.jsx), pelo admin (ClientCard.jsx) e por AdminPriceGroups.
+ * buildPriceTableHtml é puro (testável); printPriceTable abre a janela de impressão.
  */
-export function printPriceTable({ products, priceGroup, customPrices, clientOrders, company, clientName }) {
-  const activeProds = products.filter(p => p.active !== false).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+export function buildPriceTableHtml({ products, priceGroup, customPrices, clientOrders, company, clientName }) {
   const discount = priceGroup?.discount_percent || 0;
   const isCustomTable = priceGroup?.type === 'custom';
 
-  const customPriceMap = isCustomTable
-    ? Object.fromEntries((customPrices || []).map(cp => [cp.product_id, cp.custom_price]))
-    : {};
+  const customPriceMap = isCustomTable ? buildCustomPriceMap(customPrices) : {};
+
+  // Tabela do cliente (por produto): só entra o produto com preço definido nela
+  const activeProds = products
+    .filter(p => p.active !== false)
+    .filter(p => isAvailableInPriceGroup(priceGroup, customPriceMap[p.id]))
+    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+  // Produtos marcados como promoção nesta tabela (impressos sem valor riscado)
+  const promotionIds = new Set(
+    Object.values(customPriceMap)
+      .filter(cp => cp?.is_promotion === true)
+      .map(cp => cp.product_id)
+  );
 
   // Build last-order qty map from client's orders
   const lastQtyMap = {};
@@ -27,16 +40,18 @@ export function printPriceTable({ products, priceGroup, customPrices, clientOrde
   const hasClientData = clientOrders && clientOrders.length > 0;
 
   const makeRow = (p) => {
-    const basePrice = p.promo_active && p.promo_price ? p.promo_price : p.price || 0;
+    const resolved = resolvePrice(p, priceGroup, customPriceMap[p.id]);
+    const finalPrice = resolved.price;
     const origPrice = p.price || 0;
-    const finalPrice = isCustomTable
-      ? (customPriceMap[p.id] !== undefined ? customPriceMap[p.id] : p.price || 0)
-      : basePrice * (1 - discount / 100);
     const origFinal = isCustomTable ? origPrice : origPrice * (1 - discount / 100);
     const lastQty = lastQtyMap[p.id];
     const isPromo = p.promo_active && p.promo_price;
-    const rowStyle = isPromo ? 'background:#fffbe6;' : '';
-    const priceHtml = isPromo
+    // Promoção da tabela: apenas o preço promocional, com leve destaque de fonte
+    const isPromotion = resolved.isPromotion;
+    const rowStyle = (isPromo || isPromotion) ? 'background:#fffbe6;' : '';
+    const priceHtml = isPromotion
+      ? `<span style="color:#d97706;font-weight:bold;font-size:9px;">R$ ${finalPrice.toFixed(2)}</span> <span style="background:#f59e0b;color:#fff;font-size:6px;padding:0 2px;border-radius:2px;font-weight:bold;">PROMO</span>`
+      : isPromo
       ? `<span style="text-decoration:line-through;color:#999;font-size:7px;">R$ ${origFinal.toFixed(2)}</span> <span style="color:#d97706;font-weight:bold;">R$ ${finalPrice.toFixed(2)}</span> <span style="background:#f59e0b;color:#fff;font-size:6px;padding:0 2px;border-radius:2px;font-weight:bold;">PROMO</span>`
       : `<span style="font-weight:bold;color:#1a5c2a;">R$ ${finalPrice.toFixed(2)}</span>`;
     const lastQtyHtml = lastQty
@@ -105,7 +120,8 @@ export function printPriceTable({ products, priceGroup, customPrices, clientOrde
     const colSpan = hasClientData ? 5 : 4;
     const leftCells = lp ? makeRow(lp).replace(/^<tr[^>]*>/, '').replace(/<\/tr>$/, '') : `<td colspan="${colSpan}" style="border:1px solid #ddd;"></td>`;
     const rightCells = rp ? makeRow(rp).replace(/^<tr[^>]*>/, '').replace(/<\/tr>$/, '') : `<td colspan="${colSpan}" style="border:1px solid #ddd;"></td>`;
-    const bg = (lp?.promo_active || rp?.promo_active) ? '' : (i % 2 === 0 ? 'background:#f9fafb;' : '');
+    const isHighlighted = (p) => !!(p && (p.promo_active || promotionIds.has(p.id)));
+    const bg = (isHighlighted(lp) || isHighlighted(rp)) ? '' : (i % 2 === 0 ? 'background:#f9fafb;' : '');
     tableRows += `<tr style="${bg}">${leftCells}<td style="width:4px;background:#e5e7eb;"></td>${rightCells}</tr>`;
   }
 
@@ -129,7 +145,12 @@ export function printPriceTable({ products, priceGroup, customPrices, clientOrde
     </table>
   </body></html>`;
 
+  return html;
+}
+
+/** Abre a janela de impressão da tabela de preços. */
+export function printPriceTable(params) {
   const w = window.open('', '_blank');
-  w.document.write(html);
+  w.document.write(buildPriceTableHtml(params));
   w.document.close();
 }

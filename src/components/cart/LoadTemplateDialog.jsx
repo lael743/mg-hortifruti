@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
+import { buildCustomPriceMap, resolvePrice } from '@/lib/priceEngine';
 import { toast } from 'sonner';
 import { saveCart } from '@/lib/cartStore';
 import { Bookmark, Trash2, Package, AlertTriangle } from 'lucide-react';
@@ -36,20 +37,11 @@ export default function LoadTemplateDialog({ user, onClose, onLoaded }) {
     enabled: !!userPriceGroup && userPriceGroup.type === 'custom',
   });
   const customPriceMap = userPriceGroup?.type === 'custom'
-    ? Object.fromEntries(customPrices.map(cp => [cp.product_id, cp.custom_price]))
+    ? buildCustomPriceMap(customPrices)
     : {};
 
-  const getEffectivePrice = (product) => {
-    const basePrice = product.promo_active && product.promo_price ? product.promo_price : product.price;
-    if (!userPriceGroup) return basePrice;
-    if (userPriceGroup.type === 'percentage') {
-      return basePrice * (1 - (userPriceGroup.discount_percent || 0) / 100);
-    }
-    if (userPriceGroup.type === 'custom') {
-      return customPriceMap[product.id] != null ? customPriceMap[product.id] : basePrice;
-    }
-    return basePrice;
-  };
+  // Preço resolvido pelo priceEngine (fonte única de cálculo)
+  const getEffectivePrice = (product) => resolvePrice(product, userPriceGroup, customPriceMap[product.id]).price;
 
   const handleLoad = (template) => {
     const missing = [];

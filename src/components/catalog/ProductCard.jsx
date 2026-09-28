@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ShoppingCart, Tag, Package, Minus, Plus, Heart, CheckCircle2, ShoppingBag } from 'lucide-react';
 import { toggleFavorite, isFavorite } from '@/lib/favoritesStore';
 import { addToCart, getCart } from '@/lib/cartStore';
+import { resolvePrice } from '@/lib/priceEngine';
 import { toast } from 'sonner';
 
 const getCartQty = (productId) => {
@@ -52,17 +53,13 @@ export default function ProductCard({ product, isLoggedIn, priceGroup, customPri
     setFav(f => !f);
   };
   const hasPromo = product.promo_active && product.promo_price;
-  const basePrice = hasPromo ? product.promo_price : product.price;
 
-  // Custom price table: use specific price if set, otherwise fall back to base price
-  // Percentage table: apply discount/surcharge
-  const isCustomTable = priceGroup?.type === 'custom';
-  const discount = priceGroup?.discount_percent || 0;
-  const displayPrice = isCustomTable
-    ? (customPrice !== undefined ? customPrice : product.price)
-    : basePrice * (1 - discount / 100);
-  const hasGroupDiscount = !isCustomTable && discount !== 0 && isLoggedIn;
-  const hasCustomPrice = isCustomTable && customPrice !== undefined && isLoggedIn;
+  // Preço resolvido pelo priceEngine (fonte única de cálculo)
+  const resolved = resolvePrice(product, priceGroup, customPrice);
+  const displayPrice = resolved.price;
+  const isPromotion = resolved.isPromotion;
+  const hasGroupDiscount = resolved.hasGroupDiscount && isLoggedIn;
+  const hasCustomPrice = resolved.hasCustomPrice && isLoggedIn;
   const pricePerUnit = isLoggedIn ? getPricePerUnit(product, displayPrice) : null;
   const wasInLastOrder = isLoggedIn && lastOrderProductIds && lastOrderProductIds.has(product.id);
 
@@ -96,7 +93,7 @@ export default function ProductCard({ product, isLoggedIn, priceGroup, customPri
             <Heart className={`w-4 h-4 transition-colors ${fav ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`} />
           </button>
         )}
-        {hasPromo && (
+        {(hasPromo || isPromotion) && (
           <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground font-bold shadow-lg">
             <Tag className="w-3 h-3 mr-1" />PROMO
           </Badge>
@@ -134,17 +131,17 @@ export default function ProductCard({ product, isLoggedIn, priceGroup, customPri
         {isLoggedIn ? (
           <div className="pt-1 space-y-2">
             <div>
-              {(hasPromo || (hasGroupDiscount && displayPrice < product.price) || (hasCustomPrice && displayPrice < product.price)) && (
+              {!isPromotion && (hasPromo || (hasGroupDiscount && displayPrice < product.price) || (hasCustomPrice && displayPrice < product.price)) && (
                 <span className="text-xs text-muted-foreground line-through block">
                   R$ {product.price.toFixed(2)}
                 </span>
               )}
-              <span className="text-xl font-bold text-primary">
+              <span className={`font-bold text-primary ${isPromotion ? 'text-2xl' : 'text-xl'}`}>
                 R$ {displayPrice.toFixed(2)}
               </span>
               {hasGroupDiscount && (
                 <span className="text-[10px] text-green-600 font-semibold block">
-                  {discount > 0 ? `-${discount}%` : `+${Math.abs(discount)}%`} {priceGroup.name}
+                  {resolved.discount > 0 ? `-${resolved.discount}%` : `+${Math.abs(resolved.discount)}%`} {priceGroup.name}
                 </span>
               )}
               {hasCustomPrice && (

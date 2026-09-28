@@ -13,6 +13,11 @@
     "custom_price": {
       "type": "number",
       "description": "Pre\u00e7o customizado do produto nesta tabela"
+    },
+    "is_promotion": {
+      "type": "boolean",
+      "default": false,
+      "description": "Promo\u00e7\u00e3o comercial da rela\u00e7\u00e3o PriceGroup + Product. \u00c9 apenas uma flag visual/comercial: n\u00e3o altera o pre\u00e7o resolvido pelo priceEngine. S\u00f3 existe quando h\u00e1 pre\u00e7o definido na tabela."
     }
   },
   "required": [
