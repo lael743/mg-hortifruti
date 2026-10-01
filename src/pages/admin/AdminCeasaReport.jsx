@@ -14,6 +14,7 @@ import { createPortal } from 'react-dom';
 import ClientReportCard from '@/components/admin/ClientReportCard';
 import CeasaProductGroup from '@/components/admin/CeasaProductGroup';
 import CeasaPrintLayout from '@/components/admin/CeasaPrintLayout';
+import { fetchAllOperations, indexOperationsByLine } from '@/lib/ceasaOperations';
 
 const LOCAL_TZ = 'America/Porto_Velho';
 
@@ -80,11 +81,6 @@ export default function AdminCeasaReport() {
     queryFn: () => base44.entities.CeasaTruck.list('-created_date', 200),
   });
 
-  const { data: reportItems = [] } = useQuery({
-    queryKey: ['ceasa-report-items'],
-    queryFn: () => base44.entities.CeasaReportItem.list('-created_date', 500),
-  });
-
   const { data: company } = useQuery({
     queryKey: ['company-settings'],
     queryFn: () => base44.entities.CompanySettings.list().then(r => r[0]),
@@ -102,15 +98,30 @@ export default function AdminCeasaReport() {
     });
   }, [allOrders, startDate, endDate]);
 
-  // Operações CEASA ativas, indexadas por order_id + line_id.
+  // Operações CEASA dos pedidos exibidos, percorrendo TODAS as páginas (cursor).
+  // Uma página única de registros globais escondia operações de pedidos mais antigos:
+  // o Box gravado continuava no banco, mas a Gestão não o carregava e a linha
+  // aparecia "sem operação", como se a seleção não tivesse sido salva.
+  const displayedOrderIds = useMemo(() => nfeOrders.map(o => o.id), [nfeOrders]);
+
+  const { data: reportItems = [] } = useQuery({
+    queryKey: ['ceasa-report-items', displayedOrderIds],
+    enabled: displayedOrderIds.length > 0,
+    queryFn: () => fetchAllOperations(cursor => {
+      const options = { sort: '-created_date', limit: 500 };
+      if (cursor) options.cursor = cursor;
+      return base44.entities.CeasaReportItem.filter({ order_id: { $in: displayedOrderIds } }, options);
+    }),
+  });
+
+  // Operações indexadas pela identidade oficial order_id + line_id, com a MESMA
+  // resolução usada na gravação (src/lib/ceasaOperations.js): a mais recente ativa.
   // Operações inativas (item removido do pedido ou pedido sem NF-e) ficam fora da Gestão.
   const operationByLineId = useMemo(() => {
+    const index = indexOperationsByLine(reportItems);
     const map = {};
-    reportItems.forEach(ri => {
-      if (ri.active === false) return;
-      if (ri.order_id && ri.line_id && !map[`${ri.order_id}:${ri.line_id}`]) {
-        map[`${ri.order_id}:${ri.line_id}`] = ri;
-      }
+    Object.entries(index).forEach(([key, op]) => {
+      if (op.active !== false) map[key] = op;
     });
     return map;
   }, [reportItems]);

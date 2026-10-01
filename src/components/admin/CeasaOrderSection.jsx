@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { ChevronDown, ChevronRight, Truck } from 'lucide-react';
 import CeasaOperationItemRow from '@/components/admin/CeasaOperationItemRow';
 import TruckCombobox from '@/components/admin/TruckCombobox';
+import { operationsForLine, pickOperation } from '@/lib/ceasaOperations';
 
 // Colunas da tabela operacional — espelham a linha em CeasaOperationItemRow
 const COLUMNS = [
@@ -45,16 +46,12 @@ export default function CeasaOrderSection({ order, boxes, trucks = [], startDate
         '-created_date',
         500
       );
-      // Identidade da operação: order_id + line_id (nunca a posição do item)
-      const byLineId = {};
-      existing.forEach(op => {
-        if (op.line_id && !byLineId[op.line_id]) byLineId[op.line_id] = op;
-      });
-
       const toUpdate = [];
       const toCreate = [];
       order.rows.forEach(r => {
-        const op = byLineId[r.lineId];
+        // Identidade da operação: order_id + line_id (nunca a posição do item).
+        // Mesma resolução da leitura: a operação mais recente ativa da linha.
+        const op = pickOperation(operationsForLine(existing, order.orderId, r.lineId));
         if (op) {
           if ((op.caminhao || '') !== truckName) toUpdate.push({ id: op.id, caminhao: truckName });
           return;
@@ -71,6 +68,7 @@ export default function CeasaOrderSection({ order, boxes, trucks = [], startDate
           nfe_cnpj: r.cnpj || '',
           caminhao: truckName,
           date: r.orderDate || startDate,
+          ceasa_value: r.valorCeasaBase,
         });
       });
 

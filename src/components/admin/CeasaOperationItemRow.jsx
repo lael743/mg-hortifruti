@@ -8,6 +8,7 @@ import { Save, Check } from 'lucide-react';
 import ReportRowDeleteButton from '@/components/admin/ReportRowDeleteButton';
 import TruckCombobox from '@/components/admin/TruckCombobox';
 import BoxCombobox from '@/components/admin/BoxCombobox';
+import { operationsForLine, pickOperation } from '@/lib/ceasaOperations';
 
 /**
  * Linha da tabela operacional de um item de pedido (operação CEASA).
@@ -37,10 +38,13 @@ export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], st
       const existing = await base44.entities.CeasaReportItem.filter(
         { order_id: row.orderId, line_id: row.lineId },
         '-created_date',
-        1
+        500
       );
-      if (existing.length > 0) {
-        return base44.entities.CeasaReportItem.update(existing[0].id, data);
+      // Grava exatamente a operação que a linha exibe (mesma resolução da leitura).
+      // Sem isso o Box salvo podia cair em um registro que a tela não mostra.
+      const target = pickOperation(operationsForLine(existing, row.orderId, row.lineId));
+      if (target) {
+        return base44.entities.CeasaReportItem.update(target.id, data);
       }
       return base44.entities.CeasaReportItem.create(data);
     },
