@@ -17,7 +17,7 @@
     "active": {
       "type": "boolean",
       "default": true,
-      "description": "Opera\u00e7\u00e3o ativa. Opera\u00e7\u00f5es inativas (item removido do pedido ou pedido sem NF-e) n\u00e3o aparecem na Gest\u00e3o CEASA nem na impress\u00e3o, mas preservam Box, valor CEASA, caminh\u00e3o e observa\u00e7\u00e3o."
+      "description": "Opera\u00e7\u00e3o ativa. Opera\u00e7\u00f5es inativas (item removido do pedido, item bonificado ou pedido sem NF-e) n\u00e3o aparecem na Gest\u00e3o CEASA nem na impress\u00e3o, mas preservam Box, valor CEASA, caminh\u00e3o e observa\u00e7\u00e3o."
     },
     "product_id": {
       "type": "string",
@@ -25,7 +25,7 @@
     },
     "ceasa_value": {
       "type": "number",
-      "description": "Valor da opera\u00e7\u00e3o CEASA, independente do pre\u00e7o comercial do pedido. N\u00e3o altera o pedido original."
+      "description": "Valor da opera\u00e7\u00e3o CEASA por unidade, independente do pre\u00e7o comercial do pedido e do valor fiscal (nfe_value). Inicializado uma \u00fanica vez com o pre\u00e7o efetivo do item (final_unit_price, sen\u00e3o unit_price) e depois pertence \u00e0 opera\u00e7\u00e3o: nunca \u00e9 recalculado ou sobrescrito automaticamente. Ausente significa \"valor n\u00e3o definido\" (o item n\u00e3o tinha pre\u00e7o comercial no momento da cria\u00e7\u00e3o); zero significa valor definido pelo operador como zero. N\u00e3o altera o pedido original."
     },
     "caminhao": {
       "type": "string",
@@ -41,11 +41,11 @@
     },
     "box_id": {
       "type": "string",
-      "description": "ID do CeasaBox. Opcional: a opera\u00e7\u00e3o pode existir apenas com o caminh\u00e3o atribu\u00eddo."
+      "description": "ID do CeasaBox. Opcional: a opera\u00e7\u00e3o pode existir apenas com o caminh\u00e3o atribu\u00eddo. Se o Box for inativado, a refer\u00eancia \u00e9 mantida e o nome hist\u00f3rico continua exibido na Gest\u00e3o e na impress\u00e3o."
     },
     "box_name": {
       "type": "string",
-      "description": "Nome do Box (desnormalizado)"
+      "description": "Nome do Box (desnormalizado). Sustenta a exibi\u00e7\u00e3o e o agrupamento da impress\u00e3o mesmo que o cadastro do Box deixe de existir."
     },
     "product_name": {
       "type": "string",

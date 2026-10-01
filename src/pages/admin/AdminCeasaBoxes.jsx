@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2, Pencil, Package, Truck } from 'lucide-react';
 import CeasaTrucksManager from '@/components/admin/CeasaTrucksManager';
+import BoxDeleteDialog from '@/components/admin/BoxDeleteDialog';
 
 const EMPTY = { name: '', cnpj: '', active: true };
 
@@ -21,6 +22,7 @@ export default function AdminCeasaBoxes() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [tab, setTab] = useState('boxes');
+  const [deleting, setDeleting] = useState(null);
 
   const { data: boxes = [], isLoading } = useQuery({
     queryKey: ['ceasa-boxes'],
@@ -37,12 +39,6 @@ export default function AdminCeasaBoxes() {
     mutationFn: ({ id, data }) => base44.entities.CeasaBox.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['ceasa-boxes'] }); toast.success('Box atualizado!'); setShowForm(false); },
     onError: () => toast.error('Erro ao atualizar Box.'),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.CeasaBox.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['ceasa-boxes'] }); toast.success('Box excluído.'); },
-    onError: () => toast.error('Erro ao excluir Box.'),
   });
 
   const openNew = () => { setForm(EMPTY); setEditing(null); setShowForm(true); };
@@ -110,7 +106,7 @@ export default function AdminCeasaBoxes() {
                   <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openEdit(box)}>
                     <Pencil className="w-3.5 h-3.5" />
                   </Button>
-                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => deleteMutation.mutate(box.id)}>
+                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setDeleting(box)}>
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
@@ -125,6 +121,10 @@ export default function AdminCeasaBoxes() {
         <CeasaTrucksManager />
       </TabsContent>
       </Tabs>
+
+      {deleting && (
+        <BoxDeleteDialog box={deleting} onClose={() => setDeleting(null)} onDone={() => setDeleting(null)} />
+      )}
 
       {/* Formulário */}
       {showForm && (

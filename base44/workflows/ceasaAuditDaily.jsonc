@@ -1,0 +1,47 @@
+{
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 6 * * *",
+      "one_time_date": null,
+      "timezone": "America/Cuiaba",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "name": "Confer\u00eancia CEASA di\u00e1ria",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "ceasa_daily_audit",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "conferir_ceasa": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "reconcileCeasa",
+            "args": {
+              "dry_run": true
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Confer\u00eancia CEASA (somente leitura)",
+            "description": "Relat\u00f3rio di\u00e1rio de diverg\u00eancias, sem gravar nada"
+          }
+        }
+      }
+    ]
+  },
+  "description": "Roda a confer\u00eancia CEASA em modo relat\u00f3rio (somente leitura, dry_run) todos os dias \u00e0s 6h e registra em log as diverg\u00eancias encontradas: opera\u00e7\u00f5es ativas de pedido sem NF-e, valor CEASA zerado em item precificado, Box inexistente, duplicidade ativa, item sem opera\u00e7\u00e3o e conta a receber sem pedido. N\u00e3o grava nada na base."
+}

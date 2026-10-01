@@ -27,6 +27,8 @@ export default function CeasaProductGroup({ produto, rows = [], boxes = [] }) {
 
   const totalQty = rows.reduce((s, r) => s + r.qtde, 0);
   const totalClientes = new Set(rows.map(r => r.cnpj || r.cliente)).size;
+  // Itens com preço comercial e valor CEASA zerado: precisam de digitação do operador.
+  const pendingCount = rows.filter(r => r.valorCeasaPendente).length;
 
   const applyMutation = useMutation({
     mutationFn: async () => {
@@ -45,7 +47,7 @@ export default function CeasaProductGroup({ produto, rows = [], boxes = [] }) {
           return;
         }
         // Operação inexistente: cria com o Box informado e os dados do item
-        toCreate.push({
+        const record = {
           order_id: r.orderId,
           line_id: r.lineId,
           item_key: r.itemKey,
@@ -56,12 +58,14 @@ export default function CeasaProductGroup({ produto, rows = [], boxes = [] }) {
           quantity: r.qtde,
           client_name: r.cliente || '',
           date: r.orderDate,
-          ceasa_value: r.valorCeasaBase,
           caminhao: '',
           nfe_company_name: r.nfeCompanyName || '',
           nfe_cnpj: r.cnpj || '',
           notes: '',
-        });
+        };
+        // Item sem preço comercial: a operação nasce sem valor definido.
+        if (r.valorCeasaBase > 0) record.ceasa_value = r.valorCeasaBase;
+        toCreate.push(record);
       });
 
       if (toUpdate.length) await base44.entities.CeasaReportItem.bulkUpdate(toUpdate);
@@ -90,7 +94,17 @@ export default function CeasaProductGroup({ produto, rows = [], boxes = [] }) {
             {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </Button>
         </TableCell>
-        <TableCell className="font-medium">{produto}</TableCell>
+        <TableCell className="font-medium">
+          {produto}
+          {pendingCount > 0 && (
+            <span
+              className="ml-1.5 text-[10px] font-semibold text-amber-800 bg-amber-100 border border-amber-300 rounded px-1 py-0.5 whitespace-nowrap"
+              title="Itens com preço comercial e valor CEASA zerado — digite o valor na aba Lista por Cliente"
+            >
+              {pendingCount} sem valor CEASA
+            </span>
+          )}
+        </TableCell>
         <TableCell className="text-right text-muted-foreground">{totalClientes}</TableCell>
         <TableCell className="text-right text-muted-foreground">{rows.length}</TableCell>
         <TableCell className="text-right font-semibold text-primary whitespace-nowrap">{totalQty} un.</TableCell>

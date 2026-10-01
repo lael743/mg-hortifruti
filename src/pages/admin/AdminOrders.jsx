@@ -15,6 +15,8 @@ import { format, subDays } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import OrderPurchaseListDialog from '../../components/admin/OrderPurchaseListDialog';
+import DeleteOrderDialog from '../../components/admin/DeleteOrderDialog';
+import { listAllPages } from '@/lib/pagination';
 
 const statusColors = {
   Pendente: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -63,13 +65,17 @@ export default function AdminOrders() {
   const [editingOrder, setEditingOrder] = useState(null);
   const [showAdHocModal, setShowAdHocModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [deletingOrder, setDeletingOrder] = useState(null);
   const [sortBy, setSortBy] = useState('date'); // 'date' | 'alpha'
   const [nfeOnly, setNfeOnly] = useState(false); // filtra apenas pedidos com NF-e
 
-  const { data: orders = [], isLoading } = useQuery({
+  // Período completo: percorre todas as páginas por cursor (uma consulta única
+  // deixava pedidos antigos fora da tela e dos relatórios, sem aviso).
+  const { data: ordersResult = { items: [], truncated: false }, isLoading } = useQuery({
     queryKey: ['admin-orders'],
-    queryFn: () => base44.entities.Order.list('-created_date', 5000)
+    queryFn: () => listAllPages(base44.entities.Order),
   });
+  const orders = ordersResult.items;
 
   const { data: settings = [] } = useQuery({
     queryKey: ['company-settings'],
@@ -172,17 +178,6 @@ export default function AdminOrders() {
       await queryClient.refetchQueries({ queryKey: ['admin-orders'] });
       toast.success('Pedido atualizado com sucesso');
       setEditingOrder(null);
-    }
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (orderId) => base44.entities.Order.delete(orderId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['contas-a-receber'] });
-      setConfirmDelete(null);
-      toast.success('Pedido excluído com sucesso.');
     }
   });
 
@@ -578,6 +573,11 @@ export default function AdminOrders() {
         }
 
         <div className="p-4">
+          {ordersResult.truncated && (
+            <p className="text-xs font-medium text-amber-700 mb-2">
+              Há mais pedidos no período do que os exibidos — refine o intervalo de datas para ver todos.
+            </p>
+          )}
           <div className="flex flex-wrap gap-3 items-end">
             <div>
               <Label className="text-xs font-semibold mb-2 block text-foreground">De</Label>
@@ -715,8 +715,8 @@ export default function AdminOrders() {
                       size="icon"
                       className="h-8 w-8"
                       variant="destructive"
-                      disabled={deleteMutation.isPending}
-                      onClick={() => deleteMutation.mutate(order.id)}
+
+                      onClick={() => { setDeletingOrder(order); setConfirmDelete(null); }}
                       title="Confirmar exclusão">
                       
                          ✓
@@ -794,6 +794,20 @@ export default function AdminOrders() {
         }} />
 
       }
+
+      {deletingOrder && (
+        <DeleteOrderDialog
+          order={deletingOrder}
+          onClose={() => setDeletingOrder(null)}
+          onDeleted={() => {
+            setDeletingOrder(null);
+            queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+            queryClient.invalidateQueries({ queryKey: ['my-orders'] });
+            queryClient.invalidateQueries({ queryKey: ['contas-a-receber'] });
+            queryClient.invalidateQueries({ queryKey: ['ceasa-report-items'] });
+          }}
+        />
+      )}
 
       {editingOrder && (() => {
         // Sempre usa o dado mais recente do query (não o snapshot antigo)

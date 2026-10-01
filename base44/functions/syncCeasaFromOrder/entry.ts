@@ -1,5 +1,6 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { syncCeasaFromOrder } from '../../shared/ceasaSync.js';
+import { fetchAllPages } from '../../shared/pagination.js';
 
 /**
  * Sincroniza as operações CEASA de um pedido.
@@ -7,13 +8,26 @@ import { syncCeasaFromOrder } from '../../shared/ceasaSync.js';
  * Executado no backend, disparado automaticamente pelo workflow de entidade
  * (Order create/update) — não depende da Gestão CEASA nem do frontend.
  *
- * Chamado pelo workflow não há usuário na requisição; quando houver, exige admin.
+ * Acesso: admin autenticado (Gestão/manutenção) ou chamada do workflow
+ * (`invoked_by: "workflow"`, o único outro contexto que a plataforma usa para
+ * executar esta função). Toda invocação é registrada em log com a origem.
+ *
+ * Leitura de operações por página (cursor): um pedido com muitas operações não
+ * pode ter parte delas ignorada na sincronização.
+ *
+ * A sincronização NUNCA grava valor CEASA, Box, caminhão ou observação — apenas
+ * campos originados do pedido (produto, quantidade, cliente, data, NF-e) e as
+ * identidades de linha. Pedido, total comercial e financeiro ficam intactos:
+ * do pedido, a função só grava `line_id` quando falta.
  */
+const ORDER_PAGE_SIZE = 500;
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
         const payload = await req.json().catch(() => ({}));
         const orderId = payload.order_id || payload.entity_id || payload.data?.id;
+        const invokedBy = payload.invoked_by || null;
 
         let user = null;
         try {
@@ -21,9 +35,23 @@ Deno.serve(async (req) => {
         } catch {
             user = null;
         }
-        if (user && user.role !== 'admin') {
-            return Response.json({ error: 'Forbidden' }, { status: 403 });
+
+        const origin = req.headers.get('origin') || req.headers.get('referer') || '-';
+        console.log('[syncCeasaFromOrder]', JSON.stringify({
+            order_id: orderId || null,
+            invoked_by: invokedBy,
+            user: user ? user.email : null,
+            origin,
+        }));
+
+        if (user) {
+            if (user.role !== 'admin') {
+                return Response.json({ error: 'Forbidden' }, { status: 403 });
+            }
+        } else if (invokedBy !== 'workflow') {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
+
         if (!orderId) {
             return Response.json({ error: 'order_id é obrigatório' }, { status: 400 });
         }
@@ -40,7 +68,15 @@ Deno.serve(async (req) => {
         }
 
         const result = await syncCeasaFromOrder(order, {
-            listOperations: (id) => service.entities.CeasaReportItem.filter({ order_id: id }, '-created_date', 500),
+            listOperations: async (id) => {
+                const options = { sort: '-created_date', limit: ORDER_PAGE_SIZE };
+                const { items } = await fetchAllPages((cursor) => {
+                    const pageOptions = cursor ? { ...options, cursor } : options;
+                    return service.entities.CeasaReportItem.filter({ order_id: id }, pageOptions);
+                });
+                return items;
+            },
+            getOrder: (id) => service.entities.Order.get(id),
             updateOrderItems: (id, items) => service.entities.Order.update(id, { items }),
             createOperations: (records) => service.entities.CeasaReportItem.bulkCreate(records),
             updateOperations: (patches) => service.entities.CeasaReportItem.bulkUpdate(patches),

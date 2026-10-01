@@ -373,3 +373,135 @@ test('a sincronização não escreve no pedido quando a identidade já existe', 
   assert.equal(orderWrites, 0);
   assert.equal(res.line_ids_generated, 0);
 });
+
+// ---------------------------------------------------------------------------
+// Bonificação: fora do CEASA, com o histórico preservado
+// ---------------------------------------------------------------------------
+test('bonificação: não cria operação e inativa a que existia, preservando os dados', async () => {
+  const { order, operations, sync } = makeStore();
+  order.items = [line('p1', 'Tomate', 10, 12)];
+  await sync();
+  const op = operations[0];
+  op.box_id = 'b1';
+  op.box_name = 'Box 1';
+  op.ceasa_value = 9;
+  op.caminhao = 'Caminhão 1';
+  op.notes = 'conferido';
+
+  order.items = [{ ...order.items[0], is_bonus: true, final_unit_price: 0, unit_price: 0 }];
+  const res = await sync();
+
+  assert.equal(res.created, 0);
+  assert.equal(res.deactivated, 1);
+  const depois = opOf(operations, order.items[0].line_id);
+  assert.equal(depois.active, false, 'operação inativa');
+  assert.equal(depois.box_id, 'b1', 'Box preservado');
+  assert.equal(depois.ceasa_value, 9, 'valor CEASA preservado');
+  assert.equal(depois.caminhao, 'Caminhão 1', 'caminhão preservado');
+  assert.equal(depois.notes, 'conferido', 'observação preservada');
+  assert.ok(order.items[0].line_id, 'item bonificado mantém identidade estável');
+});
+
+test('bonificação: item bonificado nunca gera operação', async () => {
+  const { order, operations, sync } = makeStore();
+  order.items = [{ ...line('p1', 'Brinde', 1, 0), is_bonus: true }];
+
+  const res = await sync();
+
+  assert.equal(res.created, 0);
+  assert.equal(operations.length, 0);
+});
+
+// ---------------------------------------------------------------------------
+// Valor CEASA: inicialização pelo preço efetivo do item
+// ---------------------------------------------------------------------------
+test('ceasa_value: usa o preço final do item', async () => {
+  const { order, operations, sync } = makeStore();
+  order.items = [{ ...line('p1', 'Tomate', 2, 40), final_unit_price: 35 }];
+  await sync();
+  assert.equal(operations[0].ceasa_value, 35);
+});
+
+test('ceasa_value: item sem preço comercial nasce sem valor (nunca grava 0)', async () => {
+  const { order, operations, sync } = makeStore();
+  order.items = [{ product_id: 'p9', product_name: 'Sem preço', quantity: 1, unit_price: 0, final_unit_price: 0 }];
+
+  const res = await sync();
+
+  assert.equal(res.created, 1);
+  assert.equal('ceasa_value' in operations[0], false, 'campo ausente = valor não definido');
+});
+
+test('ceasa_value: valor fiscal e preço de catálogo nunca alimentam o CEASA', async () => {
+  const { order, operations, sync } = makeStore();
+  order.items = [{ ...line('p1', 'Tomate', 1, 0), nfe_value: 99 }];
+  await sync();
+  assert.equal('ceasa_value' in operations[0], false);
+});
+
+test('ceasa_value: zero digitado pelo operador é valor definido e não muda', async () => {
+  const { order, operations, sync } = makeStore();
+  order.items = [line('p1', 'Tomate', 10, 12)];
+  await sync();
+  operations[0].ceasa_value = 0;
+  operations[0].box_id = 'b1';
+  operations[0].box_name = 'Box 1';
+
+  order.items = [{ ...order.items[0], quantity: 20, final_unit_price: 30, product_name: 'Tomate XL' }];
+  await sync();
+
+  assert.equal(operations[0].ceasa_value, 0, 'zero digitado é preservado');
+  assert.equal(operations[0].box_id, 'b1');
+});
+
+// ---------------------------------------------------------------------------
+// Concorrência: as identidades são mescladas no estado ATUAL do pedido
+// ---------------------------------------------------------------------------
+test('concorrência: alteração feita durante o ciclo sobrevive à gravação', async () => {
+  const { order, deps } = makeStore();
+  order.items = [line('p1', 'Tomate', 10, 12)];
+
+  // O pedido muda entre a leitura e a gravação (quantidade e preço reajustados)
+  let stored = [{ ...order.items[0], quantity: 3, final_unit_price: 77 }];
+  const dep = {
+    ...deps,
+    listOperations: async () => [],
+    getOrder: async () => ({ ...order, items: stored }),
+    updateOrderItems: async (_id, items) => { stored = items; },
+  };
+
+  const res = await syncCeasaFromOrder(order, dep);
+
+  assert.equal(res.order_items_written, true);
+  assert.ok(stored[0].line_id, 'identidade gravada');
+  assert.equal(stored[0].quantity, 3, 'quantidade atual preservada');
+  assert.equal(stored[0].final_unit_price, 77, 'preço atual preservado');
+  assert.equal(res.created, 1, 'a operação é criada para o item atual');
+});
+
+// ---------------------------------------------------------------------------
+// Canônica: a sincronização usa a MESMA regra da leitura (mais recente ativa)
+// ---------------------------------------------------------------------------
+test('canônica: atualiza a operação ativa mesmo existindo uma inativa mais recente', async () => {
+  const { order, operations, sync } = makeStore();
+  order.items = [line('p1', 'Tomate', 10, 12)];
+  await sync();
+  const ativa = operations[0];
+
+  operations.push({
+    ...ativa,
+    id: 'op-inativa-recente',
+    active: false,
+    ceasa_value: 5,
+    created_date: new Date(2026, 9, 1).toISOString(),
+  });
+
+  order.items = [{ ...order.items[0], quantity: 42 }];
+  const res = await sync();
+
+  assert.equal(res.created, 0);
+  assert.equal(res.deactivated, 0, 'a inativa recente já está inativa');
+  assert.equal(operations.find(o => o.id === ativa.id).quantity, 42, 'atualiza a operação ativa');
+  assert.equal(operations.find(o => o.id === ativa.id).active, true);
+  assert.equal(operations.find(o => o.id === 'op-inativa-recente').quantity, 10, 'a inativa é preservada como está');
+});

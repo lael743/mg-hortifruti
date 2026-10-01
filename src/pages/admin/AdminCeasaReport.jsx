@@ -14,7 +14,10 @@ import { createPortal } from 'react-dom';
 import ClientReportCard from '@/components/admin/ClientReportCard';
 import CeasaProductGroup from '@/components/admin/CeasaProductGroup';
 import CeasaPrintLayout from '@/components/admin/CeasaPrintLayout';
-import { fetchAllOperations, indexOperationsByLine } from '@/lib/ceasaOperations';
+import { indexOperationsByLine } from '@/lib/ceasaOperations';
+import { fetchAllPages, listAllPages } from '@/lib/pagination';
+import { displayCeasaValue, effectiveNfeValue, initialCeasaValueOf, isCeasaValuePending } from '@/lib/ceasaValue';
+import { buildCeasaCsv, ceasaCsvFileName } from '@/lib/ceasaCsv';
 
 const LOCAL_TZ = 'America/Porto_Velho';
 
@@ -38,9 +41,17 @@ function normalize(s) {
     .trim();
 }
 
-function getEffectiveNfeValue(item) {
-  if (item.nfe_value != null) return item.nfe_value;
-  return item.final_unit_price ?? item.unit_price ?? 0;
+/**
+ * Box exibido e impresso: o cadastro do Box quando existe; senão o nome histórico
+ * gravado na operação — a linha nunca desaparece do agrupamento por Box.
+ */
+function resolveBox(operation, boxById) {
+  if (!operation?.box_id) return null;
+  return boxById[operation.box_id] || {
+    id: operation.box_id,
+    name: operation.box_name || 'Box removido',
+    cnpj: '',
+  };
 }
 
 export default function AdminCeasaReport() {
@@ -66,10 +77,13 @@ export default function AdminCeasaReport() {
     setTimeout(() => window.print(), 200);
   };
 
-  const { data: allOrders = [] } = useQuery({
+  // Pedidos do módulo: todas as páginas por cursor. Uma página única de pedidos
+  // deixava períodos antigos fora da Gestão sem nenhum aviso.
+  const { data: ordersResult = { items: [], truncated: false } } = useQuery({
     queryKey: ['orders'],
-    queryFn: () => base44.entities.Order.list('-created_date', 500),
+    queryFn: () => listAllPages(base44.entities.Order),
   });
+  const allOrders = ordersResult.items;
 
   const { data: boxes = [] } = useQuery({
     queryKey: ['ceasa-boxes'],
@@ -104,15 +118,18 @@ export default function AdminCeasaReport() {
   // aparecia "sem operação", como se a seleção não tivesse sido salva.
   const displayedOrderIds = useMemo(() => nfeOrders.map(o => o.id), [nfeOrders]);
 
-  const { data: reportItems = [] } = useQuery({
+  const { data: operationsResult = { items: [], truncated: false } } = useQuery({
     queryKey: ['ceasa-report-items', displayedOrderIds],
     enabled: displayedOrderIds.length > 0,
-    queryFn: () => fetchAllOperations(cursor => {
+    queryFn: () => fetchAllPages(cursor => {
       const options = { sort: '-created_date', limit: 500 };
       if (cursor) options.cursor = cursor;
       return base44.entities.CeasaReportItem.filter({ order_id: { $in: displayedOrderIds } }, options);
     }),
   });
+  const reportItems = operationsResult.items;
+  // Teto de segurança atingido: avisa em vez de cortar em silêncio.
+  const truncated = ordersResult.truncated || operationsResult.truncated;
 
   // Operações indexadas pela identidade oficial order_id + line_id, com a MESMA
   // resolução usada na gravação (src/lib/ceasaOperations.js): a mais recente ativa.
@@ -144,7 +161,9 @@ export default function AdminCeasaReport() {
         const operation = lineId ? operationByLineId[`${o.id}:${lineId}`] || null : null;
         // O relatório usa os dados da operação CEASA, não os valores fiscais do pedido
         const qtde = operation?.quantity ?? it.quantity;
-        const valorCeasa = operation?.ceasa_value ?? it.final_unit_price ?? 0;
+        // Valor da operação CEASA (inclusive 0 digitado); sem valor definido cai
+        // para o preço efetivo do item no momento da leitura.
+        const valorCeasa = displayCeasaValue(operation, it);
         rows.push({
           orderId: o.id,
           orderNumber: o.order_number,
@@ -161,33 +180,24 @@ export default function AdminCeasaReport() {
           produto: operation?.product_name || it.product_name,
           qtde,
           // Valor do pedido — usado apenas na coluna "Valor pedido" da Gestão CEASA
-          valorUn: getEffectiveNfeValue(it),
+          valorUn: effectiveNfeValue(it),
           // Valor CEASA por unidade
           valorCeasa,
-          // Valor inicial da operação CEASA: preço final do item (sem fallback para nfe_value)
-          valorCeasaBase: it.final_unit_price ?? 0,
+          // Valor inicial de uma operação NOVA: preço efetivo do item (nunca o valor
+          // fiscal nem o preço de catálogo). null = item sem preço comercial.
+          valorCeasaBase: initialCeasaValueOf(it) ?? null,
+          // Operação com valor zerado em item precificado: pede digitação do operador
+          valorCeasaPendente: isCeasaValuePending(operation, it),
           // Subtotal CEASA = quantidade × valor CEASA
           subtotal: valorCeasa * qtde,
           obs: operation?.notes || '',
           operation,
-          box: operation?.box_id ? (boxById[operation.box_id] || null) : null,
+          box: resolveBox(operation, boxById),
         });
       });
     });
     return rows;
   }, [nfeOrders, operationByLineId, boxById]);
-
-  // Agrupamento por Box — usado exclusivamente na impressão.
-  // Itens sem Box não são impressos.
-  const printGroups = useMemo(() => {
-    const groups = {};
-    flatRows.forEach(row => {
-      if (!row.box) return;
-      if (!groups[row.box.id]) groups[row.box.id] = { box: row.box, rows: [] };
-      groups[row.box.id].rows.push(row);
-    });
-    return Object.values(groups).sort((a, b) => a.box.name.localeCompare(b.box.name, 'pt-BR'));
-  }, [flatRows]);
 
   // Busca por cliente ou produto — ignora acentos e pontuação
   const searchedRows = useMemo(() => {
@@ -195,6 +205,20 @@ export default function AdminCeasaReport() {
     if (!q) return flatRows;
     return flatRows.filter(r => normalize(r.cliente).includes(q) || normalize(r.produto).includes(q));
   }, [flatRows, search]);
+
+  // Agrupamento por Box — usado exclusivamente na impressão.
+  // Derivado das linhas exibidas: tela, CSV e impressão mostram os mesmos totais.
+  // Linha com Box sem cadastro entra pelo nome histórico gravado na operação;
+  // itens realmente sem Box não são impressos.
+  const printGroups = useMemo(() => {
+    const groups = {};
+    searchedRows.forEach(row => {
+      if (!row.box) return;
+      if (!groups[row.box.id]) groups[row.box.id] = { box: row.box, rows: [] };
+      groups[row.box.id].rows.push(row);
+    });
+    return Object.values(groups).sort((a, b) => a.box.name.localeCompare(b.box.name, 'pt-BR'));
+  }, [searchedRows]);
 
   // Agrupamento por produto — aba "Itens Agrupado" (operação em massa por produto)
   const groupedByProduct = useMemo(() => {
@@ -230,28 +254,15 @@ export default function AdminCeasaReport() {
   const searchedValor = searchedRows.reduce((s, r) => s + r.subtotal, 0);
 
   // === Exportação CSV (dados da operação CEASA) ===
+  // Campos com escape, BOM UTF-8, total por Box e total geral — as mesmas linhas
+  // e os mesmos totais exibidos na tela e na impressão.
   const exportCsv = () => {
-    const headers = ['Box', 'Cliente', 'Pedido', 'Produto', 'Quantidade', 'Valor CEASA', 'Subtotal', 'Caminhão', 'Observação'];
-    const lines = [headers.join(';')];
-    flatRows.forEach(r => {
-      lines.push([
-        r.box?.name || 'Sem Box',
-        r.cliente,
-        r.orderNumber ?? '—',
-        r.produto,
-        r.qtde,
-        r.valorCeasa.toFixed(2).replace('.', ','),
-        r.subtotal.toFixed(2).replace('.', ','),
-        r.caminhao,
-        r.obs || '',
-      ].join(';'));
-    });
-    const csv = '\uFEFF' + lines.join('\n');
+    const csv = buildCeasaCsv(searchedRows);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `relacao-ceasa-${startDate}_a_${endDate}.csv`;
+    a.download = ceasaCsvFileName(startDate, endDate);
     a.click();
     URL.revokeObjectURL(url);
     toast.success('CSV exportado!');
@@ -311,6 +322,11 @@ export default function AdminCeasaReport() {
             <Badge variant="secondary">{totalRows} itens</Badge>
             <Badge variant="secondary">R$ {totalValor.toFixed(2)}</Badge>
           </div>
+          {truncated && (
+            <p className="w-full text-xs font-medium text-amber-700">
+              Há mais registros no período do que os exibidos — refine o intervalo de datas para ver tudo.
+            </p>
+          )}
         </div>
       </Card>
 

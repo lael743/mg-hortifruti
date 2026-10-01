@@ -9,6 +9,10 @@
  * A operação canônica de uma linha é a mais recente ATIVA; se a linha só tiver
  * operações inativas, a mais recente delas (a linha segue visível, sem operação
  * participando da Gestão).
+ *
+ * ESTA É A REGRA ÚNICA do módulo: a sincronização (base44/shared/ceasaSync.js)
+ * usa a mesma resolução — cópia server-side em base44/shared/ceasaOperationRules.js,
+ * com paridade coberta por tests/ceasaParity.test.mjs.
  */
 
 export function operationKey(orderId, lineId) {

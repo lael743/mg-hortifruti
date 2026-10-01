@@ -10,7 +10,18 @@
  *    nfe_company_name, nfe_cnpj, line_id, item_key, active) são atualizados;
  *  - operacionais da CEASA (box_id, box_name, ceasa_value, caminhao, notes)
  *    pertencem à operação e nunca são sobrescritos por este módulo.
+ *
+ * REGRA CANÔNICA ÚNICA (mesma usada na leitura e na gravação):
+ * a operação canônica de uma linha é a MAIS RECENTE ATIVA; se a linha não tiver
+ * nenhuma ativa, a mais recente. Ver `pickCanonicalOperation` — a paridade com
+ * src/lib/ceasaOperations.js#pickOperation é coberta por tests/ceasaParity.test.mjs.
+ *
+ * Valor CEASA: inicializado UMA única vez, com o preço efetivo comercial do item
+ * (`initialCeasaValueOf`) e nunca recalculado depois (inclusive quando o
+ * operador digita 0). Sem preço comercial, a operação nasce sem valor.
  */
+
+import { pickCanonicalOperation, newestFirst } from './ceasaOperationRules.js';
 
 const LOCAL_TZ = 'America/Porto_Velho';
 
@@ -82,15 +93,62 @@ function originFieldsOf(order, item) {
   };
 }
 
-function initialCeasaValueOf(item) {
-  return item?.final_unit_price ?? item?.unit_price ?? 0;
+/**
+ * Preço efetivo comercial do item (por unidade).
+ * Nunca usa valor fiscal (nfe_value) nem preço de catálogo do produto.
+ * Espelhado em src/lib/ceasaValue.js#effectiveUnitPrice.
+ */
+export function effectiveUnitPrice(item) {
+  const candidates = [item?.final_unit_price, item?.unit_price];
+  for (const candidate of candidates) {
+    const value = Number(candidate);
+    if (Number.isFinite(value) && value > 0) return value;
+  }
+  return 0;
 }
 
-// A operação canônica de uma linha é a MAIS RECENTE: é a que a Gestão CEASA
-// sempre exibiu e onde o operador fez os ajustes. Duplicatas antigas ficam inativas
-// (nunca são apagadas).
-function newestFirst(a, b) {
-  return String(b.created_date || '').localeCompare(String(a.created_date || ''));
+/**
+ * Valor inicial da operação CEASA: o preço efetivo do item.
+ * Devolve `undefined` quando o item não tem preço comercial — a operação nasce
+ * sem valor ("valor não definido") em vez de gravar 0 por ausência de preço.
+ * Espelhado em src/lib/ceasaValue.js#initialCeasaValueOf.
+ */
+export function initialCeasaValueOf(item) {
+  const value = effectiveUnitPrice(item);
+  return value > 0 ? value : undefined;
+}
+
+/** Criação de operação: `ceasa_value` só entra no registro quando existe valor. */
+function creationFields(order, item) {
+  const fields = {
+    ...originFieldsOf(order, item),
+    box_id: '',
+    box_name: '',
+    caminhao: '',
+    notes: '',
+  };
+  const value = initialCeasaValueOf(item);
+  return value === undefined ? fields : { ...fields, ceasa_value: value };
+}
+
+export { pickCanonicalOperation };
+
+/**
+ * Mescla identidades novas no estado ATUAL do pedido.
+ * Só atribui line_id a itens sem identidade (casando por posição com o plano);
+ * qualquer alteração concorrente (preço, quantidade, item adicionado/removido)
+ * é preservada integralmente.
+ */
+export function mergeLineIds(currentItems = [], plannedItems = []) {
+  let changed = false;
+  const items = (currentItems || []).map((item, index) => {
+    if (item?.line_id) return item;
+    const planned = plannedItems[index];
+    if (!planned?.line_id) return item;
+    changed = true;
+    return { ...item, line_id: planned.line_id };
+  });
+  return { items, changed };
 }
 
 /**
@@ -101,8 +159,8 @@ export function buildSyncPlan(order, existingOps = []) {
   const orderId = order?.id;
   const { items, changed: lineIdsChanged, assigned } = assignLineIds(order?.items || []);
 
-  const byLine = new Map();
-  const byLegacyKey = new Map();
+  const lineGroups = new Map();
+  const legacyGroups = new Map();
   const duplicates = [];
   const orphans = [];
   const opList = Array.isArray(existingOps) ? existingOps : existingOps?.items || [];
@@ -110,17 +168,32 @@ export function buildSyncPlan(order, existingOps = []) {
 
   orderOps.forEach(op => {
     if (op.line_id) {
-      if (byLine.has(op.line_id)) duplicates.push(op);
-      else byLine.set(op.line_id, op);
+      if (!lineGroups.has(op.line_id)) lineGroups.set(op.line_id, []);
+      lineGroups.get(op.line_id).push(op);
       return;
     }
     if (op.item_key) {
-      if (byLegacyKey.has(op.item_key)) duplicates.push(op);
-      else byLegacyKey.set(op.item_key, op);
+      if (!legacyGroups.has(op.item_key)) legacyGroups.set(op.item_key, []);
+      legacyGroups.get(op.item_key).push(op);
       return;
     }
     orphans.push(op); // operação não atribuível a uma linha do pedido
   });
+
+  // Canônica = mesma regra da leitura e da gravação (mais recente ativa).
+  // As demais ficam registradas como duplicatas e as ativas são inativadas abaixo.
+  const byLine = new Map();
+  const byLegacyKey = new Map();
+  const registerCanonical = (groups, target) => {
+    groups.forEach((ops, key) => {
+      const canonical = pickCanonicalOperation(ops);
+      if (!canonical) return;
+      target.set(key, canonical);
+      ops.forEach(op => { if (op.id !== canonical.id) duplicates.push(op); });
+    });
+  };
+  registerCanonical(lineGroups, byLine);
+  registerCanonical(legacyGroups, byLegacyKey);
 
   const base = { orderId, items, lineIdsChanged, assigned, duplicates, orphans };
 
@@ -154,14 +227,7 @@ export function buildSyncPlan(order, existingOps = []) {
       updates.push({ id: op.id, ...originFieldsOf(order, item) });
       return;
     }
-    creates.push({
-      ...originFieldsOf(order, item),
-      ceasa_value: initialCeasaValueOf(item),
-      box_id: '',
-      box_name: '',
-      caminhao: '',
-      notes: '',
-    });
+    creates.push(creationFields(order, item));
   });
 
   const deactivate = orderOps
@@ -172,8 +238,31 @@ export function buildSyncPlan(order, existingOps = []) {
 }
 
 /**
+ * Grava as identidades novas relendo o pedido imediatamente antes.
+ * Uma única retentativa; se a gravação não passar, o ciclo segue com as
+ * operações e o resultado sinaliza a falha (nada de pedido é perdido).
+ */
+async function writeLineIds(order, plan, deps) {
+  let lastError = null;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const fresh = deps.getOrder ? await deps.getOrder(order.id) : order;
+      const { items, changed } = mergeLineIds(fresh?.items || order.items || [], plan.items);
+      if (!changed) return { written: false, diverged: true };
+      await deps.updateOrderItems(order.id, items);
+      return { written: true, diverged: false };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  return { written: false, diverged: true, error: lastError?.message || 'falha ao gravar identidades' };
+}
+
+/**
  * Sincroniza um pedido com o CEASA usando a camada de acesso informada.
- * deps = { listOperations, updateOrderItems, createOperations, updateOperations }
+ * deps = { listOperations, getOrder, updateOrderItems, createOperations, updateOperations }
  */
 export async function syncCeasaFromOrder(order, deps) {
   if (!order?.id) throw new Error('Pedido inválido para sincronização CEASA.');
@@ -181,7 +270,9 @@ export async function syncCeasaFromOrder(order, deps) {
   const existing = await deps.listOperations(order.id);
   const plan = buildSyncPlan(order, existing);
 
-  if (plan.lineIdsChanged) await deps.updateOrderItems(order.id, plan.items);
+  let orderWrite = { written: false, diverged: false };
+  if (plan.lineIdsChanged) orderWrite = await writeLineIds(order, plan, deps);
+
   if (plan.creates.length) await deps.createOperations(plan.creates);
 
   const patches = [...plan.updates, ...plan.deactivate];
@@ -190,7 +281,10 @@ export async function syncCeasaFromOrder(order, deps) {
   return {
     order_id: order.id,
     mode: plan.mode,
-    line_ids_generated: plan.assigned.length,
+    line_ids_generated: orderWrite.written ? plan.assigned.length : 0,
+    order_items_written: orderWrite.written,
+    order_items_diverged: orderWrite.diverged,
+    order_items_error: orderWrite.error || null,
     created: plan.creates.length,
     updated: plan.updates.length,
     deactivated: plan.deactivate.length,

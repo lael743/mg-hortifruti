@@ -138,6 +138,12 @@ export default function AdminLayout() {
                   Boxes Ceasa
                 </DropdownMenuItem>
               </RouterLink>
+              <RouterLink to="/admin/ceasa-conferencia">
+                <DropdownMenuItem className="gap-2 cursor-pointer">
+                  <ClipboardList className="w-4 h-4" />
+                  Conferência Ceasa
+                </DropdownMenuItem>
+              </RouterLink>
             </DropdownMenuContent>
           </DropdownMenu>
           <AdminNotifications />

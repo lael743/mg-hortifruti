@@ -27,6 +27,7 @@ import AdminCities from './pages/admin/AdminCities';
 import AdminMensalidades from './pages/admin/AdminMensalidades';
 import AdminCeasaBoxes from './pages/admin/AdminCeasaBoxes';
 import AdminCeasaReport from './pages/admin/AdminCeasaReport';
+import AdminCeasaConferencia from './pages/admin/AdminCeasaConferencia';
 import ClientFinancial from './pages/ClientFinancial';
 
 import Profile from './pages/Profile';
@@ -84,6 +85,7 @@ const AuthenticatedApp = () => {
           <Route path="/admin/mensalidades" element={<AdminMensalidades />} />
           <Route path="/admin/ceasa-boxes" element={<AdminCeasaBoxes />} />
           <Route path="/admin/ceasa-report" element={<AdminCeasaReport />} />
+          <Route path="/admin/ceasa-conferencia" element={<AdminCeasaConferencia />} />
         </Route>
       </Route>
       <Route element={<FinancialLayout />}>

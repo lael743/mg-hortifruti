@@ -1,5 +1,6 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.52';
 import { assignLineIds, itemKeyFor, legacyItemKey, syncCeasaFromOrder } from '../../shared/ceasaSync.js';
+import { fetchAllPages } from '../../shared/pagination.js';
 
 /**
  * Migração de identidade: order_id + item_key("order_id:indice") → order_id + line_id.
@@ -11,8 +12,16 @@ import { assignLineIds, itemKeyFor, legacyItemKey, syncCeasaFromOrder } from '..
  * 3. sincroniza os pedidos com NF-e, deixando a base consistente.
  *
  * Preserva integralmente Box, valor CEASA, caminhão e observação. Idempotente.
+ *
+ * MODO SIMULAÇÃO POR PADRÃO: sem `dry_run: false` explícito a rotina apenas lê e
+ * devolve o plano (quantos itens/operações seriam alterados), sem gravar nada.
+ *
+ * Leitura por cursor: a base inteira é percorrida em páginas, sem o corte
+ * silencioso de uma única consulta.
  */
 const CHUNK = 100;
+const PAGE_SIZE = 500;
+const MAX_PAGES = 40;
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
@@ -30,9 +39,12 @@ async function withRetry(fn, retries = 5, baseDelay = 900) {
     }
 }
 
-async function fetchAll(entity, limit = 5000) {
-    const result = await entity.list('-created_date', limit);
-    return Array.isArray(result) ? result : result?.items || [];
+async function fetchAll(entityApi) {
+    return fetchAllPages((cursor) => {
+        const options = { sort: '-created_date', limit: PAGE_SIZE };
+        if (cursor) options.cursor = cursor;
+        return entityApi.list(options);
+    }, MAX_PAGES);
 }
 
 Deno.serve(async (req) => {
@@ -43,9 +55,14 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Forbidden' }, { status: 403 });
         }
 
+        const payload = await req.json().catch(() => ({}));
+        const dryRun = payload.dry_run !== false;
+
         const service = base44.asServiceRole;
-        const orders = await fetchAll(service.entities.Order);
-        const operations = await fetchAll(service.entities.CeasaReportItem);
+        const ordersResult = await fetchAll(service.entities.Order);
+        const operationsResult = await fetchAll(service.entities.CeasaReportItem);
+        const orders = ordersResult.items;
+        const operations = operationsResult.items;
 
         // 1. Identidade dos itens dos pedidos + mapa da chave legada → line_id
         const legacyToLineId = new Map();
@@ -96,6 +113,33 @@ Deno.serve(async (req) => {
             opPatches.push({ id: op.id, line_id: lineId, item_key: itemKeyFor(op.order_id, lineId) });
         }
 
+        const ordersToSync = [...ordersById.values()].filter((order) => order.requires_nfe);
+
+        if (dryRun) {
+            console.log('[migrateCeasaLineIds] simulação', JSON.stringify({
+                orders: orders.length,
+                operations: operations.length,
+                order_items_line_ids_generated: itemsMigrated,
+                orders_should_update: orderPatches.length,
+                operations_should_migrate: opPatches.length,
+                orders_should_sync: ordersToSync.length,
+            }));
+            return Response.json({
+                success: true,
+                dry_run: true,
+                executed: false,
+                orders_scanned: orders.length,
+                operations_scanned: operations.length,
+                order_items_line_ids_generated: itemsMigrated,
+                orders_should_update: orderPatches.length,
+                operations_should_migrate: opPatches.length,
+                operations_already_migrated: alreadyMigrated,
+                operations_unresolved: unresolved,
+                orders_should_sync: ordersToSync.length,
+                truncated: ordersResult.truncated || operationsResult.truncated,
+            });
+        }
+
         let operationsMigrated = 0;
         for (let i = 0; i < opPatches.length; i += CHUNK) {
             const batch = opPatches.slice(i, i + CHUNK);
@@ -115,7 +159,15 @@ Deno.serve(async (req) => {
 
         // 3. Sincronização dos pedidos com NF-e
         const deps = {
-            listOperations: (id) => service.entities.CeasaReportItem.filter({ order_id: id }, '-created_date', 500),
+            listOperations: async (id) => {
+                const options = { sort: '-created_date', limit: PAGE_SIZE };
+                const { items } = await fetchAllPages((cursor) => {
+                    const pageOptions = cursor ? { ...options, cursor } : options;
+                    return service.entities.CeasaReportItem.filter({ order_id: id }, pageOptions);
+                });
+                return items;
+            },
+            getOrder: (id) => service.entities.Order.get(id),
             updateOrderItems: (id, items) => service.entities.Order.update(id, { items }),
             createOperations: (records) => service.entities.CeasaReportItem.bulkCreate(records),
             updateOperations: (patches) => service.entities.CeasaReportItem.bulkUpdate(patches),
@@ -126,8 +178,7 @@ Deno.serve(async (req) => {
         let operationsDeactivated = 0;
         const errors = [];
 
-        for (const order of ordersById.values()) {
-            if (!order.requires_nfe) continue;
+        for (const order of ordersToSync) {
             try {
                 const res = await withRetry(() => syncCeasaFromOrder(order, deps));
                 ordersSynced++;
@@ -141,6 +192,8 @@ Deno.serve(async (req) => {
 
         return Response.json({
             success: true,
+            dry_run: false,
+            executed: true,
             orders_scanned: orders.length,
             operations_scanned: operations.length,
             order_items_line_ids_generated: itemsMigrated,

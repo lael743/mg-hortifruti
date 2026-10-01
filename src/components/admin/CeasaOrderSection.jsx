@@ -9,6 +9,7 @@ import { ChevronDown, ChevronRight, Truck } from 'lucide-react';
 import CeasaOperationItemRow from '@/components/admin/CeasaOperationItemRow';
 import TruckCombobox from '@/components/admin/TruckCombobox';
 import { operationsForLine, pickOperation } from '@/lib/ceasaOperations';
+import { fetchAllPages } from '@/lib/pagination';
 
 // Colunas da tabela operacional — espelham a linha em CeasaOperationItemRow
 const COLUMNS = [
@@ -41,11 +42,11 @@ export default function CeasaOrderSection({ order, boxes, trucks = [], startDate
   // Nunca altera o Order nem os demais campos da operação (Box, valor CEASA, quantidade, observação).
   const applyTruckMutation = useMutation({
     mutationFn: async (truckName) => {
-      const existing = await base44.entities.CeasaReportItem.filter(
-        { order_id: order.orderId },
-        '-created_date',
-        500
-      );
+      const { items: existing } = await fetchAllPages((cursor) => {
+        const options = { sort: '-created_date', limit: 500 };
+        if (cursor) options.cursor = cursor;
+        return base44.entities.CeasaReportItem.filter({ order_id: order.orderId }, options);
+      });
       const toUpdate = [];
       const toCreate = [];
       order.rows.forEach(r => {
@@ -56,7 +57,7 @@ export default function CeasaOrderSection({ order, boxes, trucks = [], startDate
           if ((op.caminhao || '') !== truckName) toUpdate.push({ id: op.id, caminhao: truckName });
           return;
         }
-        toCreate.push({
+        const record = {
           order_id: order.orderId,
           line_id: r.lineId,
           item_key: r.itemKey,
@@ -68,8 +69,10 @@ export default function CeasaOrderSection({ order, boxes, trucks = [], startDate
           nfe_cnpj: r.cnpj || '',
           caminhao: truckName,
           date: r.orderDate || startDate,
-          ceasa_value: r.valorCeasaBase,
-        });
+        };
+        // Item sem preço comercial: a operação nasce sem valor definido.
+        if (r.valorCeasaBase > 0) record.ceasa_value = r.valorCeasaBase;
+        toCreate.push(record);
       });
 
       if (toUpdate.length) await base44.entities.CeasaReportItem.bulkUpdate(toUpdate);

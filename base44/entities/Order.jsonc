@@ -24,7 +24,7 @@
     },
     "items": {
       "type": "array",
-      "description": "Itens do pedido. O pedido com requires_nfe = true participa da Gest\u00e3o CEASA com TODOS os seus itens.",
+      "description": "Itens do pedido. O pedido com requires_nfe = true participa da Gest\u00e3o CEASA com TODOS os seus itens, exceto os bonificados (is_bonus = true).",
       "items": {
         "type": "object",
         "properties": {
@@ -57,6 +57,11 @@
           "nfe_value": {
             "type": "number",
             "description": "Valor fiscal sobrescrito (meia nota). Quando presente, usa este valor na exporta\u00e7\u00e3o NF-e em vez do final_unit_price."
+          },
+          "is_bonus": {
+            "type": "boolean",
+            "default": false,
+            "description": "Item de bonifica\u00e7\u00e3o (brinde): n\u00e3o entra no total comercial do pedido e n\u00e3o participa da Gest\u00e3o CEASA, da impress\u00e3o nem do CSV. Itens gravados antes deste campo existir permanecem v\u00e1lidos (ausente = false)."
           }
         }
       }

@@ -9,6 +9,7 @@ import ReportRowDeleteButton from '@/components/admin/ReportRowDeleteButton';
 import TruckCombobox from '@/components/admin/TruckCombobox';
 import BoxCombobox from '@/components/admin/BoxCombobox';
 import { operationsForLine, pickOperation } from '@/lib/ceasaOperations';
+import { fetchAllPages } from '@/lib/pagination';
 
 /**
  * Linha da tabela operacional de um item de pedido (operação CEASA).
@@ -20,14 +21,16 @@ export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], st
   const operation = row.operation;
 
   const [boxId, setBoxId] = useState(operation?.box_id || '');
-  const [ceasaValue, setCeasaValue] = useState(operation?.ceasa_value ?? row.valorCeasaBase);
+  // Sem operação salva o campo começa com o preço efetivo do item; item sem preço
+  // comercial fica vazio ("valor não definido") — nunca grava 0 por ausência.
+  const [ceasaValue, setCeasaValue] = useState(operation ? (operation.ceasa_value ?? '') : (row.valorCeasaBase ?? ''));
   const [caminhao, setCaminhao] = useState(operation?.caminhao || '');
   const [notes, setNotes] = useState(operation?.notes || '');
 
   // Recarrega os campos quando a operação vinculada muda
   useEffect(() => {
     setBoxId(operation?.box_id || '');
-    setCeasaValue(operation?.ceasa_value ?? row.valorCeasaBase);
+    setCeasaValue(operation ? (operation.ceasa_value ?? '') : (row.valorCeasaBase ?? ''));
     setCaminhao(operation?.caminhao || '');
     setNotes(operation?.notes || '');
   }, [operation?.id, operation?.updated_date, row.lineId, row.valorCeasaBase]);
@@ -35,11 +38,13 @@ export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], st
   // Upsert: localiza a operação por order_id + line_id e atualiza em vez de duplicar
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      const existing = await base44.entities.CeasaReportItem.filter(
-        { order_id: row.orderId, line_id: row.lineId },
-        '-created_date',
-        500
-      );
+      // Todas as páginas da linha: com muitas operações o alvo da gravação
+      // poderia ficar fora da primeira consulta.
+      const { items: existing } = await fetchAllPages((cursor) => {
+        const options = { sort: '-created_date', limit: 500 };
+        if (cursor) options.cursor = cursor;
+        return base44.entities.CeasaReportItem.filter({ order_id: row.orderId, line_id: row.lineId }, options);
+      });
       // Grava exatamente a operação que a linha exibe (mesma resolução da leitura).
       // Sem isso o Box salvo podia cair em um registro que a tela não mostra.
       const target = pickOperation(operationsForLine(existing, row.orderId, row.lineId));
@@ -61,7 +66,10 @@ export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], st
       toast.error('Selecione um Box para salvar a operação.');
       return;
     }
-    saveMutation.mutate({
+    // `ceasa_value` só entra no payload quando o operador informa um valor:
+    // campo vazio mantém "valor não definido"; valor digitado (inclusive 0) é
+    // preservado e nunca recalculado.
+    const payload = {
       order_id: row.orderId,
       line_id: row.lineId,
       item_key: row.itemKey,
@@ -73,12 +81,13 @@ export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], st
       quantity: row.qtde,
       client_name: row.cliente || '',
       date: operation?.date || row.orderDate || startDate,
-      ceasa_value: Number(ceasaValue) || 0,
       caminhao: caminhao || '',
       nfe_company_name: row.nfeCompanyName || '',
       nfe_cnpj: row.cnpj || '',
       notes: notes || '',
-    });
+    };
+    if (ceasaValue !== '' && ceasaValue != null) payload.ceasa_value = Number(ceasaValue) || 0;
+    saveMutation.mutate(payload);
   };
 
   return (
@@ -110,7 +119,8 @@ export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], st
           step="0.01"
           min="0"
           aria-label="Valor CEASA unitário"
-          className="h-7 w-[88px] px-2 text-right text-xs"
+          title={row.valorCeasaPendente ? 'Item precificado com valor CEASA zerado — digite o valor' : undefined}
+          className={`h-7 w-[88px] px-2 text-right text-xs ${row.valorCeasaPendente ? 'border-amber-400 ring-1 ring-amber-300 bg-amber-50/60' : ''}`}
           value={ceasaValue}
           onChange={e => setCeasaValue(e.target.value)}
         />
