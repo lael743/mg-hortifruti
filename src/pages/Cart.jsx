@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Trash2, Minus, Plus, ShoppingCart, ArrowLeft, Package, Bookmark, BookmarkPlus } from 'lucide-react';
-import { getCart, saveCart, removeFromCart, updateCartQuantity, clearCart, getCartTotal } from '@/lib/cartStore';
+import { getCart, removeFromCart, updateCartQuantity, clearCart, getCartTotal } from '@/lib/cartStore';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 import { generateOrderNumber } from '@/lib/orderNumberService';
+import { withLineIds } from '@/lib/orderLines';
 import SaveTemplateDialog from '@/components/cart/SaveTemplateDialog';
 import LoadTemplateDialog from '@/components/cart/LoadTemplateDialog';
 
@@ -50,7 +50,7 @@ export default function Cart() {
       order_number: orderNumber,
       customer_email: user.email,
       customer_name: user.full_name || user.company_name || user.email,
-      items: cart.map(({ image_url, ...rest }) => rest),
+      items: withLineIds(cart.map(({ image_url, ...rest }) => rest)),
       total,
       status: 'Pendente',
       notes,

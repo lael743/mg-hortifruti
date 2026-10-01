@@ -102,11 +102,15 @@ export default function AdminCeasaReport() {
     });
   }, [allOrders, startDate, endDate]);
 
-  // Operações CEASA existentes, indexadas por order_id + item_key
-  const operationByKey = useMemo(() => {
+  // Operações CEASA ativas, indexadas por order_id + line_id.
+  // Operações inativas (item removido do pedido ou pedido sem NF-e) ficam fora da Gestão.
+  const operationByLineId = useMemo(() => {
     const map = {};
     reportItems.forEach(ri => {
-      if (ri.order_id && ri.item_key && !map[ri.item_key]) map[ri.item_key] = ri;
+      if (ri.active === false) return;
+      if (ri.order_id && ri.line_id && !map[`${ri.order_id}:${ri.line_id}`]) {
+        map[`${ri.order_id}:${ri.line_id}`] = ri;
+      }
     });
     return map;
   }, [reportItems]);
@@ -122,18 +126,20 @@ export default function AdminCeasaReport() {
   const flatRows = useMemo(() => {
     const rows = [];
     nfeOrders.forEach(o => {
-      (o.items || []).forEach((it, idx) => {
+      (o.items || []).forEach(it => {
         if (it.is_bonus) return;
-        const itemKey = `${o.id}:${idx}`;
-        const operation = operationByKey[itemKey] || null;
+        // Identidade da linha: order_id + line_id — nunca a posição no array
+        const lineId = it.line_id || null;
+        const operation = lineId ? operationByLineId[`${o.id}:${lineId}`] || null : null;
         // O relatório usa os dados da operação CEASA, não os valores fiscais do pedido
         const qtde = operation?.quantity ?? it.quantity;
         const valorCeasa = operation?.ceasa_value ?? it.final_unit_price ?? 0;
         rows.push({
           orderId: o.id,
           orderNumber: o.order_number,
-          itemIndex: idx,
-          itemKey,
+          lineId,
+          // Chave de compatibilidade — reflete a identidade, não o índice
+          itemKey: lineId ? `${o.id}:${lineId}` : null,
           orderDate: new Date(o.created_date).toLocaleDateString('en-CA', { timeZone: LOCAL_TZ }),
           // Caminhão vem da operação CEASA (nunca de Order.caminhao)
           caminhao: operation?.caminhao || '',
@@ -158,7 +164,7 @@ export default function AdminCeasaReport() {
       });
     });
     return rows;
-  }, [nfeOrders, operationByKey, boxById]);
+  }, [nfeOrders, operationByLineId, boxById]);
 
   // Agrupamento por Box — usado exclusivamente na impressão.
   // Itens sem Box não são impressos.

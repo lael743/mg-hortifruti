@@ -4,8 +4,8 @@ import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Search, Package, Plus, Minus, ShoppingCart } from 'lucide-react';
+import { withLineIds } from '@/lib/orderLines';
 
 // Calcula o preço efetivo do produto para o cliente com base no seu grupo de preços
 function calcEffectivePrice(product, priceGroup, customPrices) {
@@ -106,7 +106,7 @@ export default function AddOrderItemModal({ order, existingItems, onAdd, onClose
 
   const handleConfirm = () => {
     if (selectedItems.length === 0) return;
-    onAdd(selectedItems);
+    onAdd(withLineIds(selectedItems));
     onClose();
   };
 

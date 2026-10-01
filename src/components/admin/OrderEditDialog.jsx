@@ -8,6 +8,7 @@ import { Pencil, Check, X, Trash2, ArrowLeftRight, PackagePlus, Minus, Plus, Gif
 import AddOrderItemModal from './AddOrderItemModal';
 import BonusItemModal from './BonusItemModal';
 import NfePanel from './NfePanel';
+import { withLineIds } from '@/lib/orderLines';
 
 export default function OrderEditDialog({ order, clientCnpj = '', clientCompanyName = '', onSave, onClose }) {
   const [items, setItems] = useState(
@@ -141,7 +142,7 @@ export default function OrderEditDialog({ order, clientCnpj = '', clientCompanyN
 
   const handleSave = () => {
     onSave({
-      items,
+      items: withLineIds(items),
       subtotal: itemsSubtotal,
       discount_type: discountAmount > 0 ? discountType : null,
       discount_value: discountAmount > 0 ? discountInputNum : 0,

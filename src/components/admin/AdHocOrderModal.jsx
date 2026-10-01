@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { base44 } from '@/api/base44Client';
 import { X, Trash2, ShoppingCart, UserPlus, MapPin, Phone, FileText, Store, User } from 'lucide-react';
 import CityAutocomplete from '@/components/common/CityAutocomplete';
+import { newOrderLineId } from '@/lib/orderLines';
 import NfePanel from './NfePanel';
 
 const STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
@@ -126,6 +127,7 @@ export default function AdHocOrderModal({ onClose, onSaved }) {
       }
       const effectivePrice = getEffectivePrice(product);
       return [...prev, {
+        line_id: newOrderLineId(),
         product_id: product.id,
         product_name: product.name,
         quantity: 1,

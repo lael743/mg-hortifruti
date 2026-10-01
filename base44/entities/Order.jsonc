@@ -28,6 +28,10 @@
       "items": {
         "type": "object",
         "properties": {
+          "line_id": {
+            "type": "string",
+            "description": "Identidade est\u00e1vel da linha. Gerada uma \u00fanica vez na cria\u00e7\u00e3o do item e nunca regenerada ao editar o pedido \u2014 n\u00e3o depende da posi\u00e7\u00e3o no array. \u00c9 a base da sincroniza\u00e7\u00e3o com as opera\u00e7\u00f5es CEASA (CeasaReportItem.line_id)."
+          },
           "product_id": {
             "type": "string"
           },

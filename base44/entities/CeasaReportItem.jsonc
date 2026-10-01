@@ -6,9 +6,18 @@
       "type": "string",
       "description": "ID do pedido de origem. Nulo para lan\u00e7amentos manuais."
     },
+    "line_id": {
+      "type": "string",
+      "description": "Identidade da linha do pedido (Order.items[].line_id). A opera\u00e7\u00e3o CEASA \u00e9 identificada por order_id + line_id \u2014 nunca pela posi\u00e7\u00e3o do item no array."
+    },
     "item_key": {
       "type": "string",
-      "description": "Identificador da linha do pedido no formato \"order_id:indice\". Nulo para lan\u00e7amentos manuais."
+      "description": "Chave de compatibilidade no formato \"order_id:line_id\". Reflete a nova identidade; n\u00e3o depende mais do \u00edndice do array. Nulo para lan\u00e7amentos manuais."
+    },
+    "active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Opera\u00e7\u00e3o ativa. Opera\u00e7\u00f5es inativas (item removido do pedido ou pedido sem NF-e) n\u00e3o aparecem na Gest\u00e3o CEASA nem na impress\u00e3o, mas preservam Box, valor CEASA, caminh\u00e3o e observa\u00e7\u00e3o."
     },
     "product_id": {
       "type": "string",

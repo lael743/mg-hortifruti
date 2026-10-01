@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Minus, Plus, Gift } from 'lucide-react';
+import { withLineIds } from '@/lib/orderLines';
 
 export default function BonusItemModal({ onAdd, onClose }) {
   const [search, setSearch] = useState('');
@@ -58,7 +59,7 @@ export default function BonusItemModal({ onAdd, onClose }) {
         };
       });
     if (bonusItems.length > 0) {
-      onAdd(bonusItems);
+      onAdd(withLineIds(bonusItems));
     }
     onClose();
   };

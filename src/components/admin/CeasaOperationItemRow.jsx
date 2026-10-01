@@ -12,7 +12,7 @@ import BoxCombobox from '@/components/admin/BoxCombobox';
 /**
  * Linha da tabela operacional de um item de pedido (operação CEASA).
  * Persiste um CeasaReportItem independente do pedido comercial, identificado por
- * order_id + item_key ("order_id:indice"). Nunca escreve no pedido.
+ * order_id + line_id (identidade estável da linha do pedido). Nunca escreve no pedido.
  */
 export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], startDate, onDeleteRow }) {
   const queryClient = useQueryClient();
@@ -29,13 +29,13 @@ export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], st
     setCeasaValue(operation?.ceasa_value ?? row.valorCeasaBase);
     setCaminhao(operation?.caminhao || '');
     setNotes(operation?.notes || '');
-  }, [operation?.id, operation?.updated_date, row.itemKey, row.valorCeasaBase]);
+  }, [operation?.id, operation?.updated_date, row.lineId, row.valorCeasaBase]);
 
-  // Upsert: localiza a operação por order_id + item_key e atualiza em vez de duplicar
+  // Upsert: localiza a operação por order_id + line_id e atualiza em vez de duplicar
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       const existing = await base44.entities.CeasaReportItem.filter(
-        { order_id: row.orderId, item_key: row.itemKey },
+        { order_id: row.orderId, line_id: row.lineId },
         '-created_date',
         1
       );
@@ -59,7 +59,9 @@ export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], st
     }
     saveMutation.mutate({
       order_id: row.orderId,
+      line_id: row.lineId,
       item_key: row.itemKey,
+      active: true,
       product_id: row.productId || '',
       box_id: box.id,
       box_name: box.name,

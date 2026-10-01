@@ -45,21 +45,23 @@ export default function CeasaOrderSection({ order, boxes, trucks = [], startDate
         '-created_date',
         500
       );
-      const byKey = {};
+      // Identidade da operação: order_id + line_id (nunca a posição do item)
+      const byLineId = {};
       existing.forEach(op => {
-        if (op.item_key && !byKey[op.item_key]) byKey[op.item_key] = op;
+        if (op.line_id && !byLineId[op.line_id]) byLineId[op.line_id] = op;
       });
 
       const toUpdate = [];
       const toCreate = [];
       order.rows.forEach(r => {
-        const op = byKey[r.itemKey];
+        const op = byLineId[r.lineId];
         if (op) {
           if ((op.caminhao || '') !== truckName) toUpdate.push({ id: op.id, caminhao: truckName });
           return;
         }
         toCreate.push({
           order_id: order.orderId,
+          line_id: r.lineId,
           item_key: r.itemKey,
           product_id: r.productId || '',
           product_name: r.produto,

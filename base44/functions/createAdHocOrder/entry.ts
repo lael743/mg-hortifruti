@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import { assignLineIds } from '../../shared/ceasaSync.js';
 
 Deno.serve(async (req) => {
     try {
@@ -79,7 +80,7 @@ Deno.serve(async (req) => {
             customer_name: customerName,
             customer_display_name: customerDisplayName,
             walk_in_client_id: finalWalkInClientId,
-            items: items,
+            items: assignLineIds(items).items,
             total: total,
             status: 'Confirmado',
             notes: notes || '',

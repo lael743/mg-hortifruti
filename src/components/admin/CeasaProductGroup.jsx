@@ -47,6 +47,7 @@ export default function CeasaProductGroup({ produto, rows = [], boxes = [] }) {
         // Operação inexistente: cria com o Box informado e os dados do item
         toCreate.push({
           order_id: r.orderId,
+          line_id: r.lineId,
           item_key: r.itemKey,
           product_id: r.productId || '',
           box_id: box.id,

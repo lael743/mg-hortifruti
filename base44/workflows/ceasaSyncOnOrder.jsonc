@@ -1,0 +1,41 @@
+{
+  "name": "Sincronizar CEASA do Pedido",
+  "description": "Mant\u00e9m as opera\u00e7\u00f5es CEASA sincronizadas com o pedido (identidade order_id + line_id) sempre que o pedido \u00e9 criado ou tem itens/NF-e alterados.",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "Order",
+      "events": [
+        "create",
+        "update"
+      ]
+    },
+    "condition": "${ if .trigger.event_type == \"create\" then (.trigger.data.requires_nfe == true) else ((((.trigger.changed_fields // []) | index(\"items\")) != null) or (((.trigger.changed_fields // []) | index(\"requires_nfe\")) != null)) end }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "ceasa_sync_on_order",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "sync_ceasa": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "syncCeasaFromOrder",
+            "args": {
+              "order_id": "${ .trigger.entity_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Sincronizar pedido com o CEASA",
+            "description": "Cria, atualiza e desativa opera\u00e7\u00f5es por order_id + line_id"
+          }
+        }
+      }
+    ]
+  }
+}
