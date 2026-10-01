@@ -1,4 +1,11 @@
 import { base44 } from '@/api/base44Client';
+import { listAllPages } from '@/lib/pagination';
+import {
+  buildOrderIdMap,
+  collectionOf,
+  remapOrderReference,
+  toRestorable,
+} from '@/lib/backupMappings';
 
 const MODULES = {
   products: 'Produtos',
@@ -6,12 +13,15 @@ const MODULES = {
   clients: 'Clientes',
   priceGroups: 'Tabelas de Preço',
   settings: 'Configurações',
+  ceasaOperations: 'Operações CEASA',
+  receivables: 'Contas a Receber',
 };
 
 export async function exportBackup(module) {
   try {
     const timestamp = new Date().toISOString().split('T')[0];
     let data = {};
+    const truncated = [];
 
     if (module === 'all' || module === 'products') {
       data.products = await base44.entities.Product.list();
@@ -28,6 +38,20 @@ export async function exportBackup(module) {
     if (module === 'all' || module === 'settings') {
       data.settings = await base44.entities.CompanySettings.list();
     }
+    // Operações CEASA e contas a receber passam de uma página: leitura completa
+    // por cursor, com aviso explícito caso o teto de segurança seja atingido.
+    if (module === 'all' || module === 'ceasaOperations') {
+      const result = await listAllPages(base44.entities.CeasaReportItem);
+      data.ceasaOperations = result.items;
+      if (result.truncated) truncated.push('Operações CEASA');
+    }
+    if (module === 'all' || module === 'receivables') {
+      const result = await listAllPages(base44.entities.ContasAReceber);
+      data.receivables = result.items;
+      if (result.truncated) truncated.push('Contas a Receber');
+    }
+
+    if (truncated.length) data._truncated = truncated;
 
     const filename = module === 'all' 
       ? `backup-completo-${timestamp}.json`
@@ -41,7 +65,8 @@ export async function exportBackup(module) {
     a.click();
     URL.revokeObjectURL(url);
 
-    return { success: true, message: `Backup de ${module} exportado com sucesso`, filename };
+    const warning = truncated.length ? ` Atenção: leitura parcial em ${truncated.join(', ')}.` : '';
+    return { success: true, message: `Backup de ${MODULES[module] || module} exportado com sucesso.${warning}`, filename };
   } catch (error) {
     console.error('Export backup error:', error);
     return { success: false, message: 'Erro ao exportar backup', error };
@@ -56,11 +81,16 @@ export async function importBackup(file, options = {}) {
     let results = {
       products: 0,
       orders: 0,
-      clients: 0,
       priceGroups: 0,
       settings: 0,
+      ceasaOperations: 0,
+      receivables: 0,
       errors: [],
     };
+
+    // Pedidos restaurados: mapa ID antigo → ID novo, para reapontar os
+    // relacionamentos das contas a receber e das operações CEASA.
+    let orderIdMap = new Map();
 
     // Importar Produtos
     if (data.products && data.products.length > 0) {
@@ -82,13 +112,48 @@ export async function importBackup(file, options = {}) {
       try {
         const ordersToCreate = data.orders.map(({ id, created_date, updated_date, created_by, ...rest }) => rest);
         const chunks = chunkArray(ordersToCreate, 50);
+        const createdOrders = [];
         
         for (const chunk of chunks) {
-          await base44.entities.Order.bulkCreate(chunk);
+          const created = await base44.entities.Order.bulkCreate(chunk);
+          createdOrders.push(...collectionOf(created));
         }
         results.orders = ordersToCreate.length;
+        orderIdMap = buildOrderIdMap(data.orders, createdOrders);
       } catch (e) {
         results.errors.push(`Pedidos: ${e.message}`);
+      }
+    }
+
+    // Importar Operações CEASA (dependem dos pedidos restaurados)
+    if (data.ceasaOperations && data.ceasaOperations.length > 0) {
+      try {
+        const operationsToCreate = data.ceasaOperations.map((record) =>
+          remapOrderReference(toRestorable(record), orderIdMap, { rebuildItemKey: true }));
+        const chunks = chunkArray(operationsToCreate, 50);
+
+        for (const chunk of chunks) {
+          await base44.entities.CeasaReportItem.bulkCreate(chunk);
+        }
+        results.ceasaOperations = operationsToCreate.length;
+      } catch (e) {
+        results.errors.push(`Operações CEASA: ${e.message}`);
+      }
+    }
+
+    // Importar Contas a Receber (dependem dos pedidos restaurados)
+    if (data.receivables && data.receivables.length > 0) {
+      try {
+        const receivablesToCreate = data.receivables.map((record) =>
+          remapOrderReference(toRestorable(record), orderIdMap));
+        const chunks = chunkArray(receivablesToCreate, 50);
+
+        for (const chunk of chunks) {
+          await base44.entities.ContasAReceber.bulkCreate(chunk);
+        }
+        results.receivables = receivablesToCreate.length;
+      } catch (e) {
+        results.errors.push(`Contas a Receber: ${e.message}`);
       }
     }
 
@@ -125,7 +190,7 @@ export async function importBackup(file, options = {}) {
 
     return {
       success: results.errors.length === 0,
-      message: `Backup importado: ${results.products} produtos, ${results.orders} pedidos, ${results.priceGroups} tabelas, ${results.settings} configurações`,
+      message: `Backup importado: ${results.products} produtos, ${results.orders} pedidos, ${results.ceasaOperations} operações CEASA, ${results.receivables} contas a receber, ${results.priceGroups} tabelas, ${results.settings} configurações`,
       results,
     };
   } catch (error) {

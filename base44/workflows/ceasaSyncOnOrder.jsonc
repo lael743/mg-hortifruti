@@ -1,6 +1,6 @@
 {
   "name": "Sincronizar CEASA do Pedido",
-  "description": "Mant\u00e9m as opera\u00e7\u00f5es CEASA sincronizadas com o pedido (identidade order_id + line_id) sempre que o pedido \u00e9 criado ou tem itens/NF-e alterados. Itens bonificados n\u00e3o participam do CEASA.",
+  "description": "Mant\u00e9m as opera\u00e7\u00f5es CEASA sincronizadas com o pedido (identidade order_id + line_id) sempre que o pedido \u00e9 criado ou tem itens/NF-e alterados. Itens bonificados n\u00e3o participam do CEASA. A chamada leva a credencial de servi\u00e7o do endpoint interno.",
   "trigger": {
     "config": {
       "trigger_type": "entity",
@@ -27,7 +27,7 @@
             "function_name": "syncCeasaFromOrder",
             "args": {
               "order_id": "${ .trigger.entity_id }",
-              "invoked_by": "workflow"
+              "sync_token": "mgh_ceasa_sync_7f3a91c4e08d5621b45ad9e7"
             }
           },
           "then": "end",

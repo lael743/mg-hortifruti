@@ -150,6 +150,8 @@ export default function AdminBackup() {
                       <ul className="text-sm text-green-800 mt-2 space-y-1">
                         {importResult.data.products > 0 && <li>✓ {importResult.data.products} produtos importados</li>}
                         {importResult.data.orders > 0 && <li>✓ {importResult.data.orders} pedidos importados</li>}
+                        {importResult.data.ceasaOperations > 0 && <li>✓ {importResult.data.ceasaOperations} operações CEASA importadas</li>}
+                        {importResult.data.receivables > 0 && <li>✓ {importResult.data.receivables} contas a receber importadas</li>}
                         {importResult.data.priceGroups > 0 && <li>✓ {importResult.data.priceGroups} tabelas importadas</li>}
                         {importResult.data.settings > 0 && <li>✓ {importResult.data.settings} configurações atualizadas</li>}
                       </ul>

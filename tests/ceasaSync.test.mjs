@@ -505,3 +505,95 @@ test('canônica: atualiza a operação ativa mesmo existindo uma inativa mais re
   assert.equal(operations.find(o => o.id === ativa.id).active, true);
   assert.equal(operations.find(o => o.id === 'op-inativa-recente').quantity, 10, 'a inativa é preservada como está');
 });
+
+// ---------------------------------------------------------------------------
+// Bonificação: o caminho de volta (deixar de ser bonificação)
+// ---------------------------------------------------------------------------
+test('bonificação: desmarcar reativa a operação preservando Box, valor, caminhão e observação', async () => {
+  const { order, operations, sync } = makeStore();
+  order.items = [line('p1', 'Tomate', 10, 12)];
+  await sync();
+  const op = operations[0];
+  op.box_id = 'b1';
+  op.box_name = 'Box 1';
+  op.ceasa_value = 9;
+  op.caminhao = 'Caminhão 1';
+  op.notes = 'conferido';
+  const lineId = order.items[0].line_id;
+
+  order.items = [{ ...order.items[0], is_bonus: true, unit_price: 0, final_unit_price: 0 }];
+  const desativado = await sync();
+  assert.equal(desativado.deactivated, 1);
+  assert.equal(opOf(operations, lineId).active, false, 'bonificação inativa a operação');
+
+  order.items = [{ ...order.items[0], is_bonus: false, unit_price: 12, final_unit_price: 12 }];
+  const reativado = await sync();
+
+  assert.equal(reativado.created, 0, 'não cria operação nova');
+  assert.equal(reativado.updated, 1);
+  assert.equal(operations.length, 1, 'sem duplicidade');
+  const depois = opOf(operations, lineId);
+  assert.equal(depois.id, op.id, 'mesma identidade order_id + line_id');
+  assert.equal(depois.active, true, 'operação reativada');
+  assert.equal(depois.box_id, 'b1', 'Box preservado');
+  assert.equal(depois.box_name, 'Box 1');
+  assert.equal(depois.ceasa_value, 9, 'valor CEASA preservado');
+  assert.equal(depois.caminhao, 'Caminhão 1', 'caminhão preservado');
+  assert.equal(depois.notes, 'conferido', 'observação preservada');
+  assert.equal(depois.quantity, 10);
+});
+
+test('bonificação: item que nunca teve operação é recriado ao deixar de ser bonificação', async () => {
+  const { order, operations, sync } = makeStore();
+  order.items = [{ ...line('p1', 'Brinde', 1, 0), is_bonus: true }];
+  const primeira = await sync();
+  assert.equal(primeira.created, 0);
+  assert.equal(operations.length, 0);
+  const lineId = order.items[0].line_id;
+
+  order.items = [{ ...order.items[0], is_bonus: false, unit_price: 7, final_unit_price: 7 }];
+  const res = await sync();
+
+  assert.equal(res.created, 1, 'recria a operação');
+  assert.equal(operations.length, 1);
+  assert.equal(operations[0].line_id, lineId, 'identidade respeitada');
+  assert.equal(operations[0].active, true);
+  assert.equal(operations[0].ceasa_value, 7);
+  assert.equal(operations[0].item_key, itemKeyFor('o1', lineId));
+});
+
+test('bonificação: alternar duas vezes não duplica e fica estável', async () => {
+  const { order, operations, sync } = makeStore();
+  order.items = [line('p1', 'Tomate', 10, 12)];
+  await sync();
+
+  order.items = [{ ...order.items[0], is_bonus: true, unit_price: 0, final_unit_price: 0 }];
+  await sync();
+  order.items = [{ ...order.items[0], is_bonus: false, unit_price: 12, final_unit_price: 12 }];
+  await sync();
+  const estavel = JSON.stringify(operations);
+
+  const res = await sync();
+
+  assert.equal(operations.length, 1, 'uma única operação para a linha');
+  assert.equal(operations[0].active, true);
+  assert.equal(res.created, 0);
+  assert.equal(res.deactivated, 0);
+  assert.equal(JSON.stringify(operations), estavel);
+});
+
+test('bonificação: pedido sem NF-e mantém a operação inativa mesmo sem a marca', async () => {
+  const { order, operations, sync } = makeStore();
+  order.items = [line('p1', 'Tomate', 10, 12)];
+  await sync();
+
+  order.requires_nfe = false;
+  order.items = [{ ...order.items[0], is_bonus: true, unit_price: 0, final_unit_price: 0 }];
+  await sync();
+
+  order.items = [{ ...order.items[0], is_bonus: false, unit_price: 12, final_unit_price: 12 }];
+  const res = await sync();
+
+  assert.equal(res.mode, 'disabled');
+  assert.equal(operations[0].active, false, 'sem NF-e a operação não volta a participar');
+});

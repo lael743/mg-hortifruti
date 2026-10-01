@@ -10,7 +10,10 @@ import { buildOrderDeletionPlan } from '@/lib/orderDeletion';
 
 /**
  * Exclusão de pedido com efeitos colaterais explícitos:
- *  - remove a conta a receber gerada pelo pedido (sem fatura órfã);
+ *  - conta a receber SEM movimento financeiro: excluída (sem fatura órfã);
+ *  - conta a receber COM movimento (parcela paga, parcial ou quitada): nunca
+ *    excluída — é cancelada e o histórico financeiro é preservado; nesse caso o
+ *    pedido também é cancelado (não excluído), para o título não ficar órfão;
  *  - inativa as operações CEASA do pedido, preservando Box, valor, caminhão e
  *    observação;
  *  - não toca em nenhum outro lançamento financeiro (boleto, cheque, transação).
@@ -34,15 +37,24 @@ export default function DeleteOrderDialog({ order, onClose, onDeleted }) {
 
   const mutation = useMutation({
     mutationFn: async () => {
-      if (plan.receivableIds.length) {
-        await base44.entities.ContasAReceber.deleteMany({ id: { $in: plan.receivableIds } });
-      }
       if (plan.operationIds.length) {
         await base44.entities.CeasaReportItem.bulkUpdate(
           plan.operationIds.map(id => ({ id, active: false })),
         );
       }
-      await base44.entities.Order.delete(order.id);
+      if (plan.receivableIds.length) {
+        await base44.entities.ContasAReceber.deleteMany({ id: { $in: plan.receivableIds } });
+      }
+      if (plan.cancelReceivableIds.length) {
+        await base44.entities.ContasAReceber.bulkUpdate(
+          plan.cancelReceivableIds.map(id => ({ id, status: 'cancelada' })),
+        );
+      }
+      if (plan.cancelOrder) {
+        await base44.entities.Order.update(order.id, { status: 'Cancelado' });
+      } else {
+        await base44.entities.Order.delete(order.id);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
@@ -50,7 +62,9 @@ export default function DeleteOrderDialog({ order, onClose, onDeleted }) {
       queryClient.invalidateQueries({ queryKey: ['contas-a-receber'] });
       queryClient.invalidateQueries({ queryKey: ['ceasa-report-items'] });
       queryClient.invalidateQueries({ queryKey: ['ceasa-conferencia'] });
-      toast.success('Pedido excluído.');
+      toast.success(plan.cancelOrder
+        ? 'Pedido cancelado — histórico financeiro preservado.'
+        : 'Pedido excluído.');
       onDeleted();
     },
     onError: () => toast.error('Erro ao excluir o pedido.'),
@@ -62,7 +76,7 @@ export default function DeleteOrderDialog({ order, onClose, onDeleted }) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-destructive" />
-            Excluir pedido #{order.order_number ?? '—'}
+            {plan?.cancelOrder ? 'Cancelar' : 'Excluir'} pedido #{order.order_number ?? '—'}
           </DialogTitle>
           <DialogDescription>
             {isLoading ? (
@@ -79,15 +93,26 @@ export default function DeleteOrderDialog({ order, onClose, onDeleted }) {
           <div className="text-sm space-y-1 border rounded-lg p-3 bg-muted/30">
             <p className={plan.counts.receivables > 0 ? 'font-medium' : 'text-muted-foreground'}>
               {plan.counts.receivables > 0
-                ? <>• {plan.counts.receivables} conta(s) a receber deste pedido serão EXCLUÍDAS.</>
-                : '• Nenhuma conta a receber vinculada.'}
+                ? <>• {plan.counts.receivables} conta(s) a receber SEM movimento serão EXCLUÍDAS.</>
+                : '• Nenhuma conta a receber sem movimento vinculada.'}
             </p>
+            {plan.counts.cancelledReceivables > 0 && (
+              <p className="font-medium text-amber-700">
+                • {plan.counts.cancelledReceivables} conta(s) a receber COM movimento serão CANCELADAS e preservadas (histórico financeiro mantido).
+              </p>
+            )}
             <p className={plan.counts.operations > 0 ? 'font-medium' : 'text-muted-foreground'}>
               {plan.counts.operations > 0
                 ? <>• {plan.counts.operations} operação(ões) CEASA serão INATIVADAS (Box, valor, caminhão e observação preservados).</>
                 : '• Nenhuma operação CEASA ativa vinculada.'}
             </p>
-            <p className="text-xs text-muted-foreground">Nenhum outro lançamento financeiro é afetado.</p>
+            {plan.cancelOrder ? (
+              <p className="font-medium text-amber-700">
+                • O pedido será CANCELADO (não excluído) porque existe movimentação financeira.
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Nenhum outro lançamento financeiro é afetado.</p>
+            )}
           </div>
         )}
 
@@ -98,7 +123,7 @@ export default function DeleteOrderDialog({ order, onClose, onDeleted }) {
             disabled={isLoading || !plan || mutation.isPending}
             onClick={() => mutation.mutate()}
           >
-            Excluir pedido
+            {plan?.cancelOrder ? 'Cancelar pedido' : 'Excluir pedido'}
           </Button>
         </DialogFooter>
       </DialogContent>
