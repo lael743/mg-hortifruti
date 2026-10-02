@@ -5,9 +5,10 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { ChevronDown, ChevronRight, Truck } from 'lucide-react';
+import { ChevronDown, ChevronRight, Percent, Truck } from 'lucide-react';
 import CeasaOperationItemRow from '@/components/admin/CeasaOperationItemRow';
 import TruckCombobox from '@/components/admin/TruckCombobox';
+import CeasaBatchAdjustDialog from '@/components/admin/CeasaBatchAdjustDialog';
 import { formatCeasaMoney } from '@/lib/ceasaValue';
 import { operationsForLine, pickOperation } from '@/lib/ceasaOperations';
 import { fetchAllPages } from '@/lib/pagination';
@@ -32,6 +33,7 @@ export default function CeasaOrderSection({ order, boxes, trucks = [], startDate
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [bulkTruck, setBulkTruck] = useState('');
+  const [adjustOpen, setAdjustOpen] = useState(false);
 
   const totalQty = order.rows.reduce((s, r) => s + r.qtde, 0);
   const totalValor = order.rows.reduce((s, r) => s + r.subtotal, 0);
@@ -144,6 +146,16 @@ export default function CeasaOrderSection({ order, boxes, trucks = [], startDate
             <span className="text-[11px] text-muted-foreground">
               Altera apenas o caminhão das operações deste pedido.
             </span>
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 gap-1 text-xs"
+              onClick={() => setAdjustOpen(true)}
+              title="Reduz os valores CEASA das operações selecionadas deste pedido"
+            >
+              <Percent className="w-3.5 h-3.5" /> Ajuste em lote
+            </Button>
           </div>
 
           {/* Tabela operacional dos itens */}
@@ -175,6 +187,14 @@ export default function CeasaOrderSection({ order, boxes, trucks = [], startDate
               </tbody>
             </table>
           </div>
+
+          {/* Ajuste em lote dos valores CEASA — prévia e confirmação explícita */}
+          <CeasaBatchAdjustDialog
+            open={adjustOpen}
+            onOpenChange={setAdjustOpen}
+            order={order}
+            rows={order.rows}
+          />
         </>
       )}
     </div>

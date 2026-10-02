@@ -94,3 +94,37 @@ export function isCeasaValueDivergent(operation, item) {
 export function formatCeasaMoney(value) {
   return (Number(value) || 0).toFixed(2).replace('.', ',');
 }
+
+/**
+ * Arredondamento monetário do projeto: duas casas, a mesma precisão exibida por
+ * formatCeasaMoney, no CSV e na impressão. O cálculo é feito em centavos para não
+ * introduzir resíduos de ponto flutuante (ex.: 15 × 0,95 = 14,249999…).
+ */
+export function roundCeasaMoney(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.round(number * 100) / 100;
+}
+
+/**
+ * Valor CEASA com redução percentual (ajuste em lote / meia nota).
+ * Meio centavo é arredondado para cima, preservando a precisão monetária do
+ * projeto. Percentual não numérico devolve o valor original sem alteração.
+ */
+export function reduceCeasaValue(value, percent) {
+  const base = roundCeasaMoney(value);
+  const pct = Number(percent);
+  if (!Number.isFinite(pct)) return base;
+  return Math.round(Math.round(base * 100) * (1 - pct / 100)) / 100;
+}
+
+/**
+ * Valor CEASA que participa do ajuste em lote: precisa estar DEFINIDO na operação
+ * e ser diferente de zero. Zero é valor definido e permanece zero; item sem
+ * operação ou sem valor informado também não é ajustado.
+ */
+export function isCeasaValueAdjustable(operation) {
+  if (!operation || operation.ceasa_value == null) return false;
+  const value = Number(operation.ceasa_value);
+  return Number.isFinite(value) && value !== 0;
+}
