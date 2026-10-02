@@ -16,7 +16,7 @@ import CeasaProductGroup from '@/components/admin/CeasaProductGroup';
 import CeasaPrintLayout from '@/components/admin/CeasaPrintLayout';
 import { indexOperationsByLine } from '@/lib/ceasaOperations';
 import { fetchAllPages, listAllPages } from '@/lib/pagination';
-import { displayCeasaValue, effectiveNfeValue, initialCeasaValueOf, isCeasaValuePending } from '@/lib/ceasaValue';
+import { displayCeasaValue, effectiveNfeValue, formatCeasaMoney, initialCeasaValueOf, isCeasaValueDivergent, isCeasaValueZero } from '@/lib/ceasaValue';
 import { buildCeasaCsv, ceasaCsvFileName } from '@/lib/ceasaCsv';
 
 const LOCAL_TZ = 'America/Porto_Velho';
@@ -186,8 +186,11 @@ export default function AdminCeasaReport() {
           // Valor inicial de uma operação NOVA: preço efetivo do item (nunca o valor
           // fiscal nem o preço de catálogo). null = item sem preço comercial.
           valorCeasaBase: initialCeasaValueOf(it) ?? null,
-          // Operação com valor zerado em item precificado: pede digitação do operador
-          valorCeasaPendente: isCeasaValuePending(operation, it),
+          // Valor CEASA definido como zero: zero é valor, não ausência — recebe
+          // apenas destaque suave e nunca bloqueia gravação, CSV ou impressão.
+          valorCeasaZero: isCeasaValueZero(operation),
+          // Valor CEASA diferente do preço do pedido: indicador discreto
+          valorCeasaDivergente: isCeasaValueDivergent(operation, it),
           // Subtotal CEASA = quantidade × valor CEASA
           subtotal: valorCeasa * qtde,
           obs: operation?.notes || '',
@@ -320,7 +323,7 @@ export default function AdminCeasaReport() {
           <div className="flex gap-2 text-sm">
             <Badge variant="secondary">{totalClientes} clientes</Badge>
             <Badge variant="secondary">{totalRows} itens</Badge>
-            <Badge variant="secondary">R$ {totalValor.toFixed(2)}</Badge>
+            <Badge variant="secondary">R$ {formatCeasaMoney(totalValor)}</Badge>
           </div>
           {truncated && (
             <p className="w-full text-xs font-medium text-amber-700">
@@ -374,7 +377,7 @@ export default function AdminCeasaReport() {
               <div className="flex items-center justify-end gap-3 text-sm">
                 <Badge variant="secondary">{groupedByClient.length} clientes</Badge>
                 <Badge variant="secondary">{searchedQty} un.</Badge>
-                <Badge className="bg-primary text-primary-foreground">R$ {searchedValor.toFixed(2)}</Badge>
+                <Badge className="bg-primary text-primary-foreground">R$ {formatCeasaMoney(searchedValor)}</Badge>
               </div>
 
               {/* Cards por cliente, expansíveis */}

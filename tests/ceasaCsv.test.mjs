@@ -67,3 +67,12 @@ test('csv: acentos preservados e vírgula decimal nos valores', () => {
 test('csv: nome do arquivo por período', () => {
   assert.equal(ceasaCsvFileName('2026-10-01', '2026-10-05'), 'relacao-ceasa-2026-10-01_a_2026-10-05.csv');
 });
+
+test('csv: valor CEASA zero é exportado como 0,00 e o item permanece no arquivo', () => {
+  const csv = buildCeasaCsv([row({ produto: 'Tomate', qtde: 2, valorCeasa: 0, subtotal: 0 })]);
+
+  assert.ok(csv.includes('"Tomate"'), 'item com valor zero não é excluído');
+  assert.ok(csv.includes('"0,00"'), 'zero exportado como 0,00');
+  assert.ok(csv.includes('"TOTAL DO BOX: Box 1";"1 itens";"";"";"2";"";"0,00"'), 'total do Box zerado');
+  assert.ok(csv.includes('"TOTAL GERAL";"1 itens";"";"";"2";"";"0,00"'), 'total geral zerado');
+});

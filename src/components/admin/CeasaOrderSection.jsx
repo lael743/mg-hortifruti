@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { ChevronDown, ChevronRight, Truck } from 'lucide-react';
 import CeasaOperationItemRow from '@/components/admin/CeasaOperationItemRow';
 import TruckCombobox from '@/components/admin/TruckCombobox';
+import { formatCeasaMoney } from '@/lib/ceasaValue';
 import { operationsForLine, pickOperation } from '@/lib/ceasaOperations';
 import { fetchAllPages } from '@/lib/pagination';
 
@@ -112,7 +113,7 @@ export default function CeasaOrderSection({ order, boxes, trucks = [], startDate
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Badge variant="secondary" className="text-[10px]">{totalQty} un.</Badge>
-          <Badge variant="secondary" className="text-[10px]">R$ {totalValor.toFixed(2)}</Badge>
+          <Badge variant="secondary" className="text-[10px]">R$ {formatCeasaMoney(totalValor)}</Badge>
         </div>
       </button>
 

@@ -8,6 +8,7 @@ import { Save, Check } from 'lucide-react';
 import ReportRowDeleteButton from '@/components/admin/ReportRowDeleteButton';
 import TruckCombobox from '@/components/admin/TruckCombobox';
 import BoxCombobox from '@/components/admin/BoxCombobox';
+import { formatCeasaMoney, parseCeasaValueInput } from '@/lib/ceasaValue';
 import { operationsForLine, pickOperation } from '@/lib/ceasaOperations';
 import { fetchAllPages } from '@/lib/pagination';
 
@@ -68,7 +69,7 @@ export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], st
     }
     // `ceasa_value` só entra no payload quando o operador informa um valor:
     // campo vazio mantém "valor não definido"; valor digitado (inclusive 0) é
-    // preservado e nunca recalculado.
+    // preservado e nunca recalculado. Zero é valor definido — não há mínimo.
     const payload = {
       order_id: row.orderId,
       line_id: row.lineId,
@@ -86,7 +87,8 @@ export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], st
       nfe_cnpj: row.cnpj || '',
       notes: notes || '',
     };
-    if (ceasaValue !== '' && ceasaValue != null) payload.ceasa_value = Number(ceasaValue) || 0;
+    const valorDigitado = parseCeasaValueInput(ceasaValue);
+    if (valorDigitado !== null) payload.ceasa_value = valorDigitado;
     saveMutation.mutate(payload);
   };
 
@@ -101,7 +103,7 @@ export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], st
       <td className="px-2 py-1 align-middle text-right whitespace-nowrap">{row.qtde}</td>
 
       <td className="px-2 py-1 align-middle text-right whitespace-nowrap text-muted-foreground">
-        R$ {row.valorUn.toFixed(2)}<span className="text-[10px]">/un</span>
+        R$ {formatCeasaMoney(row.valorUn)}<span className="text-[10px]">/un</span>
       </td>
 
       <td className="px-2 py-1 align-middle">
@@ -114,16 +116,31 @@ export default function CeasaOperationItemRow({ row, boxes = [], trucks = [], st
       </td>
 
       <td className="px-2 py-1 align-middle">
-        <Input
-          type="number"
-          step="0.01"
-          min="0"
-          aria-label="Valor CEASA unitário"
-          title={row.valorCeasaPendente ? 'Item precificado com valor CEASA zerado — digite o valor' : undefined}
-          className={`h-7 w-[88px] px-2 text-right text-xs ${row.valorCeasaPendente ? 'border-amber-400 ring-1 ring-amber-300 bg-amber-50/60' : ''}`}
-          value={ceasaValue}
-          onChange={e => setCeasaValue(e.target.value)}
-        />
+        <div className="flex items-center justify-end gap-1">
+          <Input
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            aria-label="Valor CEASA unitário"
+            title={
+              row.valorCeasaZero
+                ? 'Valor CEASA definido como R$ 0,00'
+                : row.valorCeasaDivergente
+                  ? `Valor CEASA diferente do valor do pedido (R$ ${formatCeasaMoney(row.valorUn)})`
+                  : undefined
+            }
+            className={`h-7 w-[88px] px-2 text-right text-xs ${row.valorCeasaZero ? 'border-amber-200 bg-amber-50/50' : ''}`}
+            value={ceasaValue}
+            onChange={e => setCeasaValue(e.target.value)}
+          />
+          {row.valorCeasaDivergente && (
+            <span
+              className="w-1.5 h-1.5 shrink-0 rounded-full bg-sky-500"
+              title={`Valor CEASA diferente do valor do pedido (R$ ${formatCeasaMoney(row.valorUn)})`}
+              aria-label="Valor CEASA divergente do valor do pedido"
+            />
+          )}
+        </div>
       </td>
 
       <td className="px-2 py-1 align-middle">

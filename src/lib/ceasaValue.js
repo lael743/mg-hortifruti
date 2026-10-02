@@ -50,11 +50,47 @@ export function effectiveNfeValue(item) {
 }
 
 /**
- * Linha em atenção: a operação tem valor CEASA zerado enquanto o item tem preço
- * comercial — o operador precisa digitar o valor. Valores definidos (inclusive 0
- * digitado) nunca são recalculados automaticamente.
+ * Converte o texto digitado no campo "Valor CEASA" em número.
+ * Aceita as três grafias da operação: "0", "0.00" e "0,00".
+ * Devolve `null` apenas quando o campo está vazio ou o texto não é numérico —
+ * nesse caso o valor continua "não definido". Zero digitado é valor DEFINIDO:
+ * nunca é confundido com campo vazio nem com ausência de preenchimento.
  */
-export function isCeasaValuePending(operation, item) {
+export function parseCeasaValueInput(raw) {
+  if (raw == null) return null;
+  const text = String(raw).trim().replace(/\s/g, '');
+  if (text === '') return null;
+  const normalized = text.includes(',') ? text.replace(/\./g, '').replace(',', '.') : text;
+  const value = Number(normalized);
+  return Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Operação com valor CEASA DEFINIDO como zero. Zero é valor, não ausência de
+ * preenchimento: recebe apenas um destaque visual suave e nunca é recalculado.
+ */
+export function isCeasaValueZero(operation) {
   if (!operation || operation.ceasa_value == null) return false;
-  return Number(operation.ceasa_value) === 0 && effectiveUnitPrice(item) > 0;
+  return Number(operation.ceasa_value) === 0;
+}
+
+/**
+ * Valor CEASA diferente do preço efetivo do item no pedido — referência
+ * exclusivamente visual. Sem valor definido na operação, ou sem preço no pedido,
+ * não há divergência a indicar (nada é recalculado).
+ */
+export function isCeasaValueDivergent(operation, item) {
+  if (!operation || operation.ceasa_value == null) return false;
+  const definido = Number(operation.ceasa_value);
+  const pedido = effectiveNfeValue(item);
+  if (!Number.isFinite(definido) || !(pedido > 0)) return false;
+  return Math.abs(definido - pedido) > 0.005;
+}
+
+/**
+ * Formatação monetária da tela: vírgula decimal, igual ao CSV e à impressão —
+ * zero é sempre apresentado como "0,00".
+ */
+export function formatCeasaMoney(value) {
+  return (Number(value) || 0).toFixed(2).replace('.', ',');
 }

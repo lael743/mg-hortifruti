@@ -27,8 +27,8 @@ export default function CeasaProductGroup({ produto, rows = [], boxes = [] }) {
 
   const totalQty = rows.reduce((s, r) => s + r.qtde, 0);
   const totalClientes = new Set(rows.map(r => r.cnpj || r.cliente)).size;
-  // Itens com preço comercial e valor CEASA zerado: precisam de digitação do operador.
-  const pendingCount = rows.filter(r => r.valorCeasaPendente).length;
+  // Itens com valor CEASA DEFINIDO como zero — valor válido, não ausência.
+  const zeroCount = rows.filter(r => r.valorCeasaZero).length;
 
   const applyMutation = useMutation({
     mutationFn: async () => {
@@ -96,12 +96,12 @@ export default function CeasaProductGroup({ produto, rows = [], boxes = [] }) {
         </TableCell>
         <TableCell className="font-medium">
           {produto}
-          {pendingCount > 0 && (
+          {zeroCount > 0 && (
             <span
-              className="ml-1.5 text-[10px] font-semibold text-amber-800 bg-amber-100 border border-amber-300 rounded px-1 py-0.5 whitespace-nowrap"
-              title="Itens com preço comercial e valor CEASA zerado — digite o valor na aba Lista por Cliente"
+              className="ml-1.5 text-[10px] font-medium text-amber-800 bg-amber-50 border border-amber-200 rounded px-1 py-0.5 whitespace-nowrap"
+              title="Itens com valor CEASA definido como R$ 0,00 — ajuste na aba Lista por Cliente se necessário"
             >
-              {pendingCount} sem valor CEASA
+              {zeroCount} com valor CEASA 0
             </span>
           )}
         </TableCell>
