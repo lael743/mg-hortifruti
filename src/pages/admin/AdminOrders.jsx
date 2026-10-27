@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import OrderPurchaseListDialog from '../../components/admin/OrderPurchaseListDialog';
 import DeleteOrderDialog from '../../components/admin/DeleteOrderDialog';
 import { listAllPages } from '@/lib/pagination';
+import { buildVolumeWeightLabel } from '@/lib/printTotals';
 
 const statusColors = {
   Pendente: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -226,10 +227,6 @@ export default function AdminOrders() {
     return parts.join(' • ');
   })();
 
-  const calcTotalVolume = (items) => {
-    return (items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
-  };
-
   const buildCityBadge = (city, state) => {
     if (!city) return '';
     return `<span style="display:inline-block;background:#2d7a3a;color:#fff;font-size:13px;font-weight:bold;padding:4px 14px;border-radius:20px;letter-spacing:0.5px;">${city}${state ? ` - ${state}` : ''}</span>`;
@@ -298,7 +295,7 @@ export default function AdminOrders() {
               <tbody>${itemsRows}</tbody>
               <tfoot>
                 <tr>
-                  <td style="text-align:center;font-size:10px;color:#555;">${calcTotalVolume(order.items)} vol.</td>
+                  <td style="text-align:center;font-size:10px;color:#555;line-height:1.3;">${buildVolumeWeightLabel(order.items)}</td>
                   <td colspan="5" style="text-align:right;font-weight:bold;">Total do pedido:</td>
                   <td style="text-align:right;font-weight:bold;">R$ ${order.total?.toFixed(2)}</td>
                 </tr>
@@ -484,7 +481,7 @@ export default function AdminOrders() {
           <tbody>${itemsRows}</tbody>
           <tfoot>
             <tr>
-              <td style="text-align:center;font-size:10px;color:#555;">${calcTotalVolume(order.items)} vol.</td>
+              <td style="text-align:center;font-size:10px;color:#555;line-height:1.3;">${buildVolumeWeightLabel(order.items)}</td>
               <td colspan="5" style="text-align:right;font-weight:bold;">Total do pedido:</td>
               <td style="text-align:right;font-weight:bold;">R$ ${order.total?.toFixed(2)}</td>
             </tr>
