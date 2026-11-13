@@ -4,15 +4,23 @@ import { base44 } from '@/api/base44Client';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { AlertTriangle, Check, ChevronsUpDown, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { orderDateInLocalTimezone, orderItemIdentity, removeProductFromOrder, isOrderEligibleForBulkItemRemoval } from '@/lib/bulkRemoveOrderItem';
+
+function formatDateBR(value) {
+  if (!value) return '—';
+  const [year, month, day] = value.split('-');
+  return year && month && day ? `${day}/${month}/${year}` : value;
+}
 
 export default function BulkRemoveOrderItemDialog({ orders = [], startDate, endDate, onClose, onCompleted }) {
   const queryClient = useQueryClient();
   const [productKey, setProductKey] = useState('');
   const [confirmed, setConfirmed] = useState(false);
+  const [productPickerOpen, setProductPickerOpen] = useState(false);
 
   const periodOrders = useMemo(() => orders.filter(order => {
     const date = orderDateInLocalTimezone(order);
@@ -79,15 +87,52 @@ export default function BulkRemoveOrderItemDialog({ orders = [], startDate, endD
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label>Produto</Label>
-            <Select value={productKey} onValueChange={value => { setProductKey(value); setConfirmed(false); }}>
-              <SelectTrigger><SelectValue placeholder="Selecione o produto que acabou" /></SelectTrigger>
-              <SelectContent>
-                {products.map(product => <SelectItem key={product.key} value={product.key}>
-                  {product.name}{product.packaging ? ` • ${product.packaging}` : ''}{product.weight ? ` • ${product.weight}` : ''}
-                </SelectItem>)}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">Período: {startDate || 'início'} até {endDate || 'hoje'} · {periodOrders.length} pedido(s) analisado(s).</p>
+            <Popover open={productPickerOpen} onOpenChange={setProductPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={productPickerOpen}
+                  className="w-full justify-between font-normal"
+                >
+                  <span className={selectedProduct ? 'truncate' : 'text-muted-foreground'}>
+                    {selectedProduct
+                      ? `${selectedProduct.name}${selectedProduct.packaging ? ` • ${selectedProduct.packaging}` : ''}${selectedProduct.weight ? ` • ${selectedProduct.weight}` : ''}`
+                      : 'Buscar e selecionar produto...'}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Digite o nome do produto..." />
+                  <CommandList>
+                    <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+                    <CommandGroup>
+                      {products.map(product => {
+                        const label = `${product.name}${product.packaging ? ` • ${product.packaging}` : ''}${product.weight ? ` • ${product.weight}` : ''}`;
+                        return (
+                          <CommandItem
+                            key={product.key}
+                            value={label}
+                            onSelect={() => {
+                              setProductKey(product.key);
+                              setConfirmed(false);
+                              setProductPickerOpen(false);
+                            }}
+                          >
+                            <Check className={`mr-2 h-4 w-4 ${productKey === product.key ? 'opacity-100' : 'opacity-0'}`} />
+                            <span className="truncate">{label}</span>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <p className="text-xs text-muted-foreground">Período: {formatDateBR(startDate)} até {formatDateBR(endDate)} · {periodOrders.length} pedido(s) analisado(s).</p>
           </div>
           {productKey && <div className="rounded-lg border p-3 space-y-2">
             <div className="flex justify-between text-sm"><span>Pedidos que contêm o produto</span><strong>{matchingOrders.length}</strong></div>
