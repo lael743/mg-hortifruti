@@ -30,7 +30,7 @@ export default function BulkRemoveOrderItemDialog({ orders = [], startDate, endD
   }, [periodOrders]);
 
   const matchingOrders = useMemo(() => productKey
-    ? periodOrders.filter(order => (order.items || []).some(item => itemIdentity(item) === productKey))
+    ? periodOrders.filter(order => (order.items || []).some(item => orderItemIdentity(item) === productKey))
     : [], [periodOrders, productKey]);
 
   // Pedidos entregues/cancelados são preservados para não desalinhar títulos e histórico financeiro.
@@ -44,8 +44,7 @@ export default function BulkRemoveOrderItemDialog({ orders = [], startDate, endD
       const failures = [];
       for (const order of editableOrders) {
         try {
-          const items = (order.items || []).filter(item => itemIdentity(item) !== productKey);
-          await base44.entities.Order.update(order.id, recalculateOrder(order, items));
+          await base44.entities.Order.update(order.id, removeProductFromOrder(order, productKey));
           updated += 1;
         } catch (error) {
           failures.push({ orderId: order.id, orderNumber: order.order_number, message: error?.message || String(error) });
