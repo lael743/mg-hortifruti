@@ -7,36 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-
-function orderDate(order) {
-  const date = new Date(order.created_date);
-  return Number.isNaN(date.getTime()) ? String(order.created_date || '').slice(0, 10) :
-    date.toLocaleDateString('en-CA', { timeZone: 'America/Porto_Velho' });
-}
-
-function itemIdentity(item) {
-  if (item?.product_id) return `id:${item.product_id}`;
-  return `name:${String(item?.product_name || '').trim().toLocaleLowerCase('pt-BR')}`;
-}
-
-function recalculateOrder(order, items) {
-  const subtotal = items.reduce((sum, item) =>
-    item.is_bonus ? sum : sum + (Number(item.final_unit_price ?? item.unit_price) || 0) * (Number(item.quantity) || 0), 0);
-  const discountType = order.discount_type;
-  const discountValue = Number(order.discount_value) || 0;
-  const discountAmount = discountValue > 0
-    ? discountType === 'percent'
-      ? subtotal * (discountValue / 100)
-      : discountType === 'value' ? Math.min(discountValue, subtotal) : 0
-    : 0;
-  return {
-    items, subtotal,
-    discount_type: discountAmount > 0 ? discountType : null,
-    discount_value: discountAmount > 0 ? discountValue : 0,
-    discount_amount: discountAmount,
-    total: Math.max(0, subtotal - discountAmount),
-  };
-}
+import { orderDateInLocalTimezone, orderItemIdentity, removeProductFromOrder, isOrderEligibleForBulkItemRemoval } from '@/lib/bulkRemoveOrderItem';
 
 export default function BulkRemoveOrderItemDialog({ orders = [], startDate, endDate, onClose, onCompleted }) {
   const queryClient = useQueryClient();
@@ -44,14 +15,14 @@ export default function BulkRemoveOrderItemDialog({ orders = [], startDate, endD
   const [confirmed, setConfirmed] = useState(false);
 
   const periodOrders = useMemo(() => orders.filter(order => {
-    const date = orderDate(order);
+    const date = orderDateInLocalTimezone(order);
     return (!startDate || date >= startDate) && (!endDate || date <= endDate);
   }), [orders, startDate, endDate]);
 
   const products = useMemo(() => {
     const map = new Map();
     periodOrders.forEach(order => (order.items || []).forEach(item => {
-      const key = itemIdentity(item);
+      const key = orderItemIdentity(item);
       if (key === 'name:') return;
       if (!map.has(key)) map.set(key, { key, name: item.product_name || 'Produto sem nome', packaging: item.packaging_type || '', weight: item.weight || '' });
     }));
@@ -63,8 +34,8 @@ export default function BulkRemoveOrderItemDialog({ orders = [], startDate, endD
     : [], [periodOrders, productKey]);
 
   // Pedidos entregues/cancelados são preservados para não desalinhar títulos e histórico financeiro.
-  const skippedOrders = matchingOrders.filter(order => ['Entregue', 'Cancelado'].includes(order.status));
-  const editableOrders = matchingOrders.filter(order => !['Entregue', 'Cancelado'].includes(order.status));
+  const skippedOrders = matchingOrders.filter(order => !isOrderEligibleForBulkItemRemoval(order));
+  const editableOrders = matchingOrders.filter(order => isOrderEligibleForBulkItemRemoval(order));
 
   const mutation = useMutation({
     mutationFn: async () => {
