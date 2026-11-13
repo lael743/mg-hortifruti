@@ -16,6 +16,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from 'sonner';
 import OrderPurchaseListDialog from '../../components/admin/OrderPurchaseListDialog';
 import DeleteOrderDialog from '../../components/admin/DeleteOrderDialog';
+import BulkRemoveOrderItemDialog from '../../components/admin/BulkRemoveOrderItemDialog';
 import { listAllPages } from '@/lib/pagination';
 import { buildVolumeWeightLabel } from '@/lib/printTotals';
 
@@ -63,6 +64,7 @@ export default function AdminOrders() {
   const [customEnd, setCustomEnd] = useState(toDateInputValue(new Date()));
   const [cityFilters, setCityFilters] = useState([]); // multiple cities
   const [showPurchaseList, setShowPurchaseList] = useState(false);
+  const [showBulkRemoveItem, setShowBulkRemoveItem] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [showAdHocModal, setShowAdHocModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -585,6 +587,15 @@ export default function AdminOrders() {
               <Input type="date" className="h-10 w-full sm:w-36 bg-background" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} />
             </div>
             <Button
+              variant="outline"
+              className="h-10 shrink-0 border-red-300 text-red-700 hover:bg-red-50"
+              onClick={() => setShowBulkRemoveItem(true)}
+              disabled={orders.length === 0}
+            >
+              <Trash2 className="w-4 h-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Remover produto em massa</span>
+            </Button>
+            <Button
               onClick={() => setShowPurchaseList(true)}
               disabled={filtered.length === 0}
               className="h-10 shrink-0">
@@ -771,6 +782,16 @@ export default function AdminOrders() {
         })}
         </div>
       }
+
+      {showBulkRemoveItem && (
+        <BulkRemoveOrderItemDialog
+          orders={orders}
+          startDate={customStart}
+          endDate={customEnd}
+          onClose={() => setShowBulkRemoveItem(false)}
+          onCompleted={() => setShowBulkRemoveItem(false)}
+        />
+      )}
 
       {showPurchaseList &&
       <OrderPurchaseListDialog
