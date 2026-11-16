@@ -593,7 +593,7 @@ export default function AdminOrders() {
               disabled={orders.length === 0}
             >
               <Trash2 className="w-4 h-4 sm:mr-1.5" />
-              <span className="hidden sm:inline">Remover produto em massa</span>
+              <span className="hidden sm:inline">Remover produto</span>
             </Button>
             <Button
               onClick={() => setShowPurchaseList(true)}
